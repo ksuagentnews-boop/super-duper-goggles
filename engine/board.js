@@ -66,8 +66,7 @@ function buildUser(force,opts){
   const els=[];
   S.parts.forEach(p=>{const d=PARTS[p.type];if(p.dead)return;
     if(d.t==='R')els.push({t:'G',a:idx(p.a),b:idx(p.b),g:d.g||1/d.r,pid:p.id});
-    else if(d.t==='D')els.push({t:'D',a:idx(p.a),b:idx(p.b),f:SOLVER.diodeSi,pid:p.id});
-    else if(d.t==='Z')els.push({t:'D',a:idx(p.a),b:idx(p.b),f:SOLVER.zener,pid:p.id});
+    else if(['D','Z','GE','LED'].includes(d.t))els.push({t:'D',a:idx(p.a),b:idx(p.b),f:SOLVER.MODELS[d.model||{D:'si',Z:'zener',GE:'ge',LED:'led'}[d.t]],pid:p.id});
     else if(d.t==='C')els.push({t:'C',a:idx(p.a),b:idx(p.b),c:d.c,pid:p.id})});
   const ck={n:0,els,p1:null,p2:null,dcs:[],idx,opts};
   INST.forEach(i=>i.stamp&&i.stamp(ck,force,opts));
@@ -85,6 +84,8 @@ function recompute(){
   }else{const A=genOn?S.gen.amp/2:0,o=genOn?S.gen.off:0;RT.TB=SOLVER.sweep(ck,o-A,o+A,A?121:2);RT.TB.A=A;RT.TB.off=o}
   RT.TB.ck=ck;RT.dirty=false;
   INST.forEach(i=>i.measure&&i.measure());
+  /* LEDs glow while they carry forward current */
+  S.parts.forEach(p=>{if(PARTS[p.type].t==='LED'){const i=partI(p);p.lit=i>4e-4?Math.min(1,0.35+i/0.02):0}});
 }
 /* node voltage over one period (N samples, phase 0…2π) */
 function samples(net,N=240){const TB=RT.TB;const out=new Float64Array(N);if(net==null||net<0||!TB)return out;
@@ -111,6 +112,22 @@ RT.dsig=c=>byKey.sc.dsig(c);
 RT.screenInner=()=>byKey.sc.screenInner();
 /* netlist index of a panel node in the last analysis (null = not in the circuit, -1 = earth) */
 RT.netOf=node=>{const TB=RT.TB;if(!TB||!TB.ck||node==null)return null;return TB.ck.idx(node)};
+/* ---------- helpers for step checks (topology and live readings) ---------- */
+const meanOf=a=>{let s=0;for(const v of a)s+=v;return s/a.length};
+const live=net=>net!=null&&net<(RT.TB&&RT.TB.ck?RT.TB.ck.n:0);
+function nodeV(net){return net===-1?0:live(net)?meanOf(samples(net,60)):0}
+function partNets(p){return [RT.netOf(p.a),RT.netOf(p.b)]}
+function partV(p){const [a,b]=partNets(p);return nodeV(a)-nodeV(b)}
+function partI(p){const d=PARTS[p.type];const [a,b]=partNets(p);if(!live(a)&&a!==-1||!live(b)&&b!==-1)return 0;const va=samples(a,60),vb=samples(b,60);let s=0;
+  const f=d.t==='R'?(v=>v*(d.g||1/d.r)):['D','Z','GE','LED'].includes(d.t)?(v=>SOLVER.MODELS[d.model||{D:'si',Z:'zener',GE:'ge',LED:'led'}[d.t]](v)[0]):()=>0;
+  for(let k=0;k<60;k++)s+=f((a===-1?0:va[k])-(b===-1?0:vb[k]));return s/60}
+Object.assign(RT,{nodeV,partNets,partV,partI,PARTS,
+  leadNet:k=>RT.S.leads[k]&&RT.S.leads[k].node!=null?RT.netOf(RT.S.leads[k].node):null,
+  parts:type=>RT.S.parts.filter(p=>!type||p.type===type||PARTS[p.type].t===type),
+  /* parts whose two ends are exactly the nets a and b; dir=+1 means p.a on a */
+  between:(a,b)=>RT.S.parts.filter(p=>{const [x,y]=partNets(p);return PARTS[p.type].t!=='BR'&&a!=null&&b!=null&&((x===a&&y===b)||(x===b&&y===a))}).map(p=>({p,dir:partNets(p)[0]===a?1:-1})),
+  at:net=>RT.S.parts.filter(p=>PARTS[p.type].t!=='BR'&&partNets(p).includes(net)),
+  dmm:()=>byKey.dmm?byKey.dmm.reading():null});
 
 /* ---------- part drawings (top view, real looks: cathode bands, polarity stripes, colour codes) ---------- */
 const BANDC=['#111','#7a4a1d','#d22','#f08a1c','#f3d21c','#2a9a3c','#2160c9','#7d3fb8','#8a8f93','#f7f7f7'];
@@ -125,7 +142,7 @@ function partBody(type,L,sel,lit){const h=L/2,d=PARTS[type]||{t:type};const t=d.
   else if(t==='Z'){s+=legs(-10,10)+`<rect x="-10" y="-5" width="20" height="10" rx="4" fill="#c63a26" opacity=".95"/><rect x="-8" y="-3" width="16" height="2.4" rx="1" fill="#f08a76" opacity=".7"/><rect x="5" y="-5" width="3" height="10" fill="#111"/>`}
   else if(t==='GE'){s+=legs(-10,10,'#a7a08a')+`<rect x="-10" y="-4.5" width="20" height="9" rx="4" fill="#e9e3c7" opacity=".85" stroke="#b4ab86"/><line x1="-6" y1="0" x2="4" y2="0" stroke="#5a4e2a" stroke-width="1.6"/><rect x="5" y="-4.5" width="2.6" height="9" fill="#2a2a2a"/>`}
   else if(t==='LED'){const col=d.color||'#36c25a';s+=`<line x1="${-h}" y1="0" x2="-4" y2="0" stroke="#9aa3a8" stroke-width="2.2"/><path d="M4 0 L${h-6} 0 L${h-3} -3 L${h} 0" fill="none" stroke="#9aa3a8" stroke-width="2.2"/>`+
-    (lit?`<circle r="17" fill="${col}" opacity=".35"/>`:'')+`<circle r="9" fill="${col}" opacity="${lit?1:.8}" stroke="#1d5e2c"/><path d="M-6.5 -6.2 A9 9 0 0 1 -6.5 6.2" fill="none" stroke="#1d5e2c" stroke-width="2.4"/><circle cx="2.5" cy="-3" r="2.4" fill="#fff" opacity=".55"/>`}
+    (lit?`<circle r="${12+10*lit}" fill="${col}" opacity="${0.2+0.3*lit}"/>`:'')+`<circle r="9" fill="${col}" opacity="${lit?1:.8}" stroke="#1d5e2c"/><path d="M-6.5 -6.2 A9 9 0 0 1 -6.5 6.2" fill="none" stroke="#1d5e2c" stroke-width="2.4"/><circle cx="2.5" cy="-3" r="2.4" fill="#fff" opacity=".55"/>`}
   else if(t==='C'){const big=(d.c||0)>=1e-4,rad=big?11:7.5;s+=legs(-rad,rad)+`<circle r="${rad}" fill="#2a4f8f" stroke="#17305a"/><path d="M${rad*0.35} ${-rad*0.94} A${rad} ${rad} 0 0 1 ${rad*0.35} ${rad*0.94} Z" fill="#c9d4e6"/>`+
     T(rad*0.66,3,'−',{size:big?9:7,fill:'#17305a',a:'middle',w:700})+`<circle r="${rad*0.45}" fill="none" stroke="#7d93bb" stroke-width="1"/>`}
   return glow+s+pins();

@@ -7,7 +7,7 @@
        built: true when labs/<id>/exp<num>.js exists */
 const LABS=[
   {id:'ee312',code:'EE312',title:'Basic Electronics Lab',ar:'معمل الإلكترونيات الأساسية',room:{rows:2,cols:5},exps:[
-    {num:1,en:'Exploring and Testing Junction Diodes',ar:'استكشاف واختبار الدايودات',bench:['psu','dmm']},
+    {num:1,en:'Exploring and Testing Junction Diodes',ar:'استكشاف واختبار الدايودات',bench:['psu','dmm'],built:true},
     {num:2,en:'Terminal Characteristics of Junction Diodes',ar:'خصائص أطراف الدايود',bench:['psu','dmm']},
     {num:3,en:'Limiting Circuits',ar:'دوائر التحديد (Clipping)',bench:['gen','psu','scope'],built:true},
     {num:4,en:'Rectifiers and Voltage Regulation',ar:'التقويم وتنظيم الجهد',bench:['xf','scope'],built:true},

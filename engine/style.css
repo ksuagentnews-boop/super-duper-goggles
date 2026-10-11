@@ -199,3 +199,13 @@ button.t.on{background:var(--accent);border-color:var(--accent);color:#fff}
   .sm-card{padding:14px;max-height:calc(100vh - 20px);overflow:auto}.sm-card h2{font-size:18px}.sm-card p{margin-bottom:8px}
   .sm-opts button{padding:10px}.sm-opts span{font-size:12px;line-height:1.5}
 }
+/* manual sheet tables */
+.paper table.tbl{width:100%;border-collapse:collapse;direction:ltr;font-size:13px;margin:8px 0}
+.paper .tbl th,.paper .tbl td{border:1px solid var(--line);padding:4px 6px;text-align:center;vertical-align:middle}
+.paper .tbl th{background:var(--panel2);font-weight:600}
+.paper .tbl td.l{text-align:left}
+.paper .tbl input.nin{width:84px}
+.paper .tbl caption{caption-side:top;text-align:left;font-weight:700;padding:4px 0}
+.paper .row .lbl{min-width:0}.paper .row .u{color:var(--muted)}
+.paper .figimg{width:100%;border-radius:8px;border:1px solid var(--line);background:#fff}
+.paper .plq{margin:6px 0}.paper .plq>div{margin-top:4px}

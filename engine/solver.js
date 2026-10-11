@@ -11,11 +11,25 @@
 const SOLVER=(()=>{
   const VT=0.02585;
   function dexp(v,Is,nvt){const a=v/nvt;if(a>40){const e=Math.exp(40);return [Is*e*(1+a-40),Is*e/nvt]}const e=Math.exp(a);return [Is*(e-1),Is*e/nvt]}
-  /* 1N4001/1N4002 silicon rectifier */
-  function diodeSi(v){return dexp(v,7e-9,1.8*VT)}
-  /* 1N4733A Zener (VZ = 5.1 V @ 49 mA): forward Si junction + reverse breakdown knee near 4.95 V */
-  function zener(v){const [i1,g1]=dexp(v,1.5e-15,1.05*VT);const vr=-v;let a=(vr-4.95)/0.06,ib,gb;if(a>40){const e=Math.exp(40);ib=1e-3*e*(1+a-40);gb=1e-3*e/0.06}else{const e=Math.exp(a);ib=1e-3*e;gb=1e-3*e/0.06}
-    const ib0=1e-3*Math.exp(-4.95/0.06);return [i1-(ib-ib0),g1+gb]}
+  /* Two-terminal junction model with series resistance, reverse breakdown and leakage.
+     Junction: i(vj) = Is·(e^(vj/nVT) − 1) − Ib·e^((−vj − Vb)/nb) + gl·vj ; terminal v = vj + Rs·i.
+     Returns f(v) -> [i, di/dv] (v = anode − cathode), solved for vj by damped Newton. */
+  function junction(m){const nvt=m.n*VT;let last=0;
+    const ij=vj=>{const [i1,g1]=dexp(vj,m.Is,nvt);let i=i1,g=g1;if(m.Vb){const a=(-vj-m.Vb)/m.nb;let e,d;if(a>40){const E=Math.exp(40);e=E*(1+a-40);d=E}else{e=Math.exp(a);d=e}
+        i-=m.Ib*(e-Math.exp(-m.Vb/m.nb));g+=m.Ib*d/m.nb}if(m.gl){i+=m.gl*vj;g+=m.gl}return [i,g]};
+    const f=v=>{if(!m.Rs){return ij(v)}let vj=Math.max(Math.min(last,v+5),v-5);
+      for(let k=0;k<60;k++){const [i,g]=ij(vj);const h=vj+m.Rs*i-v,dh=1+m.Rs*g;let st=h/dh;if(Math.abs(st)>0.2)st=0.2*Math.sign(st);vj-=st;if(Math.abs(st)<1e-12)break}
+      last=vj;const [i,g]=ij(vj);return [i,g/(1+m.Rs*g)]};
+    f.model=m;return f}
+  /* 1N4001 / 1N4002 silicon rectifier (n ≈ 1.8, VF ≈ 0.55 V @ 1 mA, ≈ 0.66 V @ 10 mA, VRRM 50/100 V) */
+  const diodeSi=junction({Is:7e-9,n:1.8,Vb:75,Ib:1e-3,nb:0.5});
+  /* 1N4733A Zener: VZ = 5.1 V @ IZT 49 mA (≈4.8 V @ 1 mA, soft knee of a 5 V zener, ZZT within 7 Ω); forward ≈ 0.68 V @ 1 mA */
+  const zener=junction({Is:4e-14,n:1.1,Vb:4.80,Ib:1e-3,nb:0.065,Rs:2});
+  /* 1N34A-class germanium point-contact diode: ≈0.25 V @ 1 mA, large series resistance, µA reverse leakage */
+  const diodeGe=junction({Is:1.5e-6,n:1.4,Rs:25,gl:2e-7,Vb:60,Ib:1e-4,nb:1});
+  /* 5 mm green LED (GaP): ≈1.8 V @ 1 mA, ≈2.1 V @ 20 mA; reverse breakdown well above 5 V */
+  const led=junction({Is:1e-18,n:2.0,Rs:10,Vb:15,Ib:1e-4,nb:0.3});
+  const MODELS={si:diodeSi,zener,ge:diodeGe,led};
   function uf(n){const p=[...Array(n).keys()];const f=x=>p[x]===x?x:(p[x]=f(p[x]));return {f,u:(a,b)=>{a=f(a);b=f(b);if(a!==b)p[a]=b}}}
   function lsolve(A,b,n){for(let c=0;c<n;c++){let m=c;for(let r=c+1;r<n;r++)if(Math.abs(A[r*n+c])>Math.abs(A[m*n+c]))m=r;if(Math.abs(A[m*n+c])<1e-30)continue;
     if(m!==c){for(let k=0;k<n;k++){const t=A[c*n+k];A[c*n+k]=A[m*n+k];A[m*n+k]=t}const t=b[c];b[c]=b[m];b[m]=t}
@@ -81,5 +95,5 @@ const SOLVER=(()=>{
         if(e.t==='XS'&&c===cycles-1){const v=e.s*e.vp*Math.sin(2*Math.PI*e.f*t);imax=Math.max(imax,Math.abs((V(e.a)-V(e.b)-v)/e.r))}});
       if(c===cycles-1){const kk=(k+1)%NS;v1[kk]=ck.p1==null?NaN:V(ck.p1);v2[kk]=ck.p2==null?NaN:V(ck.p2);X[kk]=Float64Array.from(x);r.Is.forEach((I,u)=>{Iabs[u]+=Math.abs(I)/NS;if(r.ccs[u])ccs[u]=true})}}
     return {kind:'tran',f,v1,v2,X,imax,capMin,has1:ck.p1!=null,has2:ck.p2!=null,Idc:Iabs,ccs}}
-  return {VT,dexp,diodeSi,zener,uf,lsolve,newton,point,sweep,interp,simulate,ccs,NS};
+  return {VT,dexp,junction,MODELS,diodeSi,zener,diodeGe,led,uf,lsolve,newton,point,sweep,interp,simulate,ccs,NS};
 })();
