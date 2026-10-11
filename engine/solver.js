@@ -8,6 +8,7 @@
      XS  {a,b,s,vp,f,r}      transformer winding, s·vp·sin(2πft), series r
      C   {a,b,c}             capacitor (backward Euler in transient)
      CCS {a,b,i0,vmax}       meter test source (Ω / diode / continuity): pushes i0 out of a, collapses as Va-Vb -> vmax
+     BJT {c,b,e,m}           npn transistor, m(vbe,vbc) -> [iC, iB]
      FET {d,g,s,m}           enhancement n-MOSFET, m.ids(vgs,vds) -> drain current (d -> s)
      OA  {p,m_,o,vp,vn,y,m}  op amp macro-model (pins +, −, out, V+, V−; y = internal node of the gain stage; m = model) */
 const SOLVER=(()=>{
@@ -47,6 +48,13 @@ const SOLVER=(()=>{
   function mosfet(m){const nv=2*m.n*VT;const veff=v=>{const a=(v-m.Vt)/nv;return a>40?v-m.Vt:nv*Math.log1p(Math.exp(a))};
     const f=(vgs,vds)=>{if(vds<0)return -f(vgs-vds,-vds);const ve=veff(vgs),cl=1+m.lam*vds;return vds<ve?m.K*(ve*vds-vds*vds/2)*cl:m.K/2*ve*ve*cl};
     f.model=m;return f}
+  /* npn BJT, Ebers–Moll transport model with the Early effect:
+     iCC = IS(e^(vBE/VT) − 1), iEC = IS(e^(vBC/VT) − 1); iC = (iCC − iEC)(1 + vCE/VA) − iEC/βR; iB = iCC/βF + iEC/βR.
+     BD137 (ON Semi BD135G/137G/139G datasheet): hFE ≈ 100–150 from 1 mA to 0.1 A (130 used), VBE(on) ≈ 0.6 V at 1 mA,
+     βR ≈ 5, VA ≈ 100 V. */
+  function bjt(m){const e=v=>{const a=v/VT;if(a>40){const E=Math.exp(40);return E*(1+a-40)}return Math.exp(a)};
+    const f=(vbe,vbc)=>{const icc=m.Is*(e(vbe)-1),iec=m.Is*(e(vbc)-1);return [(icc-iec)*(1+(vbe-vbc)/m.VA)-iec/m.Br,icc/m.Bf+iec/m.Br]};f.model=m;return f}
+  MODELS.bd137=bjt({Is:8e-14,Bf:130,Br:5,VA:100});
   MODELS.irf620=mosfet({K:0.18,Vt:3.0,n:1.5,lam:0.02});
   const xexp=a=>{if(a>40){const E=Math.exp(40);return [E*(1+a-40),E]}const e=Math.exp(a);return [e,e]};
   function uf(n){const p=[...Array(n).keys()];const f=x=>p[x]===x?x:(p[x]=f(p[x]));return {f,u:(a,b)=>{a=f(a);b=f(b);if(a!==b)p[a]=b}}}
@@ -76,6 +84,12 @@ const SOLVER=(()=>{
         else if(e.t==='C'){if(ctx.dt){const g=e.c/ctx.dt;st(e.a,e.b,g*(V(e.a)-V(e.b)-ctx.vprev[ei]),g)}}
         else if(e.t==='CCS'){const [i,g]=ccs(e,V(e.a)-V(e.b));st(e.a,e.b,-i,g)}
         else if(e.t==='OA')stampOA(e,V,F,A,n,st,ctx,ei);
+        else if(e.t==='BJT'){const vb=V(e.b),vc=V(e.c),ve=V(e.e),h=1e-7;const [ic,ib]=e.m(vb-ve,vb-vc);
+          const d1=e.m(vb-ve+h,vb-vc),d2=e.m(vb-ve,vb-vc+h);const J=(r,c,g)=>{if(r>=0&&c>=0)A[r*n+c]+=g};
+          /* partial derivatives of iC, iB wrt vBE (x) and vBC (y); node voltages: vb → x,y; vc → −y; ve → −x */
+          const cx=(d1[0]-ic)/h,cy=(d2[0]-ic)/h,bx=(d1[1]-ib)/h,by=(d2[1]-ib)/h;
+          const row=(r,i,gx,gy)=>{if(r<0)return;F[r]+=i;J(r,e.b,gx+gy);J(r,e.c,-gy);J(r,e.e,-gx)};
+          row(e.c,ic,cx,cy);row(e.b,ib,bx,by);row(e.e,-(ic+ib),-(cx+bx),-(cy+by))}
         else if(e.t==='FET'){const vg=V(e.g),vd=V(e.d),vs=V(e.s),h=1e-6;const i=e.m(vg-vs,vd-vs),gm=(e.m(vg-vs+h,vd-vs)-i)/h,gd=(e.m(vg-vs,vd-vs+h)-i)/h;
           const J=(r,c,g)=>{if(r>=0&&c>=0)A[r*n+c]+=g};
           if(e.d>=0){F[e.d]+=i;J(e.d,e.g,gm);J(e.d,e.d,gd);J(e.d,e.s,-gm-gd)}if(e.s>=0){F[e.s]-=i;J(e.s,e.g,-gm);J(e.s,e.d,-gd);J(e.s,e.s,gm+gd)}}

@@ -8,6 +8,8 @@ const P0=opt.at,W=520,H=250;const knob=ENGINE.knob;
 const UX=[14,264];                                  // unit panel x (local)
 const TERM=[{p:{x:140,y:212},m:{x:100,y:212}},{p:{x:340,y:212},m:{x:300,y:212}}];
 const SIDE=['L','R'];
+/* knob resolution per press: the real COARSE / FINE pots are continuous; opt.res lets an experiment use finer steps */
+const RES=Object.assign({c:1,f:0.01},opt.res);
 const abs=p=>({x:P0.x+p.x,y:P0.y+p.y});
 function fresh(){const d={pwr:false,u:[{v:12,ilim:0.5,on:false},{v:5,ilim:1,on:false}]};if(opt.prev)opt.prev(d);return d}
 const disp=(x,y,txt,on)=>`<rect x="${x}" y="${y}" width="104" height="40" rx="3" fill="#1a0707"/>`+(on?T(x+98,y+31,txt,{size:25,fill:'#ff3b2a',a:'end',w:600}):T(x+98,y+31,'88.88',{size:25,fill:'#2a1010',a:'end',w:600}));
@@ -43,8 +45,8 @@ function key(k){const d=RT.S.psu;
   if(k==='PWR'){d.pwr=!d.pwr;RT.dirty=true;return}
   const m=k.match(/^([LR])(VC|VF|I|ON)([+-]?)$/);if(!m)return;const U=d.u[m[1]==='L'?0:1];const dir=m[3]==='+'?1:-1;
   if(m[2]==='ON'){U.on=!U.on;RT.dirty=true;return}
-  if(m[2]==='VC')U.v=clamp(Math.round((U.v+dir*1)*100)/100,0,30);
-  if(m[2]==='VF')U.v=clamp(Math.round((U.v+dir*0.01)*100)/100,0,30);
+  if(m[2]==='VC')U.v=clamp(Math.round((U.v+dir*RES.c)*1000)/1000,0,30);
+  if(m[2]==='VF')U.v=clamp(Math.round((U.v+dir*RES.f)*1000)/1000,0,30);
   if(m[2]==='I')U.ilim=clamp(Math.round((U.ilim+dir*0.01)*100)/100,0,2);
   RT.dirty=true}
 const LEADS=[{k:'Lm',label:'L −',t:TERM[0].m},{k:'Lp',label:'L +',t:TERM[0].p},{k:'Rm',label:'R −',t:TERM[1].m},{k:'Rp',label:'R +',t:TERM[1].p}];

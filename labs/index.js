@@ -15,7 +15,7 @@ const LABS=[
     {num:6,en:'SPICE Simulation I',ar:'محاكاة SPICE (١)',bench:['pc']},
     {num:7,en:'Terminal Characteristics of Enhancement N-MOSFET',ar:'خصائص N-MOSFET',bench:['psu','dmm'],built:true},
     {num:8,en:'SPICE Simulation II · MOS Switching Circuits',ar:'محاكاة SPICE (٢) · دوائر التبديل',bench:['pc']},
-    {num:9,en:'The BJT CE Circuit with Emphasis on Switching',ar:'ترانزستور BJT كمفتاح',bench:['gen','psu','scope','dmm','dbox']},
+    {num:9,en:'The BJT CE Circuit with Emphasis on Switching',ar:'ترانزستور BJT كمفتاح',bench:['gen','psu','scope','dmm','dbox'],built:true},
     {num:10,en:'The Common Emitter Amplifier',ar:'مكبّر الباعث المشترك',bench:['gen','psu','scope','dmm']}
   ]}
 ];

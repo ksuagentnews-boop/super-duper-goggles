@@ -97,7 +97,8 @@ function recompute(){
   RT.TB.ck=ck;RT.dirty=false;
   INST.forEach(i=>i.measure&&i.measure());
   /* LEDs glow while they carry forward current */
-  S.parts.forEach(p=>{if(PARTS[p.type].t==='LED'){const i=partI(p);p.lit=i>4e-4?Math.min(1,0.35+i/0.02):0}});
+  S.parts.forEach(p=>{if(PARTS[p.type].t==='LED'){p.iw=partIw(p);p.lit=litOf(p.iw.reduce((a,b)=>a+b,0)/p.iw.length)}});
+  blinkTimer();
 }
 /* node voltage over one period (N samples, phase 0…2π) */
 function samples(net,N=240){const TB=RT.TB;const out=new Float64Array(N);if(net==null||net<0||!TB)return out;
@@ -132,6 +133,17 @@ function partNets(p){return ends(p).map(RT.netOf)}
 /* net of a named pin of a multi-pin part */
 function pinNet(p,role){const k=PARTS[p.type].pins.findIndex(q=>q.role===role||q.n===role);return k<0?null:RT.netOf(pinNodes(p)[k])}
 function partV(p){if(MULTI(p.type))return 0;const [a,b]=partNets(p);return nodeV(a)-nodeV(b)}
+/* LED brightness from its current; with a slow generator (< 20 Hz) it follows the waveform in real time
+   (blinking), above that the eye only sees the average */
+const litOf=i=>i>4e-4?Math.min(1,0.35+i/0.02):0;
+function partIw(p){const [a,b]=partNets(p);const N=60;const out=new Array(N).fill(0);if(!live(a)&&a!==-1||!live(b)&&b!==-1)return out;const d=PARTS[p.type];const f=SOLVER.MODELS[d.model||'led'];
+  const va=samples(a,N),vb=samples(b,N);for(let k=0;k<N;k++)out[k]=f((a===-1?0:va[k])-(b===-1?0:vb[k]))[0];return out}
+const slowF=()=>{const g=byKey.gen;return g&&g.on()&&RT.TB&&RT.TB.kind!=='tran'&&RT.S.gen.freq<20?RT.S.gen.freq:0};
+function litNow(p){const f=slowF();if(!f||!p.iw)return p.lit;const ph=((performance.now()/1000*f)%1+1)%1;return litOf(p.iw[Math.floor(ph*p.iw.length)%p.iw.length])}
+let blinkT=null;function blinkTimer(){const need=slowF()&&RT.S.parts.some(p=>p.iw&&Math.max(...p.iw)-Math.min(...p.iw)>4e-4);
+  if(need&&!blinkT)blinkT=setInterval(()=>{if(!BENCH.sim||BENCH.sim.RT!==RT){clearInterval(blinkT);blinkT=null;return}if(!drag)$('Lparts').innerHTML=partsSVG()},90);
+  if(!need&&blinkT){clearInterval(blinkT);blinkT=null}}
+RT.litNow=litNow;
 function partI(p){const d=PARTS[p.type];if(d.pins)return 0;const [a,b]=partNets(p);if(!live(a)&&a!==-1||!live(b)&&b!==-1)return 0;const va=samples(a,60),vb=samples(b,60);let s=0;
   const f=d.t==='R'?(v=>v*(d.g||1/d.r)):['D','Z','GE','LED'].includes(d.t)?(v=>SOLVER.MODELS[d.model||{D:'si',Z:'zener',GE:'ge',LED:'led'}[d.t]](v)[0]):()=>0;
   for(let k=0;k<60;k++)s+=f((a===-1?0:va[k])-(b===-1?0:vb[k]));return s/60}
@@ -194,7 +206,7 @@ function partsSVG(){const S=RT.S;let s='';
   S.parts.forEach(p=>{if(drag&&drag.kind==='move'&&drag.id===p.id&&drag.active)return;
     if(MULTI(p.type)){const c=nodeC(p.n);s+=`<g transform="translate(${c.x} ${c.y})" data-k="part:${p.id}" style="cursor:grab">${pkgBody(p.type,S.sel===p.id)}</g>`;return}
     const a=holeP(p.a,dirHole(p.a,p.b)),b=holeP(p.b,dirHole(p.b,p.a));const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;const ang=Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI;const L=Math.hypot(b.x-a.x,b.y-a.y);
-    s+=`<g transform="translate(${mx} ${my}) rotate(${ang})" data-k="part:${p.id}" style="cursor:grab">${partBody(p.type,L,S.sel===p.id,p.lit)}</g>`;
+    s+=`<g transform="translate(${mx} ${my}) rotate(${ang})" data-k="part:${p.id}" style="cursor:grab">${partBody(p.type,L,S.sel===p.id,litNow(p))}</g>`;
     if(p.dead)s+=T(mx,my+5,'💥',{size:20,a:'middle'});
     const lab=PARTS[p.type].lab;if(lab){const vert=Math.abs(ang)>45;s+=T(vert?mx+20:mx,vert?my+4:my-17,lab,{size:9.5,fill:'#22302f',a:vert?'start':'middle',w:600})}});
   return s}
@@ -340,4 +352,4 @@ BENCH.register({
 });
 fresh();render();
 };
-ENGINE.NAMES={gen:['PeakTech 4124','مولّد الإشارات'],psu:['TTi EL302RD','مصدر الجهد المستمر (وحدتين)'],sc:['GW Instek GDS-1104B','راسم الإشارة'],dmm:['MCP MT3805','الملتيميتر'],xf:['Center-tapped Transformer','المحوّل'],board:['Plug-in panel','لوحة التوصيل']};
+ENGINE.NAMES={gen:['PeakTech 4124','مولّد الإشارات'],psu:['TTi EL302RD','مصدر الجهد المستمر (وحدتين)'],sc:['GW Instek GDS-1104B','راسم الإشارة'],dmm:['MCP MT3805','الملتيميتر'],xf:['Center-tapped Transformer','المحوّل'],dbox:['Decade resistance boxes','صناديق المقاومات'],board:['Plug-in panel','لوحة التوصيل']};
