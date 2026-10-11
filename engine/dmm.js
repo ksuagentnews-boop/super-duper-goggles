@@ -2,7 +2,7 @@
    Keys: ·))) ▶| Hz ⊣⊢ Ω ACV DCV ACI DCI · RANGE+ / AUTO (EXIT) / RANGE− · HOLD RCL STO MAX MIN REL Δ AC+DC SET RST.
    Jacks: Ω 4-wire SENSE (HI/LO), V·Ω·▶|·Hz (HI), COM (LO), A (10 A fused). The red lead sits in HI or in A.
    Readings come from the circuit solver: V modes load the circuit with 10 MΩ; Ω / ▶| / ·))) inject a test current
-   (▶| = 1 mA, 2.8 V open-circuit, 0–2 V range: an open or reverse-biased junction reads OVL-D as on the lab meter); A is a 10 mΩ shunt.
+   (▶| = 1 mA, 2.8 V open-circuit, 0–2 V range: an open or reverse-biased junction reads OVL.D as on the lab meter); A is a 10 mΩ shunt.
    State in S.dmm. Leads: mh (red, HI or A jack), ml (black, COM). */
 ENGINE.dmm=function(RT,opt){
 const M0=opt.at,W=480,H=232;
@@ -58,7 +58,7 @@ function fmt(val,r){const fs=r[0]*r[2];const n=val*r[2];const id=Math.floor(Math
 function display(){const d=RT.S.dmm;const R=RANGES[d.fn];const r=R[clamp(RD.rng,0,R.length-1)];
   if(d.rcl&&d.sto)return {main:d.sto.main,unit:d.sto.unit,r};
   if(d.hold)return d.hold;
-  if(RD.ol||RD.val==null&&d.fn!=='HZ')return RD.ol?{main:d.fn==='DIODE'?'OVL-D':'OVL',unit:'',r}:{main:fmt(0,r),unit:r[3],r};
+  if(RD.ol||RD.val==null&&d.fn!=='HZ')return RD.ol?{main:d.fn==='DIODE'?'OVL.D':'OVL',unit:'',r}:{main:fmt(0,r),unit:r[3],r};
   let v=RD.val;if(d.mm!=null&&d.mmv!=null)v=d.mmv;if(d.rel!=null)v-=d.rel;
   return {main:fmt(v,r),unit:r[3],r}}
 

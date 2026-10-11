@@ -12,6 +12,13 @@ async function hall(page, vp) {
   ok(info.length === 10, '10 tables in the hall');
   ok(info.slice(0, 5).every((b, i) => b.num === i + 1) && info.slice(5).every((b, i) => b.num === i + 6), 'row 1 = Exp 1–5, row 2 = Exp 6–10');
   ok(info.slice(0, 5).every(b => b.z === info[0].z) && info[5].z > info[0].z && info.slice(0, 5).every((b, i, a) => !i || b.x > a[i - 1].x), 'two rows, left to right');
+  ok(await page.evaluate(() => HALL.debug.cur().kind === 'room' && HALL.debug.cur().lab === 'ee312'), 'with one lab the site opens straight into its room');
+  ok(await page.evaluate(() => HALL.debug.doors().some(d => d.label === 'EXIT')), 'the room has an exit door to the corridor');
+  const corr = await page.evaluate(() => { HALL.debug.show('corridor', null, 'ee312'); const d = HALL.debug.doors(); return { n: d.length, labels: d.map(x => x.label), labs: REGISTRY.labs.map(l => l.code) }; });
+  ok(corr.n === corr.labs.length && corr.labels.join() === corr.labs.join(), `corridor has one door per registered lab (${corr.labels})`);
+  await page.waitForTimeout(150);
+  await page.evaluate(() => { const D = HALL.debug.doors().find(d => d.label === 'EE312'); D.go(); });
+  ok(await page.evaluate(() => HALL.debug.cur().lab === 'ee312' && HALL.debug.benches().length === 10), 'entering the EE312 door loads its room with its tables');
   await page.click('#quickBtn');
   ok(await page.$eval('#quick', e => !e.hidden && e.querySelectorAll('[data-lab]').length === 1), 'quick access level 1 lists the labs');
   await page.click('#quick [data-lab="ee312"]');
@@ -109,12 +116,12 @@ async function instruments(page, vp) {
   const rd = () => page.evaluate(() => { const r = BENCH.sim.RT.inst.dmm.reading(); return r.shown ? (r.shown.main.trim() + ' ' + r.shown.unit) : 'off'; });
   const num = async () => parseFloat((await rd()).replace(/^\s+/, ''));
   await H.focus('dmm'); await H.key('m:PWR'); ok((await rd()).endsWith('V'), 'DMM powers up in DCV: ' + await rd());
-  await H.key('m:DIODE'); ok((await rd()).startsWith('OVL-D'), 'diode test, open leads: ' + await rd());
+  await H.key('m:DIODE'); ok((await rd()).startsWith('OVL.D'), 'diode test, open leads: ' + await rd());
   await H.focus('board'); await H.place('D4001', 0, 1); await H.lead('mh', 0); await H.lead('ml', 1);
   const vf = await num(); ok(vf > 0.45 && vf < 0.65, `1N4001 forward (red on anode): ${await rd()}`);
-  await H.flip(0, 1); ok((await rd()).startsWith('OVL-D'), '1N4001 reversed: ' + await rd());
+  await H.flip(0, 1); ok((await rd()).startsWith('OVL.D'), '1N4001 reversed: ' + await rd());
   await H.del(0, 1); await H.place('Z4733', 0, 1); ok((await num()) > 0.45, 'Zener forward: ' + await rd());
-  await H.flip(0, 1); ok((await rd()).startsWith('OVL-D'), 'Zener reversed (VZ above the test voltage): ' + await rd());
+  await H.flip(0, 1); ok((await rd()).startsWith('OVL.D'), 'Zener reversed (VZ above the test voltage): ' + await rd());
   await H.del(0, 1); await H.place('R100', 0, 1); await H.focus('dmm'); await H.key('m:OHM');
   ok(Math.abs((await num()) - 100) < 0.01 && (await rd()).endsWith('Ω'), '100 Ω reads ' + await rd());
   // supply: unit L, 5 V / 0.05 A, RS = 100 Ω in series with a forward 1N4001
