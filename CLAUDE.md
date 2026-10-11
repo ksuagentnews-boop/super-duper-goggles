@@ -51,11 +51,13 @@ A static website (GitHub Pages, no server, no login) that simulates the EE depar
 
 ### The department corridor, ordered by study level (approved by the user)
 - The site link opens in the **corridor** (not inside a lab). The student stands at its entrance looking down it.
-- Along the corridor, **hanging ceiling signs mark the levels**, spaced apart, in this order: `المستوى الخامس · Level 5` → `المستوى السادس · Level 6` → `المستوى السابع · Level 7` → `المستوى الثامن · Level 8` → `الاختيارية · Electives`.
+- Along the corridor, **hanging ceiling signs mark the levels**, spaced apart, in this order: `المستوى الخامس · Level 5` → `المستوى السادس · Level 6` → `المستوى السابع · Level 7` → `المستوى الثامن · Level 8`.
 - After each level sign come the doors of that level's labs, **facing each other** on the left and right walls (one lab = one door; with an odd count the last door has no opposite). Each door has its own sign above it: code + English name + Arabic name, e.g. `EE312 · Basic Electronics Lab`.
+- **Electives courtyard:** after Level 8 the corridor ends in a wide gateway with the sign `الاختيارية · Electives` that opens into a **large square courtyard (باحة)**, because the electives have many doors. The elective doors are spread evenly over its three walls — left, front, right (e.g. 7 doors → 2 left, 3 front, 2 right; 6 → 2/2/2; 8 → 3/2/3) — each with its own sign. The courtyard grows with the number of electives (computed from the registry).
+- In the middle of the courtyard stands a **"عد إلى المقدمة"** stand/button: tapping it takes the student back to the corridor entrance (short fade, no long walk).
 - Labs not built yet: closed door with a "قريباً" plate; clicking/tapping it shows a toast, it does not open. Built labs: the door opens into the room; the room's exit door returns to the same spot in the corridor.
 - The corridor is generated from the registry only: every entry has `level` (5, 6, 7, 8 or `'elective'`); the order inside a level is the order in `labs/index.js`. Adding a lab later never changes corridor code.
-- Quick access (الوصول السريع) follows the same structure: level → lab → experiment; unbuilt labs/experiments greyed out with "قريباً".
+- Quick access (الوصول السريع) follows the same structure: **level → its labs → experiment** (e.g. المستوى الخامس shows one lab, EE210; المستوى السادس shows two, EE205 and EE312; الاختيارية shows the seven electives). Choosing a lab without an experiment jumps to its door; choosing an experiment goes straight to its table and sits. Unbuilt labs/experiments greyed out with "قريباً".
 - Keep the corridor walk short enough on phone (tap-to-walk works along it; quick access is the shortcut).
 - The department's labs (all go into the registry now; only EE312 is built):
 
@@ -79,7 +81,7 @@ A static website (GitHub Pages, no server, no login) that simulates the EE depar
 
 ## Quick access (الوصول السريع)
 - A "الوصول السريع" button is always visible in the hall (and reachable from the bench).
-- It opens a two-level menu: first the list of labs (for now only `EE312`; other labs appear later from the registry), then the selected lab's experiments by number and name (Exp 1, Exp 2, …).
+- It opens a three-level menu: level (المستوى الخامس … الثامن, الاختيارية) → that level's labs → the selected lab's experiments by number and name (Exp 1, Exp 2, …).
 - Choosing an experiment takes the student straight to that table and plays the sit-down animation (no walking), then the mode modal.
 - Experiments not built yet are shown greyed out with "قريباً".
 
