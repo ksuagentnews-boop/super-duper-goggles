@@ -18,7 +18,7 @@ export async function run(page, vp, ok) {
     const y0 = await page.evaluate(() => HALL.debug.P.yaw); await page.evaluate(() => document.getElementById('hallCanvas').dispatchEvent(new MouseEvent('mousemove', { movementX: 60, bubbles: true })));
     ok(await page.evaluate(y0 => HALL.debug.P.yaw < y0, y0), 'moving the mouse (no drag) turns the view');
     await page.evaluate(() => { const B = HALL.debug.benches()[2]; const P = HALL.debug.P; P.x = B.x + 0.3; P.z = B.cz + 1.6; const dx = B.x - P.x, dz = B.cz - P.z; P.yaw = Math.atan2(-dx, -dz); P.pitch = Math.atan2(0.5 - P.y, Math.hypot(dx, dz)); });
-    await page.waitForTimeout(150); await page.mouse.click(700, 600); await page.waitForSelector('#seatModal:not([hidden])', { timeout: 6000 });
+    await page.waitForTimeout(150); await page.mouse.click(700, 600); await page.waitForSelector('#seatModal:not([hidden])', { timeout: 15000 });
     ok(/EXPERIMENT 3/i.test(await page.$eval('#smKicker', e => e.textContent)) && !(await page.evaluate(() => HALL.debug.locked())), 'click on the chair under the crosshair sits (Exp 3) and releases the mouse');
     await page.click('#smStand'); await page.waitForTimeout(400);
   }

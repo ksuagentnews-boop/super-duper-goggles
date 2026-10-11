@@ -57,7 +57,7 @@ const HALL=(()=>{
   };
   function instrument(kind,w,h,d,x,z,top){const side=std(kind==='dmm'||kind==='dbox'?'#2f3538':kind==='psu'?'#d9d4c8':'#d6dde0',{roughness:.55}),f=std('#fff',{map:tex(512,Math.round(512*h/w),(g,W,H)=>FACES[kind](g,W,H)),roughness:.5});
     const sc=kind==='xf'?std('#6e3b2a'):side;return boxM(w,h,d,[sc,sc,sc,sc,f,sc],x,top+h/2,z)}
-  const SIZE={gen:[0.44,0.2,0.3],psu:[0.42,0.2,0.3],scope:[0.5,0.27,0.3],dmm:[0.32,0.13,0.28],xf:[0.46,0.3,0.34],dbox:[0.24,0.11,0.17]};
+  const SIZE={gen:[0.44,0.2,0.3],psu:[0.42,0.2,0.3],scope:[0.54,0.27,0.3],dmm:[0.32,0.13,0.28],xf:[0.46,0.3,0.34],dbox:[0.24,0.11,0.17]};
   function boardTex(){return tex(512,340,(g,W,H)=>{g.fillStyle='#e6eae8';g.fillRect(0,0,W,H);for(let i=0;i<35;i++){const cx=40+(i%7)*72,cy=40+Math.floor(i/7)*65;g.fillStyle='#d7ddda';rr(g,cx-26,cy-24,52,48,8);g.fill();g.fillStyle='#2f3739';for(let h=0;h<9;h++){g.beginPath();g.arc(cx+((h%3)-1)*14,cy+(Math.floor(h/3)-1)*13,3.2,0,7);g.fill()}}})}
   function sign(e){const L=e.lab;return tex(1024,300,(g,W,H)=>{g.fillStyle=e.built?'#2c7a6b':'#8fa29c';rr(g,8,8,W-16,H-16,40);g.fill();g.fillStyle='#fff';g.textAlign='center';g.font=`600 96px ${MO}`;g.fillText(`Exp ${e.num}`,W/2,118);
     let fs=44;g.font=`500 ${fs}px ${MO}`;while(g.measureText(e.en).width>W-90&&fs>24){fs-=2;g.font=`500 ${fs}px ${MO}`}g.fillStyle='#e6f3ef';g.fillText(e.en,W/2,186);

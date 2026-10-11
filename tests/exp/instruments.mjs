@@ -34,6 +34,20 @@ export async function run(page, vp, ok) {
   const vd = await num(); ok(vd > 0.66 && vd < 0.78, `VD at ≈43 mA: ${await rd()}`);
   await H.key('p:LI-', 3); s = await page.evaluate(() => BENCH.sim.RT.psuStat(0));
   ok(s.cc && Math.abs(s.i - 0.02) < 1e-6 && s.v < 5, `CC at 0.020 A: V = ${s.v.toFixed(2)} V, CC lamp on`);
+  // overview: controls, parts and leads work without zooming; a tap on a device body zooms; the side parts box folds
+  await page.evaluate(() => BENCH.back()); await page.waitForTimeout(500);
+  const view = () => page.evaluate(() => BENCH.view);
+  if (vp === 'desktop') { const c = await page.$eval('#bench [data-k="p:LON"]', e => { const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
+    await page.mouse.move(c[0], c[1]); await page.waitForTimeout(60); ok(await page.evaluate(() => !!document.querySelector('#Lhl2 rect')) && (await view()) === 'ov', 'overview: hovering a control outlines it (no click)'); }
+  await H.key('p:LON'); ok((await view()) === 'ov' && !(await page.evaluate(() => BENCH.sim.RT.S.psu.u[0].on)), 'overview: a supply key works at once and does not zoom');
+  ok(await page.$eval('#drawer', e => e.offsetWidth > 60 && getComputedStyle(e).display !== 'none'), 'side parts box is open next to the board');
+  await H.place('R100', 30, 31); ok((await view()) === 'ov' && await page.evaluate(() => BENCH.sim.RT.S.parts.some(p => p.a === 30 && p.b === 31)), 'overview: placing a part works without zooming');
+  await H.lead('mh', 30); ok((await view()) === 'ov' && await page.evaluate(() => BENCH.sim.RT.S.leads.mh.node === 30), 'overview: moving a lead works without zooming');
+  const rg = await page.evaluate(() => BENCH.sim.regions.dmm); await H.tap(rg[0] + rg[2] * 0.5, rg[1] + 8); await page.waitForTimeout(500);
+  ok((await view()) === 'dmm', 'tapping the DMM body zooms on it');
+  await page.evaluate(() => BENCH.back()); await page.waitForTimeout(300);
+  await page.click('#dClose'); ok(await page.$eval('#drawer', e => e.offsetWidth < 50), 'the arrow folds the parts box');
+  await page.click('#dClose'); ok(await page.$eval('#drawer', e => e.offsetWidth > 60), 'and opens it again');
   await page.evaluate(() => { if (window.__orig) EXP_DEFS['ee312/exp1'] = window.__orig; else delete EXP_DEFS['ee312/exp1']; }); await page.click('#bStand'); await page.waitForTimeout(400);
 }
 

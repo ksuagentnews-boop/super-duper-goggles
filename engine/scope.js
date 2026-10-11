@@ -4,11 +4,14 @@
    and how many BNC probe cables lie on this table (default 2). */
 ENGINE.scope=function(RT,opt){
 const C0=opt.at;
-const COLX=[405,465,525,585];
-const SC_BNC=COLX.map(x=>({x:C0.x+x,y:C0.y+352}));
+/* panel layout after the real GDS-1104B: LCD + soft keys on the left; VARIABLE, function keys, Autoset column,
+   HORIZONTAL row, four VERTICAL columns (POSITION / CH / SCALE) with Math·Ref·Bus, TRIGGER column; POWER and CH1–CH4 BNCs in the bottom strip */
+const COLX=[466,540,670,744];
+const SX=14,SY=26;                                   // where the screen's own coordinates (12…348 × 26…312) sit on the panel
+const SC_BNC=COLX.map(x=>({x:C0.x+x,y:C0.y+408}));
 const CHC=[CH1,CH2,CH3,CH4],RING=['#d8a800','#1ba9ae','#c2389e','#2f6bd9'],SYM=['①','②','③','④'];
 const NCH=4,ALL=[0,1,2,3];
-const W=690,H=385;
+const W=890,H=440;
 const GX=22,GY=48,GW=300,GH=200,DX=30,DY=25;
 const VI_LIST=['Pk-Pk','Max','Min','Amplitude','High','Low','Mean','Cycle Mean','RMS','Cycle RMS','Area','Cycle Area','ROVShoot','FOVShoot','RPREShoot','FPREShoot'];
 const TIME_LIST=['Frequency','Period','RiseTime','FallTime','+Width','-Width','Duty Cycle','+Pulses','-Pulses','+Edges','-Edges'];
@@ -91,21 +94,43 @@ function sKnob(cx,cy,r,col,key,label,val,center){let s=`<circle cx="${cx}" cy="$
   s+=`<path d="M${cx+r+14} ${cy} l-9 -7 v14 z" fill="#55646a"/><rect x="${cx+r+2}" y="${cy-11}" width="16" height="22" fill="transparent" data-k="${key}+" style="cursor:pointer"/>`;
   s+=T(cx,cy+r+11,label,{size:7.5,fill:'#3b4a50',a:'middle'});if(val)s+=T(cx,cy+r+21,val,{size:8.5,fill:'#1d2a2e',a:'middle',w:600});return s}
 function scopeSVG(){const sc=RT.S.sc;let s=`<g transform="translate(${C0.x} ${C0.y})">`;
-  s+=`<rect width="${W}" height="${H}" rx="14" fill="#dfe5e8" stroke="#9fb0b6" stroke-width="2"/>`+T(16,18,'GW INSTEK  GDS-1104B',{size:11,fill:'#3b4a50',w:600})+T(W-14,18,'Digital Storage Oscilloscope · 100 MHz',{size:8,fill:'#6a7a80',a:'end'});
-  s+=`<rect x="8" y="22" width="344" height="294" rx="5" fill="#0a0f12"/>`+(sc.run||!sc.frozen?screenInner():sc.frozen);
-  for(let i=0;i<5;i++){const y=50+i*44;s+=`<rect x="355" y="${y+2}" width="12" height="32" rx="3" fill="#c7d0d4" stroke="#9fb0b6" data-k="s:S${i}" style="cursor:pointer"/>`}
-  for(let i=0;i<5;i++){const x=16+i*66;s+=`<rect x="${x+4}" y="322" width="54" height="14" rx="3" fill="#c7d0d4" stroke="#9fb0b6" data-k="s:B${i}" style="cursor:pointer"/>`}
-  s+=`<rect x="352" y="322" width="16" height="14" rx="3" fill="#8b979c" data-k="s:MOFF" style="cursor:pointer"/>`+T(360,346,'Menu Off',{size:6.5,fill:'#3b4a50',a:'middle'});
-  const K=[['Measure','Cursor','Acquire'],['Display','Utility','Help'],['Autoset','Run/Stop','Default']];
-  K.forEach((r,ri)=>r.forEach((k,ci)=>{const x=380+ci*60,y=24+ri*26;s+=`<rect x="${x}" y="${y}" width="54" height="20" rx="4" fill="${k==='Autoset'?'#f2b632':'#eef2f3'}" stroke="#9fb0b6" data-k="s:${k}" style="cursor:pointer"/>`+T(x+27,y+14,k,{size:8.8,a:'middle'})}));
-  s+=sKnob(402,122,11,'#7d8c92','s:VAR','VARIABLE')+`<rect x="436" y="112" width="42" height="20" rx="4" fill="#eef2f3" stroke="#9fb0b6" data-k="s:SEL" style="cursor:pointer"/>`+T(457,126,'Select',{size:8.8,a:'middle'});
-  s+=T(650,98,'TRIGGER',{size:7.5,fill:'#3b4a50',a:'middle'})+sKnob(650,124,11,'#ff9f43','s:LV','LEVEL','',true)+`<rect x="631" y="150" width="38" height="15" rx="3" fill="#eef2f3" stroke="#9fb0b6" data-k="s:TRIG" style="cursor:pointer"/>`+T(650,161,'Menu',{size:8,a:'middle'});
-  s+=`<rect x="374" y="168" width="242" height="146" rx="8" fill="none" stroke="#c3ced2"/>`+T(495,178,'VERTICAL',{size:7.5,fill:'#3b4a50',a:'middle'})+T(650,178,'HORIZONTAL',{size:7.5,fill:'#3b4a50',a:'middle'});
-  ALL.forEach(c=>{const x=COLX[c];s+=sKnob(x,200,12,RING[c],`s:P${c+1}P`,'POSITION','',true)+sKnob(x,250,12,RING[c],`s:V${c+1}`,'SCALE',sc.pwr&&sc.ch[c].on?fmtVd(sc.ch[c].vd)+'/div':'');
-    const on=sc.pwr&&sc.ch[c].on;s+=`<rect x="${x-17}" y="292" width="34" height="18" rx="3" fill="${on?CHC[c]:'#eef2f3'}" stroke="${RING[c]}" data-k="s:CH${c+1}" style="cursor:pointer"/>`+T(x,305,'CH'+(c+1),{size:9,a:'middle',w:600})});
-  s+=sKnob(650,200,12,'#7d8c92','s:HP','POSITION','',true)+sKnob(650,250,12,'#7d8c92','s:H','SCALE',sc.pwr?fmtTd(sc.td)+'/div':'');
-  SC_BNC.forEach((p,i)=>{const x=p.x-C0.x,y=p.y-C0.y;s+=`<circle cx="${x}" cy="${y}" r="12" fill="#2c3438" stroke="${RING[i]}" stroke-width="3"/><circle cx="${x}" cy="${y}" r="4" fill="#c8a24a"/>`+T(x,y+26,'CH'+(i+1),{size:8.5,fill:'#3b4a50',a:'middle'})});
-  s+=`<rect x="16" y="346" width="50" height="24" rx="5" fill="#2d3438" data-k="s:PWR" style="cursor:pointer"/>`+T(41,362,'POWER',{size:8.5,fill:'#e8eef0',a:'middle'})+`<circle cx="76" cy="358" r="4" fill="${sc.pwr?'#46e070':'#555'}"/>`;
+  const key=(x,y,w,h,k,l,o={})=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${o.rx??4}" fill="${o.fill||'#f4f6f7'}" stroke="${o.st||'#9aa7ad'}" data-k="s:${k}" style="cursor:pointer"/>`+(l?T(x+w/2,y+h/2+3.5,l,{size:o.size||8.6,fill:o.ink||'#22303a',a:'middle',w:o.w||500}):'');
+  // body, brand
+  s+=`<rect width="${W}" height="${H}" rx="16" fill="#e7ebec" stroke="#a9b6bb" stroke-width="2"/><rect x="6" y="${H-62}" width="${W-12}" height="56" rx="10" fill="#dde2e4"/>`;
+  s+=T(22,30,'GW',{size:15,fill:'#22303a',w:700})+T(46,30,'INSTEK',{size:15,fill:'#22303a',w:700})+T(112,30,'GDS-1104B',{size:13,fill:'#22303a',w:600})+T(206,22,'Digital Storage Oscilloscope',{size:7.5,fill:'#55646a'})+T(206,33,'100 MHz  1 GSa/s',{size:7.5,fill:'#55646a'})+`<rect x="330" y="17" width="34" height="16" rx="3" fill="#d4552a"/>`+T(347,29,'VPO',{size:9,fill:'#fff',a:'middle',w:700});
+  // LCD with bezel
+  s+=`<rect x="${SX+4}" y="${SY+18}" width="358" height="304" rx="9" fill="#262d31"/><g transform="translate(${SX} ${SY})">${sc.run||!sc.frozen?screenInner():sc.frozen}</g>`;
+  // side soft keys (and the Hardcopy key above them), bottom soft keys, Menu Off
+  s+=`<rect x="381" y="${SY+22}" width="20" height="12" rx="3" fill="#59656b" data-k="s:Hard" style="cursor:pointer"/>`;
+  for(let i=0;i<5;i++)s+=`<rect x="380" y="${SY+52+i*44}" width="22" height="32" rx="5" fill="#59656b" stroke="#3a4448" data-k="s:S${i}" style="cursor:pointer"/>`;
+  for(let i=0;i<5;i++)s+=`<rect x="${SX+20+i*66}" y="${SY+326}" width="56" height="15" rx="5" fill="#59656b" stroke="#3a4448" data-k="s:B${i}" style="cursor:pointer"/>`;
+  s+=`<rect x="380" y="${SY+326}" width="22" height="15" rx="4" fill="#8b979c" data-k="s:MOFF" style="cursor:pointer"/>`+T(391,SY+351,'Menu',{size:6.5,fill:'#3b4a50',a:'middle'});
+  // right panel: VARIABLE + Select
+  s+=`<rect x="414" y="16" width="${W-428}" height="${H-86}" rx="10" fill="#edf0f1" stroke="#c6d0d3"/>`;
+  s+=sKnob(452,62,17,'#7d8c92','s:VAR','VARIABLE')+key(431,98,42,17,'SEL','Select');
+  // function keys block
+  s+=`<rect x="496" y="24" width="252" height="70" rx="8" fill="#3a434a"/>`;
+  [['Measure','Cursor','APP','Acquire'],['Display','Help','Save/Recall','Utility']].forEach((r,ri)=>r.forEach((k,ci)=>{s+=key(503+ci*61,31+ri*31,56,23,k,k,{size:k.length>8?7:8.2})}));
+  // Autoset · Run/Stop · Single · Default
+  [['Autoset','#3d86cf','#fff'],['Run/Stop',null],['Single',null],['Default',null]].forEach(([k,f,ink],i)=>{s+=key(800,26+i*29,62,22,k,k,{fill:f||'#f4f6f7',ink:ink||'#22303a',w:f?700:500})});
+  // HORIZONTAL
+  s+=`<rect x="496" y="104" width="292" height="74" rx="8" fill="none" stroke="#c6d0d3"/>`+T(642,116,'HORIZONTAL',{size:7.5,fill:'#3b4a50',a:'middle',w:600});
+  s+=key(506,122,48,17,'Search','Search',{size:7.5})+key(506,146,48,17,'SetClr','Set/Clear',{size:7.5});
+  s+=sKnob(628,148,11,'#7d8c92','s:HP','POSITION','',true)+sKnob(730,146,14,'#7d8c92','s:H','SCALE',sc.pwr?fmtTd(sc.td)+'/div':'');
+  // VERTICAL: POSITION / CH key / SCALE per channel, Math · Ref · Bus in the middle
+  s+=`<rect x="424" y="188" width="364" height="174" rx="8" fill="none" stroke="#c6d0d3"/>`+T(606,200,'VERTICAL',{size:7.5,fill:'#3b4a50',a:'middle',w:600});
+  ALL.forEach(c=>{const x=COLX[c];const on=sc.pwr&&sc.ch[c].on;s+=sKnob(x,224,11,RING[c],`s:P${c+1}P`,'POSITION','',true);
+    s+=`<rect x="${x-18}" y="252" width="36" height="20" rx="5" fill="${on?CHC[c]:'#f4f6f7'}" stroke="${RING[c]}" stroke-width="1.6" data-k="s:CH${c+1}" style="cursor:pointer"/>`+T(x,266,'CH'+(c+1),{size:9,a:'middle',w:600});
+    s+=sKnob(x,308,14,RING[c],`s:V${c+1}`,'SCALE',on?fmtVd(sc.ch[c].vd)+'/div':'')});
+  [['Math','M','#c2389e'],['Ref','R','#3b4a50'],['Bus','B','#2f6bd9']].forEach(([k,l,c],i)=>{const y=226+i*30;s+=`<circle cx="605" cy="${y}" r="10" fill="#f4f6f7" stroke="${c}" stroke-width="1.6" data-k="s:${k}" style="cursor:pointer"/>`+T(605,y+3.5,l,{size:9,fill:c,a:'middle',w:700})});
+  // TRIGGER
+  s+=`<rect x="796" y="188" width="74" height="174" rx="8" fill="none" stroke="#c6d0d3"/>`+T(833,200,'TRIGGER',{size:7.5,fill:'#3b4a50',a:'middle',w:600});
+  s+=sKnob(833,226,11,'#ff9f43','s:LV','LEVEL','',true)+key(811,258,44,18,'TRIG','Menu')+key(811,284,44,18,'Half','50%')+key(811,310,44,22,'Force','Force-Trig',{size:7});
+  // bottom strip: POWER, USB, probe compensation, CH1–CH4 inputs
+  s+=`<rect x="22" y="${H-46}" width="44" height="30" rx="15" fill="#e9eef0" stroke="#7d8c92" stroke-width="2" data-k="s:PWR" style="cursor:pointer"/><circle cx="44" cy="${H-31}" r="8" fill="${sc.pwr?'#cfe9d6':'#c9d1d5'}" stroke="#55646a" pointer-events="none"/>`+T(84,H-28,'POWER',{size:9,fill:'#3b4a50',w:600})+`<circle cx="128" cy="${H-31}" r="3.5" fill="${sc.pwr?'#46e070':'#8a9396'}"/>`;
+  s+=`<rect x="292" y="${H-42}" width="16" height="22" rx="2" fill="#2d3438"/><rect x="296" y="${H-38}" width="8" height="5" fill="#9aa"/>`+T(330,H-34,'2V⎍',{size:7,fill:'#3b4a50'})+`<path d="M330 ${H-24} v8 M346 ${H-24} v8" stroke="#55646a" stroke-width="2"/>`;
+  SC_BNC.forEach((p,i)=>{const x=p.x-C0.x,y=p.y-C0.y;s+=T(x,y-18,'CH'+(i+1),{size:9,fill:'#3b4a50',a:'middle',w:600})+`<circle cx="${x}" cy="${y}" r="13" fill="#c9d1d5" stroke="#5d6a6f" stroke-width="2"/><circle cx="${x}" cy="${y}" r="8" fill="#2c3438" stroke="${RING[i]}" stroke-width="2.5"/><circle cx="${x}" cy="${y}" r="3" fill="#c8a24a"/>`});
+  s+=T(606,H-12,'300V CAT I · 1MΩ // 16pF',{size:6.5,fill:'#55646a',a:'middle'});
   return s+'</g>'}
 let msgTimer=null;function flash(m){RT.S.sc.msg=m;clearTimeout(msgTimer);msgTimer=setTimeout(()=>{RT.S.sc.msg='';RT.render()},1300)}
 function step(arr,v,dir){let i=arr.findIndex(x=>Math.abs(x-v)/v<1e-6);if(i<0)i=arr.findIndex(x=>x>=v);if(i<0)i=arr.length-1;return arr[clamp(i+dir,0,arr.length-1)]}
@@ -137,7 +162,10 @@ function scKey(k){const sc=RT.S.sc;if(k==='PWR'){sc.pwr=!sc.pwr;sc.menu=null;sc.
     case 'SEL':listSelect();return;
     case 'Autoset':autoset();return;
     case 'Default':{const p=sc.pwr;RT.S.sc=scNew();RT.S.sc.pwr=p;flash('Default Setup');return}
-    case 'Run/Stop':sc.run=!sc.run;sc.frozen=sc.run?null:screenInner();return}
+    case 'Run/Stop':sc.run=!sc.run;sc.frozen=sc.run?null:screenInner();return
+    case 'Single':sc.run=false;sc.frozen=screenInner();flash('Single');return
+    case 'Half':{const sg=dsig(sc.trig.src);sc.trig.level=+((sg.max+sg.min)/2).toFixed(3);return}
+    case 'Hard':case 'APP':case 'Save/Recall':case 'Search':case 'SetClr':case 'Math':case 'Ref':case 'Bus':case 'Force':flash('Not needed here');return}
   if(k[0]==='B'){const i=+k[1];
     if(/^ch[1-4]$/.test(sc.menu||'')){const c=+sc.menu[2]-1,ch=sc.ch[c];
       if(i===0)ch.cpl={DC:'AC',AC:'GND',GND:'DC'}[ch.cpl];if(i===1)ch.inv=!ch.inv;if(i===2)ch.bw=ch.bw==='Full'?'20MHz':'Full';if(i===3)ch.exp=ch.exp==='Ground'?'Center':'Ground';
@@ -163,4 +191,4 @@ return {key:'sc',prefix:'s',bnc:SC_BNC,size:[W,H],
   fresh,scNew,chNew,svg:scopeSVG,screenInner,dsig,chVDS,flash,autoset,keyFn:scKey,
   wheel:['P1P','P2P','P3P','P4P','V1','V2','V3','V4','HP','H','VAR','LV']};
 };
-ENGINE.scope.size=[690,385];
+ENGINE.scope.size=[890,440];

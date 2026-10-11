@@ -14,11 +14,26 @@ const RT={S:null,dirty:true,TB:null,PX,MODE,uid:1};
 /* ---------- layout: instruments in a row, lead rack, plug-in panel ---------- */
 const COLS=def.cols||7,ROWS=def.rows||5,P=88,NN=COLS*ROWS,BW=COLS*P,BH=ROWS*P;
 const specs=def.instruments.map(s=>Object.assign({},s));
-{let x=20;specs.forEach(sp=>{const sz=ENGINE[sp.type].size;if(!sp.at)sp.at={x,y:20};x=Math.max(x,sp.at.x+sz[0]+28)})}
+/* compact layout: every instrument goes into the top row, a left column or a right column around the plug-in
+   panel; of all assignments the one that fits the free stage area best (largest overview scale) wins */
+let BX,BY,parkY;{
+  const G=28,sz=specs.map(sp=>ENGINE[sp.type].size),n=specs.length;const st=BENCH.stageSize();
+  const avW=Math.max(300,(st.W||1000)-(def.tray&&def.tray.length?150:20)),avH=Math.max(200,(st.H||700)-52-(BENCH.mode==='manual'?Math.min(150,(st.H||700)*0.22):14));
+  const BBW=BW+80,BBH=BH+104;let best=null;
+  for(let code=0;code<Math.pow(3,n);code++){const side=[];let c=code;for(let i=0;i<n;i++){side.push(c%3);c=Math.floor(c/3)}
+    const T=[],L=[],R=[];side.forEach((v,i)=>(v===0?T:v===1?L:R).push(i));
+    const wSum=a=>a.reduce((t,i)=>t+sz[i][0],0)+Math.max(0,a.length-1)*G,hSum=a=>a.reduce((t,i)=>t+sz[i][1],0)+Math.max(0,a.length-1)*G;
+    const wMax=a=>a.length?Math.max(...a.map(i=>sz[i][0])):0,hMax=a=>a.length?Math.max(...a.map(i=>sz[i][1])):0;
+    const CW=Math.max(BBW,wSum(T)),CH=(T.length?hMax(T)+G:0)+BBH;const lw=wMax(L),rw=wMax(R);
+    const Wt=40+CW+(L.length?lw+G:0)+(R.length?rw+G:0),Ht=40+Math.max(CH,hSum(L),hSum(R));
+    const score=Math.min(avW/Wt,avH/Ht)-(L.length&&!R.length||R.length&&!L.length?0.002:0);if(!best||score>best.score)best={score,T,L,R,CW,CH,lw,rw,Ht}}
+  const {T,L,R,CW,CH,lw,rw,Ht}=best;const x0=20+(L.length?lw+G:0);const cy=(h)=>20+Math.max(0,(Ht-40-h)/2);
+  {let x=x0+(CW-(T.reduce((t,i)=>t+sz[i][0],0)+Math.max(0,T.length-1)*G))/2;const th=T.length?Math.max(...T.map(i=>sz[i][1])):0;T.forEach(i=>{specs[i].at=specs[i].at||{x:Math.round(x),y:20+th-sz[i][1]};x+=sz[i][0]+G})}
+  const top0=20+(T.length?Math.max(...T.map(i=>sz[i][1]))+G:0);
+  const col=(a,xf)=>{let y=cy(a.reduce((t,i)=>t+sz[i][1],0)+Math.max(0,a.length-1)*G);a.forEach(i=>{specs[i].at=specs[i].at||{x:Math.round(xf(i)),y:Math.round(y)};y+=sz[i][1]+G})};
+  col(L,i=>20+lw-sz[i][0]);col(R,i=>x0+CW+G);
+  parkY=top0+34;BY=parkY+64;BX=Math.round(x0+(CW-BW)/2)}
 const INST=specs.map(spec=>ENGINE[spec.type](RT,spec));
-const totalW=Math.max(...INST.map((i,k)=>specs[k].at.x+i.size[0]))+20;
-const instBottom=Math.max(...INST.map((i,k)=>specs[k].at.y+i.size[1]));
-const parkY=instBottom+70,BY=parkY+64,BX=Math.round(Math.max(40,totalW/2-BW/2));
 const nodeC=i=>({x:BX+44+(i%COLS)*P,y:BY+44+Math.floor(i/COLS)*P});
 const holeOff=h=>({x:((h%3)-1)*19,y:(Math.floor(h/3)-1)*19});
 const holeP=(i,h)=>{const c=nodeC(i),o=holeOff(h);return {x:c.x+o.x,y:c.y+o.y}};
@@ -275,7 +290,8 @@ function targetOf(e){let t=e.target;if(t&&t.closest&&t.closest('[data-cab]')){co
 let rep=null;const stopRep=()=>{clearTimeout(rep);clearInterval(rep);rep=null};
 let press=null;
 svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;closeMenu();const el=targetOf(e);const p=pt(e);
-  if(BENCH.view==='ov'){BENCH.ovClick(p);return}
+  /* overview: controls, leads, parts and placing work right here; only a tap on a device body (or an idle node) zooms */
+  if(BENCH.view==='ov'&&!S.armed&&!S.wireMode&&(!el||el.dataset.k.startsWith('node:'))){BENCH.ovClick(p);return}
   showHL(el,true);
   const cab=e.target.closest&&e.target.closest('[data-cab]');const lk=el&&el.dataset.k.startsWith('lead:')?el.dataset.k.slice(5):cab&&cab.dataset.cab;
   if(lk&&e.pointerType!=='mouse'){press={k:lk,x:e.clientX,y:e.clientY,t:setTimeout(()=>{press=null;drag=null;openMenu(lk,e.clientX,e.clientY)},550)}}
@@ -294,7 +310,7 @@ svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;close
   if(/[+-]$/.test(kk)){stopRep();rep=setTimeout(()=>{rep=setInterval(()=>{inst.keyFn(kk);render()},70)},380)}
 });
 svg.addEventListener('pointermove',e=>{if(press&&Math.hypot(e.clientX-press.x,e.clientY-press.y)>8){clearTimeout(press.t);press=null}
-  if(!drag){if(e.pointerType==='mouse'&&BENCH.view!=='ov')showHL(targetOf(e));return}
+  if(!drag){if(e.pointerType==='mouse'){const t=targetOf(e);showHL(t&&!(BENCH.view==='ov'&&t.dataset.k.startsWith('node:')&&!RT.S.armed&&!RT.S.wireMode)?t:null)}return}
   const p=pt(e);drag.x=p.x;drag.y=p.y;if(!drag.active&&Math.hypot(p.x-drag.sx,p.y-drag.sy)>6){drag.active=true;if(drag.kind==='move')RT.S.sel=null}if(drag.active)render(true)});
 function endDrag(){stopRep();if(press){clearTimeout(press.t);press=null}const S=RT.S;if(!drag)return;if(drag.fromTray&&Math.hypot(drag.x-drag.sx,drag.y-drag.sy)<8){S.armed=drag.type;drag=null;BENCH.drawerSync();render(true);return}const d=drag;drag=null;
   if(d.kind==='new'||d.kind==='move'){
@@ -310,11 +326,11 @@ function endDrag(){stopRep();if(press){clearTimeout(press.t);press=null}const S=
 svg.addEventListener('pointerup',e=>{endDrag();if(e.pointerType!=='mouse')setTimeout(()=>showHL(null),220)});
 svg.addEventListener('pointercancel',()=>{stopRep();drag=null;render(true)});
 svg.addEventListener('pointerleave',()=>{stopRep();if(!drag)showHL(null)});
-svg.addEventListener('contextmenu',e=>{e.preventDefault();if(BENCH.view==='ov')return;const cab=e.target.closest&&e.target.closest('[data-cab]');const el=e.target.closest&&e.target.closest('[data-k^="lead:"]');
+svg.addEventListener('contextmenu',e=>{e.preventDefault();const cab=e.target.closest&&e.target.closest('[data-cab]');const el=e.target.closest&&e.target.closest('[data-k^="lead:"]');
   const k=el?el.dataset.k.slice(5):cab&&cab.dataset.cab;if(k)openMenu(k,e.clientX,e.clientY)});
 const WHEEL=INST.filter(i=>i.wheel&&i.wheel.length).map(i=>`${i.prefix}:(${i.wheel.join('|')})`);
 const wheelRe=new RegExp(`^(${WHEEL.join('|')})[c+-]?$`);
-svg.addEventListener('wheel',e=>{if(BENCH.view==='ov')return;const el=targetOf(e);if(!el)return;const k=el.dataset.k;const m=k.match(wheelRe);if(!m)return;e.preventDefault();const base=m[1];const dir=e.deltaY<0?'+':'-';
+svg.addEventListener('wheel',e=>{const el=targetOf(e);if(!el)return;const k=el.dataset.k;const m=k.match(wheelRe);if(!m)return;e.preventDefault();const base=m[1];const dir=e.deltaY<0?'+':'-';
   const inst=byPrefix[base.split(':')[0]];inst.keyFn(base.slice(base.indexOf(':')+1)+dir);render()},{passive:false});
 
 /* white outline on the control the pointer / finger is over */

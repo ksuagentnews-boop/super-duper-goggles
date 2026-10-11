@@ -187,7 +187,7 @@ button.t.on{background:var(--accent);border-color:var(--accent);color:#fff}
   .bag{grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px}
   .bag-item{min-height:50px;padding:4px}
   #stepCard{padding:7px 10px;bottom:8px}
-  #benchView.drawer-open #stepCard{display:none}
+
   #stepCard .num{width:28px;height:28px;font-size:12px}
   #stepCard .t{font-size:13px;line-height:1.55}
   #stepCard .acts{margin-top:4px}
@@ -256,3 +256,25 @@ button.t.on{background:var(--accent);border-color:var(--accent);color:#fff}
 #crosshair{position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;pointer-events:none;z-index:6}
 #crosshair::before,#crosshair::after{content:"";position:absolute;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.45);border-radius:1px}
 #crosshair::before{left:8px;top:0;width:2px;height:18px}#crosshair::after{top:8px;left:0;height:2px;width:18px}
+
+/* ===== parts box: always next to the board (left of the stage); the arrow at its bottom collapses it ===== */
+#bagBtn{display:none !important}
+#drawer{left:8px;right:auto;top:56px;bottom:12px;height:auto;min-height:0;width:128px;transform:none;border:1px solid var(--line);border-radius:14px;box-shadow:0 6px 20px rgba(20,30,28,.12);
+  display:flex;flex-direction:column;padding:8px 6px 6px;transition:width .2s ease}
+#benchView.no-bag #drawer{display:none}
+#drawer .dhead{flex-direction:column;align-items:stretch;gap:2px;margin-bottom:6px;text-align:center}
+#drawer .dhead b{font-size:13px}#drawer .dhead span{font-size:10.5px;white-space:normal;line-height:1.35}
+#drawer .bag{grid-template-columns:1fr;gap:6px;overflow-y:auto;overflow-x:hidden}
+#drawer .bag-item{min-height:52px;padding:4px 2px}#drawer .bag-item svg{width:58px;height:26px}
+#dClose{flex:none;margin-top:6px;border:0;background:var(--panel2);border-radius:8px;padding:5px 0;font:700 14px var(--f-mono);color:var(--accent);cursor:pointer}
+#benchView:not(.drawer-open) #drawer{width:34px;padding:6px 3px}
+#benchView:not(.drawer-open) #drawer .dhead span,#benchView:not(.drawer-open) #drawer .bag{display:none}
+#benchView:not(.drawer-open) #drawer .dhead b{font-size:0}#benchView:not(.drawer-open) #drawer .dhead b::first-letter{font-size:16px}
+#benchView:not(.drawer-open) #drawer{bottom:auto}
+#benchView.drawer-open #stepCard,#benchView #stepCard{bottom:12px}
+#benchView:not(.no-bag) #stepCard{left:calc(50% + 70px);width:min(620px,calc(100% - 170px))}
+#benchView:not(.no-bag):not(.drawer-open) #stepCard{left:calc(50% + 21px);width:min(620px,calc(100% - 66px))}
+@media (max-height:520px),(max-width:700px){
+  #drawer{width:96px;top:50px;bottom:8px;padding:5px 4px 4px}#drawer .dhead span{display:none}
+  #drawer .bag-item{min-height:42px}#drawer .bag-item svg{width:48px;height:22px}#drawer .bag-item small{font-size:9.5px}
+  #benchView:not(.no-bag) #stepCard{left:calc(50% + 52px);width:min(620px,calc(100% - 120px))}}

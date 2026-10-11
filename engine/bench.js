@@ -10,14 +10,14 @@ const BENCH={
       ovHint:$q('#ovHint'),bagBtn:$q('#bagBtn'),bagAr:$q('#bagAr'),drawer:$q('#drawer'),bag:$q('#bag'),dHint:$q('#dHint'),card:$q('#stepCard'),toast:$q('#toast')};
     $q('#zBack').onclick=()=>this.back();
     E.bagBtn.onclick=()=>this.setDrawer(!this.drawer);
-    $q('#dClose').onclick=()=>this.setDrawer(false);
+    $q('#dClose').onclick=()=>this.setDrawer(!this.drawer);
     $q('#bPanelBtn').onclick=()=>this.togglePanel();
     $q('#bPanelClose').onclick=()=>this.togglePanel(false);
     $q('#bReset').onclick=()=>{this.sim.reset();this.done=[];this.sim.render();this.say('بدأت من جديد')};
     $q('#bSwitch').onclick=()=>{this.enter(this.exp,this.mode==='free'?'manual':'free',true)};
     $q('#bQuick').onclick=()=>QUICK.open($q('#bQuick'));
     $q('#bStand').onclick=()=>this.leave();
-    addEventListener('keydown',e=>{if(E.view.hidden)return;if(e.key==='Escape'){if(this.drawer)this.setDrawer(false);else if(this.view!=='ov')this.back()}});
+    addEventListener('keydown',e=>{if(E.view.hidden)return;if(e.key==='Escape'){if(this.view!=='ov')this.back()}});
     addEventListener('resize',()=>{if(!E.view.hidden)this.refit(false)});
     this.panelDefault();
   },
@@ -30,8 +30,10 @@ const BENCH={
     const E=this.el;E.view.hidden=false;
     if(!force&&this.built===exp+'|'+mode){this.refit(false);return}
     if(!EXP_DEFS[exp]){REGISTRY.load(exp).then(()=>this.enter(exp,mode,true)).catch(()=>{this.say('تعذّر تحميل التجربة');this.leave()});return}
-    this.exp=exp;this.mode=mode;this.built=exp+'|'+mode;this.view='ov';this.done=[];this.drawer=false;this.sim=null;
-    E.view.dataset.mode=mode;E.view.classList.remove('drawer-open');
+    this.exp=exp;this.mode=mode;this.built=exp+'|'+mode;this.view='ov';this.done=[];this.sim=null;
+    E.view.dataset.mode=mode;
+    /* the parts box stays open next to the board (its arrow collapses it); none on PC tables or benches without parts */
+    const hasBag=!EXP_DEFS[exp].pc&&!!(EXP_DEFS[exp].tray&&EXP_DEFS[exp].tray.length);E.view.classList.toggle('no-bag',!hasBag);this.drawer=hasBag;E.view.classList.toggle('drawer-open',hasBag);
     E.svgHost.innerHTML='';E.paperHost.innerHTML='';const PC=!!EXP_DEFS[exp].pc;E.view.classList.toggle('pc-mode',PC);
     if(!PC)E.svgHost.appendChild(document.getElementById('tpl-svg').content.cloneNode(true));
     E.paperHost.innerHTML=EXP_DEFS[exp].sheet;
@@ -59,31 +61,31 @@ const BENCH={
   /* ---- view / camera ---- */
   stageSize(){return {W:this.el.stage.clientWidth,H:this.el.stage.clientHeight}},
   pads(){const top=this.view==='ov'?52:60;let bottom=14;
-    if(this.view==='board'&&this.drawer)bottom+=this.el.drawer.offsetHeight;
     if(this.mode==='manual'&&!this.el.card.hidden)bottom+=this.el.card.offsetHeight+10;
-    return {top,bottom}},
-  fit(r){const {W,H}=this.stageSize();if(!W||!H)return null;const {top,bottom}=this.pads();const m=Math.min(18,W*0.03);
-    const aw=Math.max(60,W-2*m),ah=Math.max(60,H-top-bottom);const s=Math.max(r[2]/aw,r[3]/ah);const vw=W*s,vh=H*s;
-    return {x:r[0]+r[2]/2-vw/2,y:r[1]-top*s-(ah*s-r[3])/2,w:vw,h:vh}},
+    const left=this.el.view.classList.contains('no-bag')?0:this.el.drawer.offsetWidth+8;
+    return {top,bottom,left}},
+  fit(r){const {W,H}=this.stageSize();if(!W||!H)return null;const {top,bottom,left}=this.pads();const m=Math.min(18,W*0.03);
+    const aw=Math.max(60,W-2*m-left),ah=Math.max(60,H-top-bottom);const s=Math.max(r[2]/aw,r[3]/ah);const vw=W*s,vh=H*s;
+    return {x:r[0]+r[2]/2-vw/2-left*s/2,y:r[1]-top*s-(ah*s-r[3])/2,w:vw,h:vh}},
   setVB(v){this.vb=v;this.svg.setAttribute('viewBox',`${v.x} ${v.y} ${v.w} ${v.h}`)},
   animTo(to){if(!to)return;cancelAnimationFrame(this.anim);if(!this.vb||reduceMotion){this.setVB(to);return}const from={...this.vb},t0=performance.now(),dur=560;
     const step=now=>{const k=ease(Math.min(1,(now-t0)/dur));this.setVB({x:from.x+(to.x-from.x)*k,y:from.y+(to.y-from.y)*k,w:from.w+(to.w-from.w)*k,h:from.h+(to.h-from.h)*k});if(k<1)this.anim=requestAnimationFrame(step)};this.anim=requestAnimationFrame(step)},
-  curRect(){return this.view==='ov'?this.ovRect:this.sim.regions[this.view]},
+  /* focus: the device plus a margin of context (about a quarter of its size on each side), never closer than that */
+  curRect(){if(this.view==='ov')return this.ovRect;const r=this.sim.regions[this.view];const small=this.stageSize().H<520,f=small?0.1:0.26;const mx=Math.max(small?24:70,r[2]*f),my=Math.max(small?20:60,r[3]*f);return [r[0]-mx,r[1]-my,r[2]+2*mx,r[3]+2*my]},
   refit(anim){if(!this.sim||!this.svg)return;const t=this.fit(this.curRect());if(anim)this.animTo(t);else{cancelAnimationFrame(this.anim);t&&this.setVB(t)}},
-  ui(){const E=this.el,ov=this.view==='ov';if(this.sim&&this.sim.pc){E.zoomUI.hidden=true;E.ovHint.hidden=true;E.bagBtn.hidden=true;this.drawStepCard();return}E.zoomUI.hidden=ov;E.ovHint.hidden=!ov;E.bagBtn.hidden=this.view!=='board';
+  ui(){const E=this.el,ov=this.view==='ov';if(this.sim&&this.sim.pc){E.zoomUI.hidden=true;E.ovHint.hidden=true;E.bagBtn.hidden=true;this.drawStepCard();return}E.zoomUI.hidden=ov;E.ovHint.hidden=!ov;E.bagBtn.hidden=true;
     if(!ov){const n=this.sim.names[this.view];E.zEn.textContent=n[0];E.zAr.textContent=n[1]}
     if(ov)this.hl.innerHTML='';else this.hl.innerHTML='';
-    E.ovHint.textContent=innerWidth<600&&innerHeight>innerWidth?'اقلب الجوال بالعرض، واضغط على أي جهاز':matchMedia('(pointer:coarse)').matches?'اضغط على أي جهاز عشان تقرّب عليه':'اضغط على أي جهاز عشان تقرّب عليه · ESC للرجوع';
+    E.ovHint.textContent=innerWidth<600&&innerHeight>innerWidth?'اقلب الجوال بالعرض، واضغط على أي جهاز':matchMedia('(pointer:coarse)').matches?'الأزرار شغّالة من هنا · اضغط على جسم الجهاز عشان تقرّب':'الأزرار والأسلاك شغّالة من هنا · اضغط على جسم الجهاز عشان تقرّب · ESC للرجوع';
     this.drawStepCard()},
   regionAt(p){const R=this.sim.regions;for(const k of Object.keys(R).reverse()){const r=R[k];if(p.x>=r[0]&&p.x<=r[0]+r[2]&&p.y>=r[1]&&p.y<=r[1]+r[3])return k}return null},
   ovClick(p){const k=this.regionAt(p);if(k){this._hk=null;this.focus(k)}},
-  focus(k){if(this.sim&&this.sim.pc){this.sim.focus(k);return}if(!this.sim||!this.sim.regions[k])return;this.view=k;if(k!=='board')this.setDrawer(false,true);this.ui();this.refit(true);
-    if(k==='board'&&!this._bagShown){this._bagShown=true;setTimeout(()=>{if(this.view==='board'&&!this.drawer)this.setDrawer(true)},450)}},
-  back(){if(this.sim&&this.sim.pc)return;this.setDrawer(false,true);this.view='ov';this.ui();this.refit(true)},
-  setDrawer(open,silent){this.drawer=open;const E=this.el;if((innerWidth<700||innerHeight<520)&&this.mode==='manual'){E.card.classList.toggle('min',open);E.card.dataset.key=''}E.view.classList.toggle('drawer-open',open);E.bagBtn.setAttribute('aria-expanded',open);E.bagAr.textContent=open?'▾':'▸';
-    E.view.style.setProperty('--dhpx',E.drawer.offsetHeight+'px');
+  focus(k){if(this.sim&&this.sim.pc){this.sim.focus(k);return}if(!this.sim||!this.sim.regions[k])return;this.view=k;this.ui();this.refit(true)},
+  back(){if(this.sim&&this.sim.pc)return;this.view='ov';this.ui();this.refit(true)},
+  /* open / collapse the side parts box */
+  setDrawer(open,silent){if(this.el.view.classList.contains('no-bag'))return;this.drawer=open;const E=this.el;E.view.classList.toggle('drawer-open',open);$q('#dClose').textContent=open?'◂':'▸';
     if(!silent)setTimeout(()=>this.refit(true),20)},
-  hover(e){if(this.view!=='ov'||!this.sim)return;const p=this.svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(this.svg.getScreenCTM().inverse());const k=this.regionAt(q);
+  hover(e){if(this.view!=='ov'||!this.sim)return;const ctl=e.target&&e.target.closest&&e.target.closest('[data-k]');if(ctl&&!ctl.dataset.k.startsWith('node:')){if(this._hk){this._hk=null;this.hl.innerHTML=''}this.svg.style.cursor='pointer';return}const p=this.svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(this.svg.getScreenCTM().inverse());const k=this.regionAt(q);
     if(k===this._hk)return;this._hk=k;if(!k){this.hl.innerHTML='';this.svg.style.cursor='';return}this.svg.style.cursor='zoom-in';
     const r=this.sim.regions[k],n=this.sim.names[k];const w=Math.max(n[0].length*9.2+40,150);
     this.hl.innerHTML=`<rect x="${r[0]}" y="${r[1]}" width="${r[2]}" height="${r[3]}" rx="16" fill="rgba(255,255,255,.14)" stroke="#fff" stroke-width="4" filter="url(#hlGlow)"/><rect x="${r[0]+r[2]/2-w/2}" y="${r[1]+r[3]-44}" width="${w}" height="34" rx="17" fill="#fff" stroke="#c9d3d0"/><text x="${r[0]+r[2]/2}" y="${r[1]+r[3]-21.5}" text-anchor="middle" font-size="16" font-weight="600" fill="#1e2a28">${n[0]} 🔍</text>`},
