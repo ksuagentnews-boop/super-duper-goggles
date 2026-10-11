@@ -15,7 +15,7 @@ for (const vp of VPS) {
     const { ctx, page } = await openPage(browser, vp, errors, `${vp}/${m}`);
     console.log(`[${vp}] ${m}`);
     try { await run(page, vp, ok); }
-    catch (e) { fails.push(`[${vp}] ${m}: ${e.message}`); console.log('  ✗ ' + e.stack.split('\n').slice(0, 3).join(' | ')); await page.screenshot({ path: `/tmp/e2e-fail-${vp}-${m}.png` }).catch(() => {}); }
+    catch (e) { fails.push(`[${vp}] ${m}: ${e.message}`); console.log('  ✗ ' + e.stack.split('\n').slice(0, 10).join(' | ')); await page.screenshot({ path: `/tmp/e2e-fail-${vp}-${m}.png` }).catch(() => {}); }
     await ctx.close();
   }
 }

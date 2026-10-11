@@ -66,7 +66,7 @@ export function bench(page) {
   return H;
 }
 export async function sit(page, id, mode) {
-  await page.click('#quickBtn'); await page.click('#quick [data-lab="ee312"]'); await page.click(`#quick [data-exp="${id}"]`);
+  await page.click('#quickBtn'); await page.click('#quick [data-level="6"]'); await page.click('#quick [data-lab="ee312"]'); await page.click(`#quick [data-exp="${id}"]`);
   await page.waitForSelector('#seatModal:not([hidden])', { timeout: 8000 });
   await page.click(`#seatModal button[data-mode="${mode}"]`);
   await page.waitForFunction(() => !document.querySelector('#benchView').hidden && BENCH.sim, null, { timeout: 8000 }); await page.waitForTimeout(400);
