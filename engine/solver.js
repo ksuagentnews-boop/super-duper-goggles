@@ -8,6 +8,7 @@
      XS  {a,b,s,vp,f,r}      transformer winding, s·vp·sin(2πft), series r
      C   {a,b,c}             capacitor (backward Euler in transient)
      CCS {a,b,i0,vmax}       meter test source (Ω / diode / continuity): pushes i0 out of a, collapses as Va-Vb -> vmax
+     FET {d,g,s,m}           enhancement n-MOSFET, m.ids(vgs,vds) -> drain current (d -> s)
      OA  {p,m_,o,vp,vn,y,m}  op amp macro-model (pins +, −, out, V+, V−; y = internal node of the gain stage; m = model) */
 const SOLVER=(()=>{
   const VT=0.02585;
@@ -38,6 +39,15 @@ const SOLVER=(()=>{
      follows y through Rout with a current limit. Internal impedances are scaled (Cc = 300 pF) for conditioning. */
   const UA741=(()=>{const Cc=300e-12,gbw=1e6,sr=0.5e6,A0=2e5;const gm=2*Math.PI*gbw*Cc;return {Rin:2e6,gm,Imax:sr*Cc,G1:gm/A0,Cc,Voff:1.0,Vc:0.03,Ic:1e-5,Rout:150,Ilim:0.025,Iq:1.7e-3}})();
   MODELS.ua741=UA741;
+  /* Enhancement n-MOSFET, square law with channel-length modulation and a smooth (EKV-style) subthreshold
+     transition: Veff = 2nVT·ln(1 + e^((vGS − Vt)/2nVT)); saturation iD = K/2·Veff²·(1 + λvDS),
+     triode iD = K(Veff·vDS − vDS²/2)(1 + λvDS). Symmetric in d/s for vDS < 0.
+     IRF620 (Vishay / ST datasheets): VGS(th) 2–4 V at ID = 250 µA (≈3.0 V typical used here), transfer curve
+     ≈ 0.1 A at VGS ≈ 4 V → K ≈ 0.18 A/V² in the low-current region used in the lab, λ ≈ 0.02 V⁻¹. */
+  function mosfet(m){const nv=2*m.n*VT;const veff=v=>{const a=(v-m.Vt)/nv;return a>40?v-m.Vt:nv*Math.log1p(Math.exp(a))};
+    const f=(vgs,vds)=>{if(vds<0)return -f(vgs-vds,-vds);const ve=veff(vgs),cl=1+m.lam*vds;return vds<ve?m.K*(ve*vds-vds*vds/2)*cl:m.K/2*ve*ve*cl};
+    f.model=m;return f}
+  MODELS.irf620=mosfet({K:0.18,Vt:3.0,n:1.5,lam:0.02});
   const xexp=a=>{if(a>40){const E=Math.exp(40);return [E*(1+a-40),E]}const e=Math.exp(a);return [e,e]};
   function uf(n){const p=[...Array(n).keys()];const f=x=>p[x]===x?x:(p[x]=f(p[x]));return {f,u:(a,b)=>{a=f(a);b=f(b);if(a!==b)p[a]=b}}}
   function lsolve(A,b,n){for(let c=0;c<n;c++){let m=c;for(let r=c+1;r<n;r++)if(Math.abs(A[r*n+c])>Math.abs(A[m*n+c]))m=r;if(Math.abs(A[m*n+c])<1e-30)continue;
@@ -66,6 +76,9 @@ const SOLVER=(()=>{
         else if(e.t==='C'){if(ctx.dt){const g=e.c/ctx.dt;st(e.a,e.b,g*(V(e.a)-V(e.b)-ctx.vprev[ei]),g)}}
         else if(e.t==='CCS'){const [i,g]=ccs(e,V(e.a)-V(e.b));st(e.a,e.b,-i,g)}
         else if(e.t==='OA')stampOA(e,V,F,A,n,st,ctx,ei);
+        else if(e.t==='FET'){const vg=V(e.g),vd=V(e.d),vs=V(e.s),h=1e-6;const i=e.m(vg-vs,vd-vs),gm=(e.m(vg-vs+h,vd-vs)-i)/h,gd=(e.m(vg-vs,vd-vs+h)-i)/h;
+          const J=(r,c,g)=>{if(r>=0&&c>=0)A[r*n+c]+=g};
+          if(e.d>=0){F[e.d]+=i;J(e.d,e.g,gm);J(e.d,e.d,gd);J(e.d,e.s,-gm-gd)}if(e.s>=0){F[e.s]-=i;J(e.s,e.g,-gm);J(e.s,e.d,-gd);J(e.s,e.s,gm+gd)}}
       });
       const dx=lsolve(A,F.map(v=>-v),n);let mx=0;for(let k=0;k<n;k++)mx=Math.max(mx,Math.abs(dx[k]));
       const sc=mx>damp?damp/mx:1;for(let k=0;k<n;k++)x[k]+=dx[k]*sc;if(mx<tol)break;

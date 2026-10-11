@@ -154,6 +154,14 @@ function pkgBody(type,sel,icon){const d=PARTS[type];let s='';
     d.pins.forEach(q=>{const x=q.dx*P,top=q.dy===0;const yh=top?19:P-19;s+=`<rect x="${x-4}" y="${top?yh-2:y1}" width="8" height="${top?y0-yh+2:yh-y1+2}" fill="#b9bec2" stroke="#7d868b" stroke-width=".8"/><circle cx="${x}" cy="${yh}" r="3.6" fill="#9aa3a8"/>`+T(x+(top?-9:-9),top?yh+3:yh+3,q.n,{size:7.5,fill:'#5d6a6e',a:'middle'})});
     s+=`<rect x="${x0}" y="${y0}" width="${x1-x0}" height="${y1-y0}" rx="4" fill="#1f2224" stroke="#0c0d0e"/><path d="M${x0} ${(y0+y1)/2-7} a7 7 0 0 1 0 14" fill="#3a3f42"/><circle cx="${x0+12}" cy="${y1-8}" r="3" fill="#3a3f42"/>`;
     s+=T((x0+x1)/2,(y0+y1)/2-1,d.mark||'UA741CN',{size:11,fill:'#d9dcde',a:'middle',w:600})+T((x0+x1)/2,(y0+y1)/2+11,d.mark2||'',{size:7.5,fill:'#9aa1a5',a:'middle'})}
+  if(d.pkg==='TO220'||d.pkg==='TO126'){const big=d.pkg==='TO220';const bw=big?60:46;
+    if(icon)return `<rect x="${-bw/2}" y="-16" width="${bw}" height="${big?12:0}" rx="2" fill="#c3c8cc"/><rect x="${-bw/2}" y="${big?-6:-12}" width="${bw}" height="${big?16:22}" rx="2" fill="#1f2224"/>`+[-12,0,12].map(x=>`<rect x="${x-2}" y="10" width="4" height="8" fill="#b9bec2"/>`).join('')+T(0,big?6:2,d.mark||'',{size:7.5,fill:'#d9dcde',a:'middle',w:600});
+    const yb=-24,yt=big?-66:-58;
+    s+=sel?`<rect x="${-P-14}" y="${yt-8}" width="${2*P+28}" height="${-yt+8}" rx="9" fill="none" stroke="${CH1}" stroke-width="2.5"/>`:'';
+    d.pins.forEach((q,k)=>{const x=q.dx*P-P,lx=(k-1)*14;s+=`<path d="M${lx} ${yb} L${lx} ${yb+3} L${x} -19" fill="none" stroke="#9aa3a8" stroke-width="3.2" stroke-linecap="round"/><circle cx="${x}" cy="-19" r="3.6" fill="#9aa3a8"/>`+T(x+9,-14,q.n,{size:7.5,fill:'#5d6a6e',a:'middle',w:600})});
+    if(big)s+=`<rect x="${-bw/2}" y="${yt}" width="${bw}" height="16" rx="2" fill="#c3c8cc" stroke="#8d969a"/><circle cx="0" cy="${yt+8}" r="4.5" fill="#e9ecea" stroke="#8d969a"/>`;
+    s+=`<rect x="${-bw/2}" y="${big?yt+16:yt}" width="${bw}" height="${yb-(big?yt+16:yt)}" rx="2.5" fill="#1f2224" stroke="#0c0d0e"/>`+T(0,yb-8,d.mark||'',{size:9,fill:'#d9dcde',a:'middle',w:600});
+    s=`<g transform="translate(${P} 0)">${s}</g>`}
   return s}
 function partBody(type,L,sel,lit){const h=L/2,d=PARTS[type]||{t:type};const t=d.t;let s='';if(d.pins)return pkgBody(type,sel,true);
   const legs=(a,b,col='#9aa3a8')=>`<line x1="${-h}" y1="0" x2="${a}" y2="0" stroke="${col}" stroke-width="2.2"/><line x1="${b}" y1="0" x2="${h}" y2="0" stroke="${col}" stroke-width="2.2"/>`;
@@ -193,7 +201,7 @@ function partsSVG(){const S=RT.S;let s='';
 /* selection toolbar (⇄ / ✕) and wire-start marker: drawn above the cables so a plug never hides them */
 function toolbarSVG(){const S=RT.S;let s='';
   const sp=S.parts.find(p=>p.id===S.sel),sw=S.wires.find(w=>w.id===S.sel);
-  if(sp||sw){let x,y;if(sp&&MULTI(sp.type)){const c=fpC(sp.type,sp.n);x=c.x;y=nodeC(sp.n).y-34}else if(sp){const a=nodeC(sp.a),b=nodeC(sp.b);x=(a.x+b.x)/2;y=(a.y+b.y)/2-40}else{const a=holeP(sw.a,sw.ha),b=holeP(sw.b,sw.hb);x=(a.x+b.x)/2;y=(a.y+b.y)/2-44}
+  if(sp||sw){let x,y;if(sp&&MULTI(sp.type)){const c=fpC(sp.type,sp.n);x=c.x;y=nodeC(sp.n).y-(PARTS[sp.type].pkg==='DIP8'?34:84)}else if(sp){const a=nodeC(sp.a),b=nodeC(sp.b);x=(a.x+b.x)/2;y=(a.y+b.y)/2-40}else{const a=holeP(sw.a,sw.ha),b=holeP(sw.b,sw.hb);x=(a.x+b.x)/2;y=(a.y+b.y)/2-44}
     const btn=(bx,lab,k,c)=>`<circle cx="${bx}" cy="${y}" r="15" fill="#141c20" stroke="${c}" stroke-width="2" data-k="${k}" style="cursor:pointer"/>`+T(bx,y+5,lab,{size:14,fill:c,a:'middle',w:600});
     s+=sp&&POLAR(sp.type)?btn(x-20,'⇄','tb:flip',CH2)+btn(x+20,'✕','tb:del',RED):btn(x,'✕','tb:del',RED)}
   if(S.wireMode&&S.wireStart!=null){const c=nodeC(S.wireStart);s+=`<rect x="${c.x-32}" y="${c.y-32}" width="64" height="64" rx="9" fill="none" stroke="#e0b000" stroke-width="3" pointer-events="none"/>`}
