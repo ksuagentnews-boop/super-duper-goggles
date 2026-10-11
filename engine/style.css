@@ -252,3 +252,7 @@ button.t.on{background:var(--accent);border-color:var(--accent);color:#fff}
 @media (max-height:520px){.pcapp{left:4px;right:4px;top:4px}.pc-title{display:none}.pc-menu{padding:0 4px}.pcm>button{padding:2px 8px}.pc-tools{padding:1px 4px}.pc-tools button{height:24px;min-width:28px}.pc-wave{flex-basis:52%}.pc-sub{display:none}.pc-whead{padding:1px 4px}.pc-stat{height:18px;line-height:18px}}
 @media (max-height:520px){.pc-dbox{padding:8px 10px;max-height:94%}.pc-dbox h4{margin-bottom:4px}.pc-form{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}.pc-dbox label{margin:2px 0;font-size:11.5px}.pc-dbox input,.pc-dbox select{width:84px;padding:2px 4px}.pc-db{margin-top:6px}.pc-list{max-height:170px}}
 .pcm-list[hidden],.pc-dlg[hidden],.pc-wave[hidden]{display:none}
+/* hall: crosshair while the mouse is locked (game-style look) */
+#crosshair{position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;pointer-events:none;z-index:6}
+#crosshair::before,#crosshair::after{content:"";position:absolute;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.45);border-radius:1px}
+#crosshair::before{left:8px;top:0;width:2px;height:18px}#crosshair::after{top:8px;left:0;height:2px;width:18px}

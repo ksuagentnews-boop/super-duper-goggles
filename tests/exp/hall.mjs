@@ -12,6 +12,16 @@ export async function run(page, vp, ok) {
   await page.waitForTimeout(150);
   await page.evaluate(() => { const D = HALL.debug.doors().find(d => d.label === 'EE312'); D.go(); });
   ok(await page.evaluate(() => HALL.debug.cur().lab === 'ee312' && HALL.debug.benches().length === 10), 'entering the EE312 door loads its room with its tables');
+  if (vp === 'desktop') {
+    await page.mouse.click(700, 600); await page.waitForTimeout(250);
+    ok(await page.evaluate(() => HALL.debug.locked()) && await page.$eval('#crosshair', e => !e.hidden), 'desktop: first click locks the mouse and shows the crosshair');
+    const y0 = await page.evaluate(() => HALL.debug.P.yaw); await page.evaluate(() => document.getElementById('hallCanvas').dispatchEvent(new MouseEvent('mousemove', { movementX: 60, bubbles: true })));
+    ok(await page.evaluate(y0 => HALL.debug.P.yaw < y0, y0), 'moving the mouse (no drag) turns the view');
+    await page.evaluate(() => { const B = HALL.debug.benches()[2]; const P = HALL.debug.P; P.x = B.x + 0.3; P.z = B.cz + 1.6; const dx = B.x - P.x, dz = B.cz - P.z; P.yaw = Math.atan2(-dx, -dz); P.pitch = Math.atan2(0.5 - P.y, Math.hypot(dx, dz)); });
+    await page.waitForTimeout(150); await page.mouse.click(700, 600); await page.waitForSelector('#seatModal:not([hidden])', { timeout: 6000 });
+    ok(/EXPERIMENT 3/i.test(await page.$eval('#smKicker', e => e.textContent)) && !(await page.evaluate(() => HALL.debug.locked())), 'click on the chair under the crosshair sits (Exp 3) and releases the mouse');
+    await page.click('#smStand'); await page.waitForTimeout(400);
+  }
   await page.click('#quickBtn');
   ok(await page.$eval('#quick', e => !e.hidden && e.querySelectorAll('[data-lab]').length === 1), 'quick access level 1 lists the labs');
   await page.click('#quick [data-lab="ee312"]');

@@ -15,8 +15,9 @@ const HALL=(()=>{
   const CUR={kind:null,lab:null};
   const EYE=1.65,SPEED=2.4;
   let ROOM={x0:-12,x1:12,z0:-8.5,z1:8.5,pad:[0.45,0.95,0.4,0.4]};
-  const HINT_ROOM=coarse?'اسحب بإصبعك عشان تلتفت · اضغط على الأرض عشان تمشي، وعلى الكرسي عشان تجلس':'تحرّك بـ <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> أو الأسهم · اسحب بالماوس عشان تلتفت · اضغط على الأرض للمشي أو على الكرسي للجلوس';
-  const HINT_CORR=coarse?'اسحب بإصبعك عشان تلتفت · اضغط على الأرض عشان تمشي، وعلى باب المعمل عشان تدخله':'تحرّك بـ <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> أو الأسهم · اسحب بالماوس عشان تلتفت · اضغط على باب المعمل عشان تدخله';
+  const HINT_ROOM=coarse?'اسحب بإصبعك عشان تلتفت · اضغط على الأرض عشان تمشي، وعلى الكرسي عشان تجلس':'اضغط في المشهد عشان تتحكم بالماوس (حرّك الماوس للالتفات) · <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> أو الأسهم للمشي · <kbd>ESC</kbd> يطلع الماوس';
+  const HINT_LOCK='حرّك الماوس عشان تلتفت · <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> للمشي · اضغط (أو <kbd>E</kbd>) على الكرسي اللي تحت العلامة عشان تجلس · <kbd>ESC</kbd> يطلع الماوس';
+  const HINT_CORR=coarse?'اسحب بإصبعك عشان تلتفت · اضغط على الأرض عشان تمشي، وعلى باب المعمل عشان تدخله':'اضغط في المشهد عشان تتحكم بالماوس · <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> للمشي · اضغط على باب المعمل اللي تحت العلامة عشان تدخله · <kbd>ESC</kbd> يطلع الماوس';
 
   function tex(w,h,draw){const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=R.capabilities.getMaxAnisotropy();return t}
   function rr(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
@@ -196,7 +197,7 @@ const HALL=(()=>{
   function walkTo(x,z,then){mode='walk';path=planTo(x,z);path.then=then;stuck=0}
   function goSit(B){if(!B.built){toast(`تجربة ${B.num} قريباً`);return}const ax=B.x,az=B.cz+0.75;if(Math.hypot(P.x-ax,P.z-az)<0.35)sit(B);else walkTo(ax,az,()=>sit(B))}
   function angDiff(a,b){let d=b-a;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return d}
-  function sit(B){mode='sitting';path=[];seatB=B;const from={...P},to={x:B.x,z:B.cz-0.02,y:1.2,yaw:0,pitch:-0.42};const dy=angDiff(from.yaw,to.yaw);const t0=performance.now(),dur=reduceMotion?1:1500;prompt.hidden=true;tip.hidden=true;
+  function sit(B){if(document.pointerLockElement)document.exitPointerLock();mode='sitting';path=[];seatB=B;const from={...P},to={x:B.x,z:B.cz-0.02,y:1.2,yaw:0,pitch:-0.42};const dy=angDiff(from.yaw,to.yaw);const t0=performance.now(),dur=reduceMotion?1:1500;prompt.hidden=true;tip.hidden=true;
     anim=now=>{const k=Math.min(1,(now-t0)/dur),e=ease(k);P.x=from.x+(to.x-from.x)*e;P.z=from.z+(to.z-from.z)*e;P.yaw=from.yaw+dy*e;P.pitch=from.pitch+(to.pitch-from.pitch)*e;
       const yk=Math.max(0,(k-0.25)/0.75);P.y=from.y+(to.y-from.y)*ease(yk)-Math.sin(Math.min(1,yk)*Math.PI)*0.06;if(k>=1){anim=null;mode='seated';seated(B)}}}
   function seated(B){const e=B.e;$q('#smKicker').textContent=`${e.lab.code} · EXPERIMENT ${e.num}`;$q('#smTitle').textContent=e.en;$q('#smSub').textContent=`جلست على طاولة تجربة ${e.num} (${e.ar}). اختر الطور:`;$q('#seatModal').hidden=false;setTimeout(()=>$q('#seatModal button[data-mode]').focus(),50)}
@@ -230,17 +231,31 @@ const HALL=(()=>{
   const ray=new THREE.Raycaster(),v2=new THREE.Vector2();
   function hit(e,objs){const r=cv.getBoundingClientRect();v2.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(v2,cam);return ray.intersectObjects(objs,false)[0]}
   let down=null;
+  /* desktop: game-style mouse look. The first click locks the pointer; then moving the mouse turns the view,
+     a crosshair marks the centre, click (or E) acts on what is under it, ESC releases the mouse. Touch stays drag-to-look. */
+  const cross=$q('#crosshair');const locked=()=>document.pointerLockElement===cv;const CENTER={clientX:0,clientY:0};
+  const centerEv=()=>{const r=cv.getBoundingClientRect();CENTER.clientX=r.left+r.width/2;CENTER.clientY=r.top+r.height/2;return CENTER};
+  function lockHover(){if(!locked()||mode!=='walk'){return}const e=centerEv();const h=hit(e,pick);setHover(h?h.object.userData.bench:null,e,h?h.object.userData.door:null)}
+  function lockClick(){if(mode!=='walk')return;const e=centerEv();const h=hit(e,pick);if(h){const u=h.object.userData;if(u.bench){unlock();goSit(u.bench)}else if(u.door)goDoor(u.door);return}
+    const f=hit(e,[floor]);if(f&&Math.hypot(f.point.x-P.x,f.point.z-P.z)<9&&!blocked(f.point.x,f.point.z))walkTo(f.point.x,f.point.z)}
+  function unlock(){if(locked())document.exitPointerLock()}
   function bindInput(){
-    cv.addEventListener('pointerdown',e=>{if(mode!=='walk')return;down={x:e.clientX,y:e.clientY,yaw:P.yaw,pitch:P.pitch,drag:false,id:e.pointerId};try{cv.setPointerCapture(e.pointerId)}catch(_){}cv.focus()});
+    document.addEventListener('pointerlockchange',()=>{const on=locked();cross.hidden=!on;hint.innerHTML=on?HINT_LOCK:CUR.kind==='room'?HINT_ROOM:HINT_CORR;if(!on)setHover(null)});
+    cv.addEventListener('mousemove',e=>{if(!locked()||mode!=='walk')return;const s=0.0024;P.yaw-=e.movementX*s;P.pitch=Math.max(-1.1,Math.min(0.9,P.pitch-e.movementY*s));lockHover()});
+    cv.addEventListener('pointerdown',e=>{if(mode!=='walk')return;
+      let lockReq=false;if(!coarse&&e.pointerType==='mouse'&&e.button===0){if(locked()){lockClick();return}try{const r=cv.requestPointerLock();lockReq=true;if(r&&r.catch)r.catch(()=>{})}catch(_){}}
+      down={x:e.clientX,y:e.clientY,yaw:P.yaw,pitch:P.pitch,drag:false,id:e.pointerId,lockReq};try{cv.setPointerCapture(e.pointerId)}catch(_){}cv.focus()});
     cv.addEventListener('pointermove',e=>{if(down&&e.pointerId===down.id){const dx=e.clientX-down.x,dy=e.clientY-down.y;if(!down.drag&&Math.hypot(dx,dy)>7)down.drag=true;
         if(down.drag){const s=coarse?0.0055:0.0042;P.yaw=down.yaw+dx*s;P.pitch=Math.max(-1.1,Math.min(0.9,down.pitch+dy*s*0.85));cv.style.cursor='grabbing'}return}
       if(coarse||mode!=='walk')return;const h=hit(e,pick);setHover(h?h.object.userData.bench:null,e,h?h.object.userData.door:null)});
-    const up=e=>{if(!down)return;const d=down;down=null;cv.style.cursor='';if(d.drag||mode!=='walk')return;
+    const up=e=>{if(!down)return;const d=down;down=null;cv.style.cursor='';/* the click that takes the mouse only locks it (as in games); if the browser refuses the lock it acts as before */
+      if(d.drag||mode!=='walk'||locked()||(d.lockReq&&document.pointerLockElement!==null))return;if(d.lockReq){setTimeout(()=>{if(!locked())up2(e)},120);return}up2(e)};const up2=e=>{
       const h=hit(e,pick);if(h){const u=h.object.userData;if(u.bench)goSit(u.bench);else if(u.door)goDoor(u.door);return}
       const f=hit(e,[floor]);if(f){let tx=f.point.x,tz=f.point.z;if(blocked(tx,tz)){for(const b of benches){const r=0.4;if(tx>b.box[0]-r&&tx<b.box[1]+r&&tz>b.box[2]-r&&tz<b.box[3]+r){tz=tz<b.z?b.box[2]-0.5:b.box[3]+0.5}}}if(!blocked(tx,tz))walkTo(tx,tz)}};
     cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',()=>{down=null});
     cv.addEventListener('pointerleave',()=>{if(!down)setHover(null)});
     addEventListener('keydown',e=>{if($q('#hall').hidden)return;if(!$q('#seatModal').hidden){if(e.key==='Escape')standUp();return}keys[e.code]=true;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
+      if(e.code==='KeyE'&&mode==='walk'&&locked()){const h=hit(centerEv(),pick);if(h&&h.object.userData.bench){unlock();goSit(h.object.userData.bench);return}if(h&&h.object.userData.door){goDoor(h.object.userData.door);return}}
       if(e.code==='KeyE'&&mode==='walk'){const D=nearDoor();if(D){enterDoor(D);return}const B=nearest();if(B)goSit(B)}});
     addEventListener('keyup',e=>{keys[e.code]=false});
     addEventListener('blur',()=>{keys={}});
@@ -267,7 +282,7 @@ const HALL=(()=>{
       const ND=nearDoor();if(ND&&!toastT){prompt.hidden=false;prompt.textContent=ND.label==='EXIT'?(coarse?'اضغط على الباب عشان ترجع للممر':'اضغط E أو على الباب عشان ترجع للممر'):(coarse?`اضغط على الباب عشان تدخل ${ND.label}`:`اضغط E أو على الباب عشان تدخل ${ND.label}`)}
       const B=ND?null:nearest();if(ND){}else if(B&&!toastT){prompt.hidden=false;prompt.textContent=B.built?(coarse?`اضغط على الكرسي عشان تجلس · تجربة ${B.num}`:`اضغط E أو على الكرسي عشان تجلس · تجربة ${B.num}`):`تجربة ${B.num} · قريباً`}else if(!toastT)prompt.hidden=true}
     const t=now/1000;benches.forEach(b=>{const on=b===hoverB||b===nearest();b.ring.material.opacity+=(((on?0.85:b.built?0.35:0.12)+Math.sin(t*3)*0.1)-b.ring.material.opacity)*0.15});
-    cam.position.set(P.x,P.y,P.z);cam.rotation.set(P.pitch,P.yaw,0);R.render(scene,cam)}
+    cam.position.set(P.x,P.y,P.z);cam.rotation.set(P.pitch,P.yaw,0);if(locked()&&mode==='walk'&&(now|0)%4===0)lockHover();R.render(scene,cam)}
   function loop0(){last=0;requestAnimationFrame(frame)}
 
   async function init(){
@@ -284,5 +299,5 @@ const HALL=(()=>{
     ok=true;bindInput();resize();addEventListener('resize',()=>{if(!$q('#hall').hidden)resize()});$q('#hallLoading').hidden=true;loop0();
   }
   function fail(){$q('#hallLoading').hidden=true;$q('#fallback').hidden=false;$q('#hallHint').hidden=true;$q('#quickBtn').hidden=true}
-  return {init,goTo,resume,standUp:()=>{if(ok)standUp();else{$q('#hall').hidden=false;$q('#seatModal').hidden=true}},debug:{P,benches:()=>benches,doors:()=>doors,cur:()=>({...CUR}),show,planTo}};
+  return {init,goTo,resume,standUp:()=>{if(ok)standUp();else{$q('#hall').hidden=false;$q('#seatModal').hidden=true}},debug:{P,lockClick,locked,benches:()=>benches,doors:()=>doors,cur:()=>({...CUR}),show,planTo}};
 })();
