@@ -17,9 +17,10 @@ export async function run(page, vp, ok) {
   await page.click('#quick [data-lab="ee312"]');
   const items = await page.$$eval('#quick [data-exp]', a => a.map(b => ({ id: b.dataset.exp, off: b.classList.contains('off'), soon: !!b.querySelector('.soon') })));
   ok(items.length === 10, 'level 2 lists the 10 experiments');
-  ok(items.filter(i => i.off).every(i => i.soon) && items.filter(i => !i.off).map(i => i.id).join() === 'ee312/exp3,ee312/exp4', 'unbuilt ones greyed with قريباً');
-  await page.$eval('#quick [data-exp="ee312/exp1"]', b => b.click());
-  ok(await page.$eval('#seatModal', e => e.hidden), 'greyed experiment does nothing');
+  const built = await page.evaluate(() => REGISTRY.all().filter(e => e.built).map(e => e.id).join());
+  ok(items.filter(i => i.off).every(i => i.soon) && items.filter(i => !i.off).map(i => i.id).join() === built, `built ones active (${built}), unbuilt greyed with قريباً`);
+  const off = items.find(i => i.off);
+  if (off) { await page.$eval(`#quick [data-exp="${off.id}"]`, b => b.click()); ok(await page.$eval('#seatModal', e => e.hidden), 'greyed experiment does nothing'); }
   await page.keyboard.press('Escape');
 }
 
