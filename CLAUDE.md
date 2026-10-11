@@ -5,7 +5,7 @@ A static website (GitHub Pages, no server, no login) that simulates the EE depar
 ## Source of truth
 - `docs/<lab>/` holds the lab manual and slides (PDF/images). Every experiment MUST match them exactly: same instruments, same component values, same procedure steps, same figures, same questions.
 - If the manual and these rules disagree, follow the manual and tell the user.
-- Never invent instruments or steps. Component behaviour and readings are **yours to derive**: use the manual, the slides, the parts' datasheets and device physics to choose realistic models and values (e.g. a 1N4001 reads ≈0.55 V on diode test, a Ge point-contact diode ≈0.2–0.3 V, a green LED ≈1.7–2 V). Do not ask the user for numbers or rely on any student report.
+- Never invent instruments or steps. Component behaviour and readings are **yours to derive**: use the manual, the slides, the parts' datasheets and device physics to choose realistic models and values (e.g. a 1N4001 reads ≈0.55 V on diode test, a Ge point-contact diode ≈0.2–0.3 V, a green LED ≈1.7–2 V). Do not ask the user for numbers. Fallback only: if a value is still unclear after the manual, slides and datasheets, use the student's own lab reports in `docs/<lab>/measured/` (may contain mistakes).
 - Resolve small gaps yourself (typos in figure numbers, one meter vs two drawn in a figure, unnamed parts) with the most reasonable reading of the manual and slides, note your assumption in the commit message, and keep going. Ask the user only when the manual and slides genuinely contradict each other on something that changes what the student does.
 
 ## Current state
