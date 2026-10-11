@@ -1,6 +1,6 @@
-# Exp 1 — real readings taken in the EE312 lab (student's own report)
+# Exp 1 — readings from the student's own lab report (FALLBACK only)
 
-Use these to tune the diode models so the simulator reads like the real bench.
+Priority: derive values from the manual, the slides, datasheets and device physics first. Use this file only when that leaves a value unclear, or as a sanity check. It is one student's report and may contain mistakes.
 
 Instruments: MCP MT3805 DMM, Aim-TTi EL302RD dual supply, RS = RL = 100 Ω.
 
