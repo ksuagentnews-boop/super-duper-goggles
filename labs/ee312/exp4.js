@@ -1,15 +1,14 @@
-/* EE312 · Experiment 4 · Rectifiers and Voltage Regulation (approved prototype). */
+/* EE312 · Experiment 4 · Rectifiers and Voltage Regulation (approved prototype; to be checked against the manual Fig. 4.2/4.3 in its own session). */
 EXP_DEFS['ee312/exp4']={
   sheet:`<div class="paper" id="paper">
-  <h2 class="practice-only">Experiment 4 · Rectifiers &amp; Voltage Regulation</h2>
-  <h2 class="exam-only">Exam · Experiment 4 <span class="ver">نموذج <span data-p="ver"></span></span></h2>
+  <h2>Experiment 4 · Rectifiers &amp; Voltage Regulation</h2>
     <div class="figbox"><svg id="fig1" viewBox="0 0 440 250"></svg></div>
     <div class="hint" style="text-align:center">Fig. 1 · D1, D2 = 1N4002 · RL = 4.7 kΩ · C = <span data-p="ca"></span> µF (added in step 5)</div>
     <div class="figbox" style="margin-top:8px"><svg id="fig6" viewBox="0 0 440 220"></svg></div>
     <div class="hint" style="text-align:center">Fig. 6 · Regulator: RS = 100 Ω, DZ = 1N4733A, RL across DZ</div>
-    <div class="check practice-only" id="live"></div>
-  <div class="exam-only">
-    <p class="exam-note">نفس المانيوال، لكن بعض القيم تتغير كل مرة تدخل فيها. سجّل الشاشات وعبّي الإجابات، وبعدها اضغط "صحّح إجاباتي".</p>
+    <div class="check manual-only" id="live"></div>
+  <div class="manual-only">
+    <p class="exam-note">سجّل الشاشات وعبّي القراءات والأسئلة، وبعدها اضغط "صحّح إجاباتي".</p>
     <h3>Part A · Unregulated supply</h3>
     <ol class="en">
       <li>Assemble Fig. 1 with RL = 4.7 kΩ and <b>without</b> the capacitor. Connect CH1 to v<sub>S</sub> (terminal A, ground at B) and CH2 to v<sub>o</sub>. Ask the instructor to check, then plug in the transformer.</li>
@@ -50,17 +49,12 @@ EXP_DEFS['ee312/exp4']={
   </div>
 </div>
 `,
-  params:MODE=>{const VER=Math.random().toString(36).slice(2,6).toUpperCase();
-    return MODE==='exam'?(()=>{const ca=pick([470,10]);return {ca,cfgA:ca===470?'c470':'c10',cfgB:ca===470?'c470b':'c10b',cth:pick([100,220,470,1000]),rlth:pick([270,470,1000]),ver:VER}})():{ca:470,cfgA:'c470',cfgB:'c470b',cth:470,rlth:270,ver:'—'}},
-  analysis:'transient',
+  params:()=>({ca:470,cfgA:'c470',cfgB:'c470b',cth:470,rlth:270}),
   instruments:[
-    {type:'xf',at:{x:40,y:30},park:{tA:{x:420,y:398},tB:{x:490,y:398},tC:{x:560,y:398}}},
-    {type:'scope',at:{x:820,y:20},park:{c1r:{x:888,y:468},c1b:{x:888,y:538},c2r:{x:888,y:648},c2b:{x:888,y:718}},
-      prev:sc=>{sc.ch[0].cpl='AC';sc.ch[0].vd=0.5;sc.ch[1].on=true;sc.ch[1].vd=0.2;sc.ch[1].pos=-2;sc.ch[1].inv=true;sc.td=2e-4;sc.meas=[{src:0,src2:1,type:'Max'}];sc.disp.vec=false;sc.trig.src=1;sc.trig.level=3}}],
-  parts:{R47:{t:'R',g:1/4700,lab:'4.7kΩ'},R270:{t:'R',g:1/270,lab:'270Ω'},R100:{t:'R',g:1/100,lab:'100Ω'},D:{t:'D',lab:'1N4002'},Z:{t:'Z',lab:'Zener'},C10:{t:'C',c:10e-6,lab:'10µF'},C470:{t:'C',c:470e-6,lab:'470µF'},BR:{t:'BR',lab:''}},
-  tray:[['D','1N4002'],['C470','470 µF'],['C10','10 µF'],['R47','4.7 kΩ'],['R270','270 Ω'],['R100','100 Ω'],['Z','Zener'],['BR','Bridge'],['W','Wire']],
-  regions:{xf:[26,16,788,420],scope:[816,16,578,393],board:[215,372,712,508]},
-  names:{xf:['Center-tapped Transformer','المحوّل'],scope:['GW Instek GDS-1104B','راسم الإشارة'],board:['Plug-in panel','لوحة التوصيل']},
+    {type:'xf'},
+    {type:'scope',probes:2,prev:sc=>{sc.ch[0].cpl='AC';sc.ch[0].vd=0.5;sc.ch[1].on=true;sc.ch[1].vd=0.2;sc.ch[1].pos=-2;sc.ch[1].inv=true;sc.td=2e-4;sc.meas=[{src:0,src2:1,type:'Max'}];sc.disp.vec=false;sc.trig.src=1;sc.trig.level=3}}],
+  parts:{R47:{t:'R',r:4700,lab:'4.7kΩ'},R270:{t:'R',r:270,lab:'270Ω'},R100:{t:'R',r:100,lab:'100Ω'},D:{t:'D',lab:'1N4002'},Z:{t:'Z',lab:'1N4733A'},C10:{t:'C',c:10e-6,lab:'10µF'},C470:{t:'C',c:470e-6,lab:'470µF'},BR:{t:'BR',lab:''}},
+  tray:[['D','1N4002'],['C470','470 µF'],['C10','10 µF'],['R47','4.7 kΩ'],['R270','270 Ω'],['R100','100 Ω'],['Z','1N4733A'],['BR','Bridge'],['W','Wire']],
   setup(RT){
 const PX=RT.PX;
 /* reference configurations; nets: 0 A, 1 C, 2 K (cathodes), 3 R (regulated); -1 = B (ground) */
@@ -81,7 +75,6 @@ function status(){const sc=RT.S.sc;const sg=[RT.dsig(0),RT.dsig(1)];
   let fit;if(sc.xy){const c1=sc.ch[0];const l=sg[0].min/c1.vd+c1.pos,r=sg[0].max/c1.vd+c1.pos;fit=sc.pwr&&l>=-5.05&&r<=5.05&&(r-l)>=1.2&&fitC(1)}else{const cyc=10*sc.td*60;fit=sc.pwr&&fitC(0)&&fitC(1)&&cyc>=1&&cyc<=10}
   return {cfg:whichCfg(),ch1:ch1OK(),gnd:RT.S.leads.c1b.node!=null&&RT.S.leads.c2b.node!=null,plug:RT.S.xf.plugged,pwr:sc.pwr,ch:sc.ch[0].on&&sc.ch[1].on,probe:sc.ch.every(c=>c.probe===1&&!c.inv),cpl1:sc.ch[0].cpl,cpl2:sc.ch[1].cpl,xy:sc.xy,fit}}
 const CFGNAME={fw:'Full-wave بدون مكثف',hw1:'Half-wave (D1 بس)',hw2:'Half-wave (D2 بس)',c10:'Full-wave + 10 µF',c10b:'Full-wave + 10 µF, RL 270',c470:'Full-wave + 470 µF, RL 4.7k',c470b:'Full-wave + 470 µF, RL 270',reg47:'Regulator, RL 4.7k',reg270:'Regulator, RL 270'};
-function updateLive(){BENCH.onRender()}
 const CAPS={};
 document.querySelectorAll('[data-cap]').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.cap;if(RT.dirty)RT.recompute();CAPS[id]=status();const mm=RT.S.sc.msg;RT.S.sc.msg='';const inner=RT.S.sc.run?RT.screenInner():RT.S.sc.frozen;RT.S.sc.msg=mm;
   $(id).innerHTML=`<svg viewBox="12 26 336 286" direction="ltr" font-family="Plex Mono, IBM Plex Mono, monospace"><defs><clipPath id="gridclip"><rect x="22" y="48" width="300" height="200"/></clipPath></defs>${inner}</svg>`}));
@@ -121,7 +114,7 @@ const has=(st,...k)=>k.includes(st.cfg);
 return {status:()=>Object.assign(status(),{xfok:RT.S.xf.ok}),
   steps:[
     {dev:'scope',t:'شغّل الإسكوب (POWER).',ok:s=>s.pwr},
-    {dev:'board',t:'ركّب Fig. 1 بدون مكثف: اسحب أطراف المحوّل A و B و C للوحة، وحط D1 و D2 (1N4002) و RL = 4.7 kΩ. وصّل CH1 على A و CH2 على vo، والأسود على B. بعدها اضغط Ask instructor to check في المحوّل.',ok:s=>s.xfok||s.plug},
+    {dev:'board',t:'ركّب Fig. 1 بدون مكثف: اسحب أطراف المحوّل A و B و C للوحة، وحط D1 و D2 (1N4002) و RL = 4.7 kΩ. وصّل CH1 على A و CH2 على vo، و CH1 ⏚ و CH2 ⏚ على B. بعدها اضغط Ask instructor to check في المحوّل.',ok:s=>s.xfok||s.plug},
     {dev:'xf',t:'اضغط Plug in عشان توصّل المحوّل بالكهرباء.',ok:s=>s.plug&&has(s,'fw')&&s.ch1&&s.gnd},
     {dev:'scope',t:'شغّل CH1 و CH2، وخلّ Probe 1X و Coupling = DC، واضغط Autoset (Fig. 2). قِس VSM و vo max بالـ Measure.',ok:s=>has(s,'fw')&&s.ch&&s.probe&&s.cpl1==='DC'&&s.cpl2==='DC'&&s.fit&&!s.xy},
     {dev:'board',t:'شيل D2 وشوف الـ half-wave (Fig. 3)، وبعدها رجّعه مكانه.',ok:s=>has(s,'hw1','hw2')},

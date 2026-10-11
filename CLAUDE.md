@@ -8,11 +8,13 @@ A static website (GitHub Pages, no server, no login) that simulates the EE depar
 - Never invent instruments, values or steps. If something is missing from the docs, ask.
 
 ## Current state
-- `index.html` is the working prototype (Exp 3 and Exp 4 of EE312). Its scope, generator, transformer, circuit solver and interactions are approved: reuse them, do not redesign them. Known gaps: single-unit DC supply (replace with the EL302RD), no DMM, scope CH3/CH4 unused, and its Exp 3 circuit came from an old exam — rebuild Exp 3 from the manual (Fig. 3.4a/b).
-- First task: split `index.html` into a clean structure without changing behaviour:
-  - `engine/` shared code: hall (3D), bench shell (zoom, bag drawer, stepper), instruments, breadboard, circuit solver.
-  - `labs/ee312/exp3.js`, `exp4.js`, … one file per experiment (circuit reference, steps, exam sheet, grading, randomization).
-  - Adding a new experiment should only mean adding one file in `labs/<lab>/` and one entry in a registry.
+- The site is split into `engine/` (shared) and `labs/` (one file per experiment). `index.html` only holds the shell markup and script tags.
+  - `engine/solver.js` circuit solver (Newton dc op, quasi-static sweep for the generator, transient for C / transformer; several floating supply units with CV/CC; meter test source).
+  - Instruments: `scope.js` (GDS-1104B, 4 channels), `gen.js` (PeakTech 4124), `psu.js` (TTi EL302RD, two units), `dmm.js` (MCP MT3805), `xf.js` (center-tapped transformer).
+  - `board.js` bench runtime (auto layout, plug-in panel, parts with real looks, cables with labels / shadow / colour menu, hover glow, netlist, analysis), `bench.js` shell (zoom, bag drawer, stepper, Manual/Free), `hall.js` 3D hall (10 tables, signs), `quick.js` الوصول السريع.
+  - `labs/registry.js` lists labs and experiments (`file` = built). An experiment file registers `EXP_DEFS['<lab>/expN']` with: `sheet` (HTML), `params`, `instruments`, `parts`, `tray`, `setup(RT)` → `{status, steps, onReset}`. Adding an experiment = one file + its `file` entry in the registry.
+- Built so far: Exp 3 and Exp 4 (approved prototypes, now on the new engine). Exp 3 is still the old-exam circuit: rebuild it from the manual (Fig. 3.4a/b) in its own session. Exp 4 must be checked against the manual too.
+- Tests: `node tests/e2e.mjs [desktop,phone]` (Playwright; set `THREE_JS=/path/three.min.js` if cdnjs is blocked). Add each new experiment's full Manual run and grading to it.
 
 ## Experience (approved by the user — keep it)
 1. **Hall (3D, Three.js r128):** first-person lab room with **all 10 EE312 experiments, every one of them built (no "coming soon")**: two rows of five tables, row 1 = Exp 1–5 and row 2 = Exp 6–10, in order. A hanging sign above every table shows the experiment number and name. Each table carries that experiment's real instruments in their real places.

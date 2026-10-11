@@ -1,8 +1,14 @@
+<!doctype html>
+<html lang="ar">
+<head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>محاكي معامل قسم الكهرباء</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="engine/style.css">
+</head>
+<body>
 
 <!-- ================= HALL ================= -->
 <div id="hall">
@@ -10,24 +16,20 @@
   <div class="loading" id="hallLoading">جاري تجهيز القاعة…</div>
   <div class="hud-top">
     <div class="brand"><b>محاكي معامل قسم الكهرباء</b><span>EE312 · Basic Electronics Lab</span></div>
-    <button class="hud-btn" id="quickBtn" aria-expanded="false">⚡ انتقال سريع</button>
-  </div>
-  <div class="quick" id="quick" hidden>
-    <button data-exp="exp3"><b>طاولة تجربة 3</b><span>Limiting Circuits</span></button>
-    <button data-exp="exp4"><b>طاولة تجربة 4</b><span>Rectifiers &amp; Voltage Regulation</span></button>
+    <button class="hud-btn" id="quickBtn" aria-expanded="false" aria-haspopup="true">⚡ الوصول السريع</button>
   </div>
   <div class="tip" id="tip" hidden></div>
   <div class="prompt" id="prompt" hidden></div>
   <div class="hallhint" id="hallHint"></div>
   <div class="fallback" id="fallback" hidden>
     <b style="font-size:18px">جهازك ما يدعم العرض ثلاثي الأبعاد</b>
-    <span style="color:var(--muted)">اختر الطاولة مباشرة:</span>
-    <div class="cards">
-      <button data-exp="exp3"><b>طاولة تجربة 3</b><span>Limiting Circuits</span></button>
-      <button data-exp="exp4"><b>طاولة تجربة 4</b><span>Rectifiers &amp; Regulation</span></button>
-    </div>
+    <span style="color:var(--muted)">اختر التجربة من الوصول السريع:</span>
+    <button class="hud-btn" id="fallbackQuick">⚡ الوصول السريع</button>
   </div>
 </div>
+
+<!-- quick access: labs → experiments (shared by the hall and the bench) -->
+<div class="quick" id="quick" hidden role="menu"></div>
 
 <div id="seatModal" hidden>
   <div class="sm-card" role="dialog" aria-modal="true" aria-labelledby="smTitle">
@@ -35,8 +37,8 @@
     <h2 id="smTitle">Limiting Circuits</h2>
     <p id="smSub">جلست على الطاولة. اختر الطور:</p>
     <div class="sm-opts">
-      <button data-mode="practice"><span class="tag">PRACTICE</span><b>طور التدريب</b><span>تمشي خطوة بخطوة بقيم المانيوال، وكل خطوة تتشيك عليك أول بأول.</span></button>
-      <button data-mode="exam"><span class="tag">EXAM</span><b>طور الاختبار</b><span>نفس المانيوال، بس القيم تتغير كل مرة. تسجّل الشاشات وتجاوب، وبعدها يصحّح لك.</span></button>
+      <button data-mode="manual"><span class="tag">MANUAL</span><b>المانيوال</b><span>تمشي مع مانيوال التجربة خطوة بخطوة وبنفس قيمه. كل خطوة تتشيك عليك أول بأول، وفي الآخر تعبّي الـ sheet ويتصحّح.</span></button>
+      <button data-mode="free"><span class="tag">FREE</span><b>حر</b><span>نفس الطاولة ونفس الأجهزة بدون خطوات ولا تصحيح. ركّب أي دائرة من الشنطة وقِس براحتك.</span></button>
     </div>
     <button class="sm-stand" id="smStand">↩ قم من الكرسي</button>
   </div>
@@ -44,13 +46,14 @@
 <div id="fade"></div>
 
 <!-- ================= BENCH ================= -->
-<div id="benchView" hidden data-mode="practice">
+<div id="benchView" hidden data-mode="manual">
   <div class="btop">
     <button class="tb" id="bStand">↩ قم من الطاولة</button>
     <div class="ttl"><b id="bTitle">EE312 · تجربة 3</b><span id="bSub">Limiting Circuits</span></div>
-    <span class="mchip" id="bChip">طور التدريب</span>
-    <button class="tb" id="bSwitch">بدّل للاختبار</button>
+    <span class="mchip" id="bChip">المانيوال</span>
+    <button class="tb" id="bSwitch">بدّل للحر</button>
     <button class="tb" id="bReset">↺ من جديد</button>
+    <button class="tb" id="bQuick" aria-haspopup="true">⚡ الوصول السريع</button>
     <button class="tb primary" id="bPanelBtn">📋 المانيوال</button>
   </div>
   <div class="bmain">
@@ -82,23 +85,28 @@
     <clipPath id="gridclip"><rect x="22" y="48" width="300" height="200"/></clipPath>
     <linearGradient id="deskG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ece6da"/><stop offset="1" stop-color="#e2d9c8"/></linearGradient>
     <pattern id="deskP" width="240" height="38" patternUnits="userSpaceOnUse"><path d="M0 19 Q60 15 120 19 T240 19" fill="none" stroke="#d9cfbc" stroke-width="1"/></pattern>
+    <filter id="cabShadow" x="-5%" y="-5%" width="110%" height="115%"><feDropShadow dx="0" dy="2.5" stdDeviation="2.2" flood-color="#3a3326" flood-opacity=".22"/></filter>
+    <filter id="hlGlow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="0" stdDeviation="3.5" flood-color="#ffffff" flood-opacity=".95"/></filter>
   </defs>
-  <rect x="-3000" y="-3000" width="7400" height="6900" fill="url(#deskG)"/>
-  <rect x="-3000" y="-3000" width="7400" height="6900" fill="url(#deskP)" opacity=".55"/>
-  <g id="Lstatic"></g><g id="Ldyn"></g><g id="Lparts"></g><g id="Lcables"></g><g id="Ldrag"></g><g id="Lhl" pointer-events="none"></g>
+  <rect x="-3000" y="-3000" width="8400" height="6900" fill="url(#deskG)"/>
+  <rect x="-3000" y="-3000" width="8400" height="6900" fill="url(#deskP)" opacity=".55"/>
+  <g id="Lstatic"></g><g id="Ldyn"></g><g id="Lparts"></g><g id="Lcables"></g><g id="Ldrag"></g><g id="Lhl" pointer-events="none"></g><g id="Lhl2" pointer-events="none"></g>
 </svg>
 </template>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="engine/util.js"></script>
 <script src="engine/solver.js"></script>
 <script src="engine/scope.js"></script>
 <script src="engine/gen.js"></script>
-<script src="engine/dc.js"></script>
+<script src="engine/psu.js"></script>
+<script src="engine/dmm.js"></script>
 <script src="engine/xf.js"></script>
 <script src="engine/board.js"></script>
 <script src="engine/bench.js"></script>
+<script src="engine/quick.js"></script>
 <script src="engine/hall.js"></script>
 <script src="labs/registry.js"></script>
-<script src="labs/ee312/exp3.js"></script>
-<script src="labs/ee312/exp4.js"></script>
 <script>BENCH.init();HALL.init();</script>
+</body>
+</html>

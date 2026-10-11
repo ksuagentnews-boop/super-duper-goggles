@@ -1,16 +1,17 @@
-/* EE312 · Experiment 3 · Limiting Circuits (prototype circuit from an old exam; to be rebuilt from the manual Fig. 3.4a/b). */
+/* EE312 · Experiment 3 · Limiting Circuits.
+   NOTE: this is still the approved prototype circuit (from an old exam: R, D1 + V1, D2 + DZ). It must be rebuilt
+   from the manual (Fig. 3.4a/b) in its own session. V1 now comes from a unit of the TTi EL302RD. */
 EXP_DEFS['ee312/exp3']={
   sheet:`<div class="paper" id="paper">
-  <h2 class="practice-only">Experiment 3 · Limiting Circuits</h2>
-  <h2 class="exam-only">Exam · Experiment 3 <span class="ver">نموذج <span data-p="ver"></span></span></h2>
+  <h2>Experiment 3 · Limiting Circuits</h2>
   <div class="figbox"><svg id="fig1" viewBox="0 0 430 270"></svg></div>
-  <div class="hint" style="text-align:center">Fig. 1 · R = 1 kΩ, D1 &amp; D2 = 1N4001 (Si), DZ = 1N4733A (Zener), V1 = <span data-p="v1"></span> V (DC power supply)</div>
-  <div class="check practice-only" id="live"></div>
-  <div class="exam-only">
-    <p class="exam-note">نفس المانيوال، لكن القيم تتغير كل مرة تدخل فيها. سجّل الشاشات وعبّي الإجابات، وبعدها اضغط "صحّح إجاباتي".</p>
+  <div class="hint" style="text-align:center">Fig. 1 · R = 1 kΩ, D1 &amp; D2 = 1N4001 (Si), DZ = 1N4733A (Zener), V1 = <span data-p="v1"></span> V (TTi EL302RD, one unit)</div>
+  <div class="check manual-only" id="live"></div>
+  <div class="manual-only">
+    <p class="exam-note">سجّل الشاشات وعبّي القراءات والأسئلة، وبعدها اضغط "صحّح إجاباتي".</p>
     <h3>Q1</h3>
     <ol class="en">
-      <li>Connect the circuit in Fig. 1. Take V1 = <span data-p="v1"></span> V from the DC power supply (current limit 0.05 A). Connect CH1 of the oscilloscope to v<sub>i</sub> and CH2 to v<sub>o</sub>.</li>
+      <li>Connect the circuit in Fig. 1. Take V1 = <span data-p="v1"></span> V from one unit of the dc power supply (current limit 0.05 A). Connect CH1 of the oscilloscope to v<sub>i</sub> and CH2 to v<sub>o</sub>.</li>
       <li>Set the input to <span data-p="a1"></span> V (peak-to-peak), f = <span data-p="f"></span> Hz.</li>
       <li>Display the waveforms of v<sub>i</sub> and v<sub>o</sub> and capture them on Fig. 2.</li>
     </ol>
@@ -43,20 +44,13 @@ EXP_DEFS['ee312/exp3']={
   </div>
 </div>
 `,
-  params:MODE=>{const VER=Math.random().toString(36).slice(2,6).toUpperCase();
-    return MODE==='exam'?(()=>{const v1=pick([1.5,2,2.5,3]);const f=pick([100,200,500,1000]);const a1=pick([5,6,7,8,9].filter(a=>a/2>=v1+1&&a/2<=4.6));const a2=pick([14,16,18,20]);return {v1,f,a1,a2,a1h:a1/2,vop:(v1+0.6).toFixed(1),ver:VER}})():{v1:2,f:200,a1:6,a2:16,a1h:3,vop:'2.6',ver:'—'}},
-  analysis:'sweep',
+  params:()=>({v1:2,f:200,a1:6,a2:16,a1h:3,vop:'2.6'}),
   instruments:[
-    {type:'gen',at:{x:20,y:20,s:1.3},park:{gr:{x:395,y:388},gb:{x:450,y:388}}},
-    {type:'dc',at:{x:530,y:20},park:{dr:{x:690,y:388},db:{x:760,y:388}}},
-    {type:'scope',at:{x:820,y:20},park:{c1r:{x:888,y:468},c1b:{x:888,y:538},c2r:{x:888,y:648},c2b:{x:888,y:718}},
-      prev:sc=>{sc.ch[0].probe=10;sc.ch[0].vd=50;sc.ch[1].on=false;sc.ch[1].vd=0.5;sc.ch[1].pos=1;sc.ch[1].cpl='AC';sc.td=5e-5;sc.xy=true;sc.meas=[{src:0,src2:1,type:'Pk-Pk'}];sc.trig.level=1.2;sc.disp.grat='Frame'}}],
-  cableOrder:['gen','sc','dc'],
-  boardCaption:'Plug-in panel (كل مربع = node فيه 9 فتحات موصولة)',
-  parts:{R:{t:'R',g:1e-3,lab:'1kΩ'},D:{t:'D',lab:'1N4001'},Z:{t:'Z',lab:'Zener'},BR:{t:'BR',lab:''}},
-  tray:[['R','1 kΩ resistor'],['D','Si diode 1N4001'],['Z','Zener 1N4733A'],['BR','Bridging plug'],['W','Wire (tap 2 nodes)']],
-  regions:{gen:[16,16,502,294],dc:[526,16,288,218],scope:[816,16,578,393],board:[215,372,712,508]},
-  names:{gen:['PeakTech 4124','مولّد الإشارات'],dc:['DC Power Supply','مصدر الجهد المستمر'],scope:['GW Instek GDS-1104B','راسم الإشارة'],board:['Plug-in panel','لوحة التوصيل']},
+    {type:'gen'},
+    {type:'psu',prev:d=>{d.u[0].v=5;d.u[0].ilim=0.1;d.u[1].v=12;d.u[1].ilim=0.5}},
+    {type:'scope',probes:2,prev:sc=>{sc.ch[0].probe=10;sc.ch[0].vd=50;sc.ch[1].on=false;sc.ch[1].vd=0.5;sc.ch[1].pos=1;sc.ch[1].cpl='AC';sc.td=5e-5;sc.xy=true;sc.meas=[{src:0,src2:1,type:'Pk-Pk'}];sc.trig.level=1.2;sc.disp.grat='Frame'}}],
+  parts:{R1k:{t:'R',r:1000,lab:'1kΩ'},D4001:{t:'D',lab:'1N4001'},Z4733:{t:'Z',lab:'1N4733A'},BR:{t:'BR',lab:''}},
+  tray:[['R1k','1 kΩ'],['D4001','1N4001'],['Z4733','1N4733A'],['BR','Bridging plug'],['W','Wire']],
   setup(RT){
 const PX=RT.PX;
 /* reference circuit of Fig. 1 */
@@ -66,16 +60,16 @@ function buildRef(){ // nets: 0 vi, 1 vo, 2 X, 3 Y ; -1 ground
 const VSCHK=[-8,-6,-4,-2.5,-1,0,1,2.5,4,6,8];
 function respond(ck){let x=null;return VSCHK.map(v=>{const r=SOLVER.point(ck,v,x);x=r.x;return r})}
 let REF=null;function ref(){if(!REF){const ck=buildRef();REF=respond(ck);const t6=SOLVER.sweep(ck,-PX.a1/2,PX.a1/2,61),t16=SOLVER.sweep(ck,-PX.a2/2,PX.a2/2,81);REF.vop=Math.max(...t6.v2);REF.vom=Math.min(...t16.v2);REF.vd2=REF.vom; }return REF}
-function status(){const L=RT.S.leads,g=RT.S.gen,d=RT.S.dc,sc=RT.S.sc;const R=ref();
-  const st={pwr:g.pwr&&d.pwr&&sc.pwr,dc:d.pwr&&d.out&&Math.abs(d.v-PX.v1)<0.005&&d.ilim<=0.05+1e-9,dcv:Math.abs(d.v-PX.v1)<0.005,gnd:['gb','c1b','c2b'].every(k=>L[k].node!=null),
+function status(){const L=RT.S.leads,g=RT.S.gen,d=RT.S.psu,sc=RT.S.sc;const R=ref();
+  const unitOK=U=>U.on&&Math.abs(U.v-PX.v1)<0.005&&U.ilim<=0.05+1e-9;
+  const st={pwr:g.pwr&&d.pwr&&sc.pwr,dc:d.pwr&&d.u.some(unitOK),dcv:d.u.some(U=>Math.abs(U.v-PX.v1)<0.005),gnd:['gb','c1b','c2b'].every(k=>L[k].node!=null),
     f:Math.abs(g.freq-PX.f)<0.5&&g.wave==='Sine'&&Math.abs(g.off)<0.005,probe:sc.ch.every(c=>c.probe===1&&!c.inv),a6:Math.abs(g.amp-PX.a1)<0.05,a16:Math.abs(g.amp-PX.a2)<0.05,out:g.pwr&&g.out,ch:sc.ch[0].on&&sc.ch[1].on,cpl:sc.ch[0].cpl==='DC'&&sc.ch[1].cpl==='DC'};
   st.circ=false;st.ch1=false;
-  if(L.gr.node!=null&&L.c2r.node!=null&&RT.S.dc.pwr&&RT.S.dc.out){const U=respond(RT.buildUser(true));st.circ=U.every((u,i)=>u.v2!=null&&Math.abs(u.v2-R[i].v2)<0.12);st.ch1=L.c1r.node!=null&&U.every((u,i)=>u.v1!=null&&Math.abs(u.v1-R[i].v1)<0.12)}
+  if(L.gr.node!=null&&L.c2r.node!=null&&st.dc){const U=respond(RT.buildUser(true));st.circ=U.every((u,i)=>u.v2!=null&&Math.abs(u.v2-R[i].v2)<0.12);st.ch1=L.c1r.node!=null&&U.every((u,i)=>u.v1!=null&&Math.abs(u.v1-R[i].v1)<0.12)}
   // fit on screen
   const sg=[RT.dsig(0),RT.dsig(1)];const fitC=c=>{const ch=sc.ch[c];const top=sg[c].max/ch.vd+ch.pos,bot=sg[c].min/ch.vd+ch.pos;return top<=4.05&&bot>=-4.05&&(top-bot)>=1.5};
   if(sc.xy){const c1=sc.ch[0];const l=sg[0].min/c1.vd+c1.pos,r=sg[0].max/c1.vd+c1.pos;st.fit=sc.pwr&&l>=-5.05&&r<=5.05&&(r-l)>=1.5&&fitC(1)}else{const cyc=10*sc.td*g.freq;st.fit=sc.pwr&&fitC(0)&&fitC(1)&&cyc>=1&&cyc<=10}
   st.xy=sc.xy;return st}
-function updateLive(){BENCH.onRender()}
 const CAPS={};
 document.querySelectorAll('[data-cap]').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.cap;if(RT.dirty)RT.recompute();const st=status();CAPS[id]={st,amp:RT.S.gen.amp,freq:RT.S.gen.freq};const mm=RT.S.sc.msg;RT.S.sc.msg='';const inner=RT.S.sc.run?RT.screenInner():RT.S.sc.frozen;RT.S.sc.msg=mm;$(id).innerHTML=`<svg viewBox="12 26 336 286" direction="ltr" font-family="Plex Mono, IBM Plex Mono, monospace"><defs><clipPath id="gridclip"><rect x="22" y="48" width="300" height="200"/></clipPath></defs>${inner}</svg>`}));
 const STATES=['— ','ON (forward)','OFF','Breakdown'];['p1','p2','pz','n1','n2','nz'].forEach(id=>{$(id).innerHTML=STATES.map((s,i)=>`<option value="${i}">${s}</option>`).join('')});
@@ -108,10 +102,10 @@ $('submit').addEventListener('click',()=>{const R=ref();const res=[];let sc=0,to
   $('fig1').innerHTML=s})();
 return {status,
   steps:[
-    {dev:'gen',t:'شغّل الأجهزة الثلاثة: اضغط POWER في الجنريتر والـ DC supply والإسكوب.',ok:s=>s.pwr},
-    {dev:'dc',t:`اضبط الـ DC supply على ${PX.v1} V بمقبضي COARSE و FINE، وخلّ CURRENT ≤ 0.05 A، وبعدها شغّل OUTPUT.`,ok:s=>s.dc},
-    {dev:'board',t:'ركّب دائرة Fig. 1 على اللوحة: R و D1 و D2 و DZ، والـ DC supply مكان V1. وصّل أحمر الجنريتر على vi، وأحمر CH2 على vo.',ok:s=>s.circ},
-    {dev:'board',t:'وصّل أحمر CH1 على vi، وكل الأسود (الجنريتر و CH1 و CH2) على الأرضي.',ok:s=>s.ch1&&s.gnd},
+    {dev:'gen',t:'شغّل الأجهزة الثلاثة: POWER في الجنريتر، و ∼POWER في الـ TTi EL302RD، و POWER في الإسكوب.',ok:s=>s.pwr},
+    {dev:'psu',t:`في وحدة من وحدتي الـ EL302RD ومفتاح الـ dc على OFF (PRESET): اضبط CURRENT على 0.05 A، والجهد على V1 = ${PX.v1} V بمقبضي COARSE و FINE، وبعدها حوّل مفتاح الـ dc على ON.`,ok:s=>s.dc},
+    {dev:'board',t:'ركّب دائرة Fig. 1 على اللوحة: R و D1 و D2 و DZ، وطرفي الوحدة (+ و −) مكان V1. وصّل GEN OUT على vi و CH2 على vo، و GEN ⏚ و CH2 ⏚ على الأرضي.',ok:s=>s.circ},
+    {dev:'board',t:'وصّل CH1 على vi، و CH1 ⏚ على الأرضي.',ok:s=>s.ch1&&s.gnd},
     {dev:'gen',t:`اضبط الجنريتر: Sine، و f = ${PX.f} Hz (F1)، و Amplitude = ${PX.a1} Vpp (F2)، و Offset = 0 (F3)، وشغّل زر CH1.`,ok:s=>s.f&&s.a6&&s.out},
     {dev:'scope',t:'في الإسكوب: اضغط Default، وشغّل CH2، وتأكد إن Coupling = DC و Probe 1X.',ok:s=>s.ch&&s.cpl&&s.probe},
     {dev:'scope',t:'اضغط Autoset أو اضبط SCALE و TIME/DIV لين تطلع الموجتين كاملة على الشاشة (Fig. 2).',ok:s=>s.fit&&!s.xy&&s.a6},

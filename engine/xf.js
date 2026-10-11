@@ -33,11 +33,13 @@ function xfKey(k){const X=RT.S.xf;if(k==='CHECK'){const [ok,say]=safety();X.ok=o
   if(k==='PLUG'){if(X.plugged){X.plugged=false;X.say='تم فصل المحوّل.';RT.dirty=true;return}if(!X.ok){X.say='لازم المعيد يشيك على الدائرة أول (Ask instructor to check).';return}X.plugged=true;X.say='';RT.dirty=true}}
 function fresh(){return {plugged:false,ok:false,say:'',blown:null}}
 return {key:'xf',prefix:'x',fresh,svg:xfSVG,keyFn:xfKey,wheel:[],FQ,
-  leads:[{k:'tA',park:opt.park.tA,circuit:true},{k:'tB',park:opt.park.tB,circuit:true},{k:'tC',park:opt.park.tC,circuit:true}],
-  cables:D=>{let s='';['tA','tB','tC'].forEach(k=>{const t=XT[k];const p=D.leadPos(k);s+=D.lead(t,p,t.c,'#1c0d08')+D.plug(k,p,t.c,'#1c0d08')});return s},
+  size:[770,400],
+  leads:['tA','tB','tC'].map(k=>({k,label:XT[k].l,from:XT[k],circuit:true,banana:true})),
+  cables:D=>['tA','tB','tC'].map(k=>D.banana(XT[k],k)).join(''),
   stamp(ck,force){const L=RT.S.leads;const on=force||RT.S.xf.plugged;
     if(on&&L.tA.node!=null&&L.tB.node!=null)ck.els.push({t:'XS',a:ck.idx(L.tA.node),b:ck.idx(L.tB.node),s:1,vp:VP,f:FQ,r:XR});
     if(on&&L.tC.node!=null&&L.tB.node!=null)ck.els.push({t:'XS',a:ck.idx(L.tC.node),b:ck.idx(L.tB.node),s:-1,vp:VP,f:FQ,r:XR})},
   onCircuitChange(){RT.S.xf.ok=false},
   postSim,safety};
 };
+ENGINE.xf.size=[770,400];

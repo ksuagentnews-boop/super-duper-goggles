@@ -1,7 +1,7 @@
 /* PeakTech 4124 function generator (approved prototype behaviour). State in S.gen.
    opt: {at:{x,y,s}, prev:{...leftover settings}} */
 ENGINE.gen=function(RT,opt){
-const G0=opt.at;
+const G0=Object.assign({s:1.3},opt.at);
 const GEN_BNC={x:G0.x+330*G0.s,y:G0.y+182*G0.s};
 function fmtFreq(f){let s,u;if(f>=1e6){s=(f/1e6).toFixed(6);u='MHz'}else if(f>=1e3){s=(f/1e3).toFixed(6);u='kHz'}else{s=f.toFixed(4);u='Hz'}const [a,b]=s.split('.');return a+'.'+b.slice(0,3)+','+b.slice(3)+u}
 const fmtAmp=a=>a>=1?a.toFixed(3)+'Vpp':(a*1000).toFixed(1)+'mVpp';
@@ -48,10 +48,12 @@ function genKey(k){const g=RT.S.gen;if(k==='PWR'){g.pwr=!g.pwr;g.edit=null;if(!g
   if(a>20){a=20;genErr('Ampl limit 20Vpp')}if(Math.abs(o)+a/2>10){o=Math.sign(o)*(10-a/2);genErr('Out of range')}
   g.freq=f;g.amp=+a.toPrecision(6);g.off=+o.toPrecision(6);g.edit=null;RT.dirty=true}
 function fresh(){return Object.assign({pwr:false,out:false,wave:'Square',freq:1000,amp:4,off:0.5,edit:null,buf:''},opt.prev||{})}
-return {key:'gen',prefix:'g',fresh,svg:genSVG,keyFn:genKey,wheel:[],wv,
-  leads:[{k:'gr',park:opt.park.gr},{k:'gb',park:opt.park.gb,earth:true}],
+return {key:'gen',prefix:'g',size:[380*G0.s,220*G0.s],fresh,svg:genSVG,keyFn:genKey,wheel:[],wv,
+  leads:[{k:'gr',label:'GEN OUT',from:{x:GEN_BNC.x-14,y:GEN_BNC.y},coax:true},{k:'gb',label:'GEN ⏚',from:{x:GEN_BNC.x+14,y:GEN_BNC.y},earth:true,coax:true}],
   cables:D=>D.coax(GEN_BNC,'gr','gb','GEN'),
+  /* 50 Ω output referenced to earth (its black clip is earthed through the mains plug) */
   stamp(ck,force){const g=RT.S.gen,L=RT.S.leads;const genOn=force||(g.pwr&&g.out);if(L.gr.node!=null&&genOn)ck.els.push({t:'VS',a:ck.idx(L.gr.node),r:50})},
   on:()=>RT.S.gen.pwr&&RT.S.gen.out&&RT.S.leads.gr.node!=null,
   sigF:()=>RT.S.gen.freq};
 };
+ENGINE.gen.size=[494,286];
