@@ -32,17 +32,16 @@ const BENCH={
     if(!EXP_DEFS[exp]){REGISTRY.load(exp).then(()=>this.enter(exp,mode,true)).catch(()=>{this.say('تعذّر تحميل التجربة');this.leave()});return}
     this.exp=exp;this.mode=mode;this.built=exp+'|'+mode;this.view='ov';this.done=[];this.drawer=false;this.sim=null;
     E.view.dataset.mode=mode;E.view.classList.remove('drawer-open');
-    E.svgHost.innerHTML='';E.paperHost.innerHTML='';
-    E.svgHost.appendChild(document.getElementById('tpl-svg').content.cloneNode(true));
+    E.svgHost.innerHTML='';E.paperHost.innerHTML='';const PC=!!EXP_DEFS[exp].pc;E.view.classList.toggle('pc-mode',PC);
+    if(!PC)E.svgHost.appendChild(document.getElementById('tpl-svg').content.cloneNode(true));
     E.paperHost.innerHTML=EXP_DEFS[exp].sheet;
     const X=REGISTRY.exp(exp);$q('#bTitle').textContent=X.lab.code+' · تجربة '+X.num;$q('#bSub').textContent=X.en;
     const chip=$q('#bChip');chip.textContent=mode==='free'?'الطور الحر':'المانيوال';chip.classList.toggle('exam',mode==='free');
     $q('#bSwitch').textContent=mode==='free'?'بدّل للمانيوال':'بدّل للحر';
-    this.svg=document.getElementById('bench');this.hl=document.getElementById('Lhl');
-    this.svg.addEventListener('pointermove',e=>this.hover(e));
-    this.svg.addEventListener('pointerleave',()=>{if(this.view==='ov')this.hl.innerHTML=''});
+    this.svg=PC?null:document.getElementById('bench');this.hl=PC?{innerHTML:''}:document.getElementById('Lhl');
+    if(!PC){this.svg.addEventListener('pointermove',e=>this.hover(e));this.svg.addEventListener('pointerleave',()=>{if(this.view==='ov')this.hl.innerHTML=''})}
     this._bagShown=false;
-    ENGINE.run(EXP_DEFS[exp]);
+    if(PC){this.view='pc';ENGINE.runPC(EXP_DEFS[exp])}else ENGINE.run(EXP_DEFS[exp]);
     this.ui();
     requestAnimationFrame(()=>{this.refit(false)});
   },
@@ -70,17 +69,17 @@ const BENCH={
   animTo(to){if(!to)return;cancelAnimationFrame(this.anim);if(!this.vb||reduceMotion){this.setVB(to);return}const from={...this.vb},t0=performance.now(),dur=560;
     const step=now=>{const k=ease(Math.min(1,(now-t0)/dur));this.setVB({x:from.x+(to.x-from.x)*k,y:from.y+(to.y-from.y)*k,w:from.w+(to.w-from.w)*k,h:from.h+(to.h-from.h)*k});if(k<1)this.anim=requestAnimationFrame(step)};this.anim=requestAnimationFrame(step)},
   curRect(){return this.view==='ov'?this.ovRect:this.sim.regions[this.view]},
-  refit(anim){if(!this.sim)return;const t=this.fit(this.curRect());if(anim)this.animTo(t);else{cancelAnimationFrame(this.anim);t&&this.setVB(t)}},
-  ui(){const E=this.el,ov=this.view==='ov';E.zoomUI.hidden=ov;E.ovHint.hidden=!ov;E.bagBtn.hidden=this.view!=='board';
+  refit(anim){if(!this.sim||!this.svg)return;const t=this.fit(this.curRect());if(anim)this.animTo(t);else{cancelAnimationFrame(this.anim);t&&this.setVB(t)}},
+  ui(){const E=this.el,ov=this.view==='ov';if(this.sim&&this.sim.pc){E.zoomUI.hidden=true;E.ovHint.hidden=true;E.bagBtn.hidden=true;this.drawStepCard();return}E.zoomUI.hidden=ov;E.ovHint.hidden=!ov;E.bagBtn.hidden=this.view!=='board';
     if(!ov){const n=this.sim.names[this.view];E.zEn.textContent=n[0];E.zAr.textContent=n[1]}
     if(ov)this.hl.innerHTML='';else this.hl.innerHTML='';
     E.ovHint.textContent=innerWidth<600&&innerHeight>innerWidth?'اقلب الجوال بالعرض، واضغط على أي جهاز':matchMedia('(pointer:coarse)').matches?'اضغط على أي جهاز عشان تقرّب عليه':'اضغط على أي جهاز عشان تقرّب عليه · ESC للرجوع';
     this.drawStepCard()},
   regionAt(p){const R=this.sim.regions;for(const k of Object.keys(R).reverse()){const r=R[k];if(p.x>=r[0]&&p.x<=r[0]+r[2]&&p.y>=r[1]&&p.y<=r[1]+r[3])return k}return null},
   ovClick(p){const k=this.regionAt(p);if(k){this._hk=null;this.focus(k)}},
-  focus(k){if(!this.sim||!this.sim.regions[k])return;this.view=k;if(k!=='board')this.setDrawer(false,true);this.ui();this.refit(true);
+  focus(k){if(this.sim&&this.sim.pc){this.sim.focus(k);return}if(!this.sim||!this.sim.regions[k])return;this.view=k;if(k!=='board')this.setDrawer(false,true);this.ui();this.refit(true);
     if(k==='board'&&!this._bagShown){this._bagShown=true;setTimeout(()=>{if(this.view==='board'&&!this.drawer)this.setDrawer(true)},450)}},
-  back(){this.setDrawer(false,true);this.view='ov';this.ui();this.refit(true)},
+  back(){if(this.sim&&this.sim.pc)return;this.setDrawer(false,true);this.view='ov';this.ui();this.refit(true)},
   setDrawer(open,silent){this.drawer=open;const E=this.el;if((innerWidth<700||innerHeight<520)&&this.mode==='manual'){E.card.classList.toggle('min',open);E.card.dataset.key=''}E.view.classList.toggle('drawer-open',open);E.bagBtn.setAttribute('aria-expanded',open);E.bagAr.textContent=open?'▾':'▸';
     E.view.style.setProperty('--dhpx',E.drawer.offsetHeight+'px');
     if(!silent)setTimeout(()=>this.refit(true),20)},
@@ -105,7 +104,7 @@ const BENCH={
     const key=all+'|'+i+'|'+this.view;if(c.dataset.key===key)return;c.dataset.key=key;
     if(all){c.innerHTML=`<div class="num done">✓</div><div class="body"><div class="k">خلصت خطوات المانيوال 🎉</div><div class="t">كل الخطوات تمت. كمّل الـ sheet (الشاشات والقراءات والأسئلة) واضغط "صحّح" عشان تشوف درجتك.</div><div class="acts"><button class="go" id="scSheet">افتح الـ sheet</button></div></div>`;
       c.querySelector('#scSheet').onclick=()=>{this.togglePanel(true);const r=$q('#submit');if(r)r.scrollIntoView({block:'center'})};return}
-    const s=S[i];const here=this.view===s.dev;
+    const s=S[i];const here=this.view===s.dev&&!this.sim.pc;
     c.innerHTML=`<div class="num">${i+1}</div><div class="body"><div class="k">الخطوة ${i+1} من ${S.length}</div><div class="t">${s.t}</div><div class="acts">${here?'':`<button class="go" id="scGo">وريني وين</button>`}<button id="scAll">كل الخطوات</button></div></div><button class="mini" id="scMin" aria-label="تصغير">${min?'▴':'▾'}</button>`;
     const g=c.querySelector('#scGo');if(g)g.onclick=()=>this.focus(s.dev);
     c.querySelector('#scAll').onclick=()=>this.togglePanel(true);

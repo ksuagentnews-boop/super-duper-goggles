@@ -10,6 +10,8 @@
      CCS {a,b,i0,vmax}       meter test source (Ω / diode / continuity): pushes i0 out of a, collapses as Va-Vb -> vmax
      BJT {c,b,e,m}           npn transistor, m(vbe,vbc) -> [iC, iB]
      FET {d,g,s,m}           enhancement n-MOSFET, m.ids(vgs,vds) -> drain current (d -> s)
+     L   {a,b,l}             inductor (backward Euler; a 1 mΩ short in the dc operating point); ctx.vprev holds its current
+     XF  {pa,pb,sa,sb,n,j}   ideal transformer vs = n·vp (perfectly coupled inductors, SPICE K = 1); x[j] = secondary current
      OA  {p,m_,o,vp,vn,y,m}  op amp macro-model (pins +, −, out, V+, V−; y = internal node of the gain stage; m = model) */
 const SOLVER=(()=>{
   const VT=0.02585;
@@ -84,6 +86,10 @@ const SOLVER=(()=>{
         else if(e.t==='C'){if(ctx.dt){const g=e.c/ctx.dt;st(e.a,e.b,g*(V(e.a)-V(e.b)-ctx.vprev[ei]),g)}else if(ctx.leak)st(e.a,e.b,ctx.leak*(V(e.a)-V(e.b)),ctx.leak)}
         else if(e.t==='CCS'){const [i,g]=ccs(e,V(e.a)-V(e.b));st(e.a,e.b,-i,g)}
         else if(e.t==='OA')stampOA(e,V,F,A,n,st,ctx,ei);
+        else if(e.t==='L'){const v=V(e.a)-V(e.b);if(ctx.dt){const g=ctx.dt/e.l;st(e.a,e.b,ctx.vprev[ei]+g*v,g)}else st(e.a,e.b,1e3*v,1e3)}
+        else if(e.t==='XF'){const J=(r,c,g)=>{if(r>=0&&c>=0)A[r*n+c]+=g};const is=x[e.j];
+          F[e.j]+=V(e.sa)-V(e.sb)-e.n*(V(e.pa)-V(e.pb));J(e.j,e.sa,1);J(e.j,e.sb,-1);J(e.j,e.pa,-e.n);J(e.j,e.pb,e.n);
+          if(e.sa>=0){F[e.sa]-=is;J(e.sa,e.j,-1)}if(e.sb>=0){F[e.sb]+=is;J(e.sb,e.j,1)}if(e.pa>=0){F[e.pa]+=e.n*is;J(e.pa,e.j,e.n)}if(e.pb>=0){F[e.pb]-=e.n*is;J(e.pb,e.j,-e.n)}}
         else if(e.t==='BJT'){const vb=V(e.b),vc=V(e.c),ve=V(e.e),h=1e-7;const [ic,ib]=e.m(vb-ve,vb-vc);
           const d1=e.m(vb-ve+h,vb-vc),d2=e.m(vb-ve,vb-vc+h);const J=(r,c,g)=>{if(r>=0&&c>=0)A[r*n+c]+=g};
           /* partial derivatives of iC, iB wrt vBE (x) and vBC (y); node voltages: vb → x,y; vc → −y; ve → −x */
@@ -147,5 +153,5 @@ const SOLVER=(()=>{
         if(e.t==='XS'&&c===cycles-1){const v=e.s*e.vp*Math.sin(2*Math.PI*e.f*t);imax=Math.max(imax,Math.abs((V(e.a)-V(e.b)-v)/e.r))}});
       if(c===cycles-1){const kk=(k+1)%NS;v1[kk]=ck.p1==null?NaN:V(ck.p1);v2[kk]=ck.p2==null?NaN:V(ck.p2);X[kk]=Float64Array.from(x);r.Is.forEach((I,u)=>{Iabs[u]+=Math.abs(I)/NS;if(r.ccs[u])ccs[u]=true})}}
     return {kind:'tran',f,v1,v2,X,imax,capMin,has1:ck.p1!=null,has2:ck.p2!=null,Idc:Iabs,ccs}}
-  return {VT,dexp,junction,MODELS,diodeSi,zener,diodeGe,led,uf,lsolve,newton,point,sweep,interp,simulate,ccs,NS};
+  return {VT,dexp,junction,bjt,mosfet,MODELS,diodeSi,zener,diodeGe,led,uf,lsolve,newton,point,sweep,interp,simulate,ccs,NS};
 })();
