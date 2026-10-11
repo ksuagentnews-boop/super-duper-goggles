@@ -34,6 +34,14 @@ A static website (GitHub Pages, no server, no login) that simulates the EE depar
 - **Steps and procedure text:** shown inside a clean, consistent rectangular card/panel: aligned edges, fixed padding, no overlap with instruments or other UI, no clipped text, proper RTL. The previous prototype had layout problems here; check every screen size.
 - **Component looks must match the real parts and the photos in `docs/`:** Zener drawn red as in the manual; silicon diode (e.g. 1N400x) black body with a grey cathode band; germanium diode in its small glass body with its band; LED as a 5 mm dome with two legs (longer anode); resistors with correct colour bands for their value; electrolytic capacitor with its polarity stripe. Cathode/polarity marks must be accurate because students learn orientation from them.
 
+## Multi-lab building (plan for it now)
+- Later the site will hold all EE labs (~8). The student will start in a **corridor of the EE department**, walk along it, and enter a lab through its **door** (a sign with the lab code, e.g. `EE312`, above each door). Entering a door loads that lab's room with its tables.
+- Build the engine so this is only data, not new code:
+  - a **lab registry** (`labs/index.js`): code, name, room layout (rows × tables), list of experiments;
+  - the hall renders any lab room from its registry entry; the corridor renders one door per registered lab;
+  - instruments are shared across labs (one scope/generator/DMM/supply implementation reused everywhere).
+- For now there is only `EE312`: the site can open straight into its room, but the corridor/door scene and the registry must already exist so adding a lab = adding a folder `labs/<code>/` + one registry entry.
+
 ## Quick access (الوصول السريع)
 - A "الوصول السريع" button is always visible in the hall (and reachable from the bench).
 - It opens a two-level menu: first the list of labs (for now only `EE312`; other labs appear later from the registry), then the selected lab's experiments by number and name (Exp 1, Exp 2, …).
