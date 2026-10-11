@@ -89,8 +89,9 @@ const HALL=(()=>{
     const ring=new THREE.Mesh(new THREE.RingGeometry(0.34,0.42,40),new THREE.MeshBasicMaterial({color:e.built?0x2c7a6b:0x8a9692,transparent:true,opacity:0}));ring.rotation.x=-Math.PI/2;ring.position.set(x,0.012,cz);scene.add(ring);
     // hanging sign, readable from both sides
     const sm=new THREE.MeshBasicMaterial({map:sign(e),transparent:true});
-    [0,Math.PI].forEach(r=>{const sg=new THREE.Mesh(new THREE.PlaneGeometry(1.5,0.44),sm);sg.position.set(x,2.35,z-0.2+(r?-0.004:0.004));sg.rotation.y=r;scene.add(sg)});
-    [-0.6,0.6].forEach(dx=>{const w=new THREE.Mesh(new THREE.CylinderGeometry(0.004,0.004,0.7,4),frame);w.position.set(x+dx,2.92,z-0.2);scene.add(w)});
+    [0,Math.PI].forEach(r=>{const sg=new THREE.Mesh(new THREE.PlaneGeometry(1.5,0.44),sm);sg.position.set(x,2.98,z-0.2+(r?-0.004:0.004));sg.rotation.y=r;scene.add(sg)});
+    /* hung just under the ceiling so no sign hides the whiteboard from the aisles */
+    [-0.6,0.6].forEach(dx=>{const w=new THREE.Mesh(new THREE.CylinderGeometry(0.004,0.004,0.1,4),frame);w.position.set(x+dx,3.25,z-0.2);scene.add(w)});
     const B={x,z,cz,num:e.num,e,built:e.built,seatM,ring,box:[x-1.3,x+1.3,z-0.58,z+0.58]};benches.push(B);
     ch.traverse(o=>{if(o.isMesh){o.userData.bench=B;pick.push(o)}});
     return B}
@@ -153,7 +154,7 @@ const HALL=(()=>{
     const wb=tex(1400,500,(g,Wt,Ht)=>{g.fillStyle='#fbfcfc';g.fillRect(0,0,Wt,Ht);g.strokeStyle='#9aa6a2';g.lineWidth=18;g.strokeRect(9,9,Wt-18,Ht-18);g.fillStyle='#2c7a6b';g.font=`600 74px ${MO}`;g.textAlign='center';g.fillText(`${Lb.code} · ${Lb.title}`,Wt/2,150);
       g.direction='rtl';g.fillStyle='#1e2a28';g.font=`600 64px ${AR}`;g.fillText('أهلاً بك في محاكي معامل قسم الكهرباء',Wt/2,270);g.fillStyle='#5d6b67';g.font=`500 46px ${AR}`;g.fillText('امشِ لأي طاولة واضغط على الكرسي، أو استخدم الوصول السريع',Wt/2,370);
       g.strokeStyle='#c8372d';g.lineWidth=5;g.beginPath();for(let i=0;i<=200;i++){const x=Wt*.15+Wt*.7*i/200,y=440-Math.max(-0.55,Math.min(0.55,Math.sin(i/200*Math.PI*6)))*40;i?g.lineTo(x,y):g.moveTo(x,y)}g.stroke()});
-    const wbm=new THREE.Mesh(new THREE.PlaneGeometry(5.2,1.86),new THREE.MeshStandardMaterial({map:wb,roughness:.35}));wbm.position.set(0,2.0,ROOM.z0+0.03);scene.add(wbm);
+    const wbm=new THREE.Mesh(new THREE.PlaneGeometry(5.2,1.86),new THREE.MeshStandardMaterial({map:wb,roughness:.35}));wbm.position.set(0,1.82,ROOM.z0+0.03);scene.add(wbm);
     // windows (left wall)
     for(let i=-1;i<=1;i++){const z=i*4.2;const w=new THREE.Mesh(new THREE.PlaneGeometry(2,1.3),new THREE.MeshBasicMaterial({color:0xd5ebf3}));w.position.set(ROOM.x0+0.02,1.85,z);w.rotation.y=Math.PI/2;scene.add(w);
       const fr=std('#f7f9f8'),X=ROOM.x0+0.04;boxM(0.06,1.42,0.08,fr,X,1.85,z-1.04,false);boxM(0.06,1.42,0.08,fr,X,1.85,z+1.04,false);boxM(0.06,0.08,2.16,fr,X,2.55,z,false);boxM(0.08,0.08,2.16,fr,X+0.02,1.16,z,false);boxM(0.06,1.3,0.05,fr,X,1.85,z,false)}

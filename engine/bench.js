@@ -96,7 +96,7 @@ const BENCH={
     if(just>=0){const all=this.done.filter(Boolean).length===S.length;this.say(all?'🎉 خلصت كل خطوات التجربة':'✓ تمت الخطوة '+(just+1));const c=this.el.card;c.classList.remove('flash');void c.offsetWidth;c.classList.add('flash')}},
   cur(){const S=this.sim.steps;for(let i=0;i<S.length;i++)if(!this.done[i])return i;return S.length},
   drawSteps(){const el=document.getElementById('live');if(!el)return;const S=this.sim.steps,c=this.cur(),n=this.done.filter(Boolean).length;
-    el.innerHTML=`<div class="sh"><b>خطوات التجربة</b><span>${n} / ${S.length}</span></div><div class="prog"><i style="width:${n/S.length*100}%"></i></div>`+
+    el.innerHTML=`<div class="sh"><b>خطوات التجربة</b><span dir="ltr">${n} / ${S.length}</span></div><div class="prog"><i style="width:${n/S.length*100}%"></i></div>`+
       S.map((s,i)=>`<div class="step ${this.done[i]?'done':i===c?'cur':'todo'}"><span class="m">${this.done[i]?'✓':i+1}</span><span class="x">${s.t}</span>${i===c?`<button class="eye" data-dev="${s.dev}">وريني</button>`:''}</div>`).join('');
     el.querySelectorAll('.eye').forEach(b=>b.onclick=()=>{this.focus(b.dataset.dev);if(innerWidth<=900)this.togglePanel(false)})},
   drawStepCard(){const c=this.el.card;if(!this.sim||this.mode!=='manual'){c.hidden=true;return}c.hidden=false;
