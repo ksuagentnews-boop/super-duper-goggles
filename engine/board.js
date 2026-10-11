@@ -46,6 +46,14 @@ RT.inst=byKey;RT.layout={BX,BY,P,COLS,ROWS,parkY,PARK,regions};
 /* ---------- parts ---------- */
 const PARTS=def.parts;
 const POLAR=t=>['D','Z','C','LED','GE'].includes((PARTS[t]||{}).t);
+/* multi-pin parts (ICs, transistors): def.pins = [{dx,dy,h,role,n}] node offsets from the anchor node p.n,
+   the hole each leg goes into and its electrical role; def.pkg picks the drawing */
+const MULTI=t=>!!(PARTS[t]&&PARTS[t].pins);
+const pinNodes=p=>PARTS[p.type].pins.map(q=>p.n+q.dy*COLS+q.dx);
+const fits=(t,n)=>{const ps=PARTS[t].pins;const c=n%COLS,r=Math.floor(n/COLS);return ps.every(q=>c+q.dx>=0&&c+q.dx<COLS&&r+q.dy>=0&&r+q.dy<ROWS)};
+const ends=p=>MULTI(p.type)?pinNodes(p):[p.a,p.b];
+/* centre of a multi-pin footprint */
+function fpC(t,n){const ps=PARTS[t].pins;let x=0,y=0;ps.forEach(q=>{const c=nodeC(n+q.dy*COLS+q.dx);x+=c.x;y+=c.y});return {x:x/ps.length,y:y/ps.length}}
 
 /* ---------- state ---------- */
 function fresh(){
@@ -63,11 +71,15 @@ function buildUser(force,opts){
   S.parts.forEach(p=>{if(PARTS[p.type].t==='BR')U.u(p.a,p.b)});S.wires.forEach(w=>U.u(w.a,w.b));
   LEADS.forEach(k=>{if(LEADDEF[k].earth&&L[k].node!=null)U.u(L[k].node,E)});
   const root=U.f(E);const map=new Map();const idx=n=>{const r=U.f(n);if(r===root)return -1;if(!map.has(r))map.set(r,map.size);return map.get(r)};
+  let nIn=0;const inner=()=>{const k='in'+(nIn++);map.set(k,map.size);return map.size-1};
   const els=[];
   S.parts.forEach(p=>{const d=PARTS[p.type];if(p.dead)return;
     if(d.t==='R')els.push({t:'G',a:idx(p.a),b:idx(p.b),g:d.g||1/d.r,pid:p.id});
     else if(['D','Z','GE','LED'].includes(d.t))els.push({t:'D',a:idx(p.a),b:idx(p.b),f:SOLVER.MODELS[d.model||{D:'si',Z:'zener',GE:'ge',LED:'led'}[d.t]],pid:p.id});
-    else if(d.t==='C')els.push({t:'C',a:idx(p.a),b:idx(p.b),c:d.c,pid:p.id})});
+    else if(d.t==='C')els.push({t:'C',a:idx(p.a),b:idx(p.b),c:d.c,pid:p.id});
+    else if(d.pins){const R={};pinNodes(p).forEach((nd,k)=>{const r=d.pins[k].role;if(r)R[r]=idx(nd)});
+      if(d.t==='OA')els.push(Object.assign({t:'OA',y:inner(),m:SOLVER.MODELS[d.model],pid:p.id},R));
+      else if(d.stamp)d.stamp(els,R,inner,p)}});
   const ck={n:0,els,p1:null,p2:null,dcs:[],idx,opts};
   INST.forEach(i=>i.stamp&&i.stamp(ck,force,opts));
   ck.n=map.size;return ck;
@@ -77,7 +89,7 @@ RT.buildUser=buildUser;
 /* ---------- analysis ---------- */
 function recompute(){
   const S=RT.S;const ck=buildUser(false);const gen=byKey.gen;const genOn=!!(gen&&gen.on());
-  if(ck.els.some(e=>e.t==='C'||e.t==='XS')){
+  if(ck.els.some(e=>e.t==='C'||e.t==='XS'||e.t==='OA')){
     const f=byKey.xf?byKey.xf.FQ:genOn?S.gen.freq:50;
     const vsFn=genOn?(t=>S.gen.off+S.gen.amp/2*gen.wv(2*Math.PI*f*t)):null;
     RT.TB=SOLVER.simulate(ck,f,def.cycles||6,vsFn);
@@ -116,23 +128,34 @@ RT.netOf=node=>{const TB=RT.TB;if(!TB||!TB.ck||node==null)return null;return TB.
 const meanOf=a=>{let s=0;for(const v of a)s+=v;return s/a.length};
 const live=net=>net!=null&&net<(RT.TB&&RT.TB.ck?RT.TB.ck.n:0);
 function nodeV(net){return net===-1?0:live(net)?meanOf(samples(net,60)):0}
-function partNets(p){return [RT.netOf(p.a),RT.netOf(p.b)]}
-function partV(p){const [a,b]=partNets(p);return nodeV(a)-nodeV(b)}
-function partI(p){const d=PARTS[p.type];const [a,b]=partNets(p);if(!live(a)&&a!==-1||!live(b)&&b!==-1)return 0;const va=samples(a,60),vb=samples(b,60);let s=0;
+function partNets(p){return ends(p).map(RT.netOf)}
+/* net of a named pin of a multi-pin part */
+function pinNet(p,role){const k=PARTS[p.type].pins.findIndex(q=>q.role===role||q.n===role);return k<0?null:RT.netOf(pinNodes(p)[k])}
+function partV(p){if(MULTI(p.type))return 0;const [a,b]=partNets(p);return nodeV(a)-nodeV(b)}
+function partI(p){const d=PARTS[p.type];if(d.pins)return 0;const [a,b]=partNets(p);if(!live(a)&&a!==-1||!live(b)&&b!==-1)return 0;const va=samples(a,60),vb=samples(b,60);let s=0;
   const f=d.t==='R'?(v=>v*(d.g||1/d.r)):['D','Z','GE','LED'].includes(d.t)?(v=>SOLVER.MODELS[d.model||{D:'si',Z:'zener',GE:'ge',LED:'led'}[d.t]](v)[0]):()=>0;
   for(let k=0;k<60;k++)s+=f((a===-1?0:va[k])-(b===-1?0:vb[k]));return s/60}
-Object.assign(RT,{nodeV,partNets,partV,partI,PARTS,
+Object.assign(RT,{nodeV,partNets,pinNet,partV,partI,PARTS,
   leadNet:k=>RT.S.leads[k]&&RT.S.leads[k].node!=null?RT.netOf(RT.S.leads[k].node):null,
   parts:type=>RT.S.parts.filter(p=>!type||p.type===type||PARTS[p.type].t===type),
   /* parts whose two ends are exactly the nets a and b; dir=+1 means p.a on a */
-  between:(a,b)=>RT.S.parts.filter(p=>{const [x,y]=partNets(p);return PARTS[p.type].t!=='BR'&&a!=null&&b!=null&&((x===a&&y===b)||(x===b&&y===a))}).map(p=>({p,dir:partNets(p)[0]===a?1:-1})),
+  between:(a,b)=>RT.S.parts.filter(p=>{if(MULTI(p.type))return false;const [x,y]=partNets(p);return PARTS[p.type].t!=='BR'&&a!=null&&b!=null&&((x===a&&y===b)||(x===b&&y===a))}).map(p=>({p,dir:partNets(p)[0]===a?1:-1})),
   at:net=>RT.S.parts.filter(p=>PARTS[p.type].t!=='BR'&&partNets(p).includes(net)),
   dmm:()=>byKey.dmm?byKey.dmm.reading():null});
 
 /* ---------- part drawings (top view, real looks: cathode bands, polarity stripes, colour codes) ---------- */
 const BANDC=['#111','#7a4a1d','#d22','#f08a1c','#f3d21c','#2a9a3c','#2160c9','#7d3fb8','#8a8f93','#f7f7f7'];
 function rBands(r){let e=0,v=r;while(v>=100){v/=10;e++}while(v<10){v*=10;e--}v=Math.round(v);return [Math.floor(v/10),v%10,e]}
-function partBody(type,L,sel,lit){const h=L/2,d=PARTS[type]||{t:type};const t=d.t;let s='';
+/* multi-pin package drawn over its footprint (local coordinates: anchor node centre = 0,0) */
+function pkgBody(type,sel,icon){const d=PARTS[type];let s='';
+  if(d.pkg==='DIP8'){if(icon)return `<rect x="-30" y="-12" width="60" height="24" rx="3" fill="#1f2224"/><path d="M-30 -5 a5 5 0 0 1 0 10" fill="#3a3f42"/>`+[-21,-7,7,21].map(x=>`<rect x="${x-2.5}" y="-17" width="5" height="5" fill="#b9bec2"/><rect x="${x-2.5}" y="12" width="5" height="5" fill="#b9bec2"/>`).join('')+T(2,4,'741',{size:9,fill:'#d9dcde',a:'middle',w:600});
+    const x0=-26,x1=3*P+26,y0=19+7,y1=P-19-7;
+    s+=sel?`<rect x="${x0-8}" y="${y0-14}" width="${x1-x0+16}" height="${y1-y0+28}" rx="9" fill="none" stroke="${CH1}" stroke-width="2.5"/>`:'';
+    d.pins.forEach(q=>{const x=q.dx*P,top=q.dy===0;const yh=top?19:P-19;s+=`<rect x="${x-4}" y="${top?yh-2:y1}" width="8" height="${top?y0-yh+2:yh-y1+2}" fill="#b9bec2" stroke="#7d868b" stroke-width=".8"/><circle cx="${x}" cy="${yh}" r="3.6" fill="#9aa3a8"/>`+T(x+(top?-9:-9),top?yh+3:yh+3,q.n,{size:7.5,fill:'#5d6a6e',a:'middle'})});
+    s+=`<rect x="${x0}" y="${y0}" width="${x1-x0}" height="${y1-y0}" rx="4" fill="#1f2224" stroke="#0c0d0e"/><path d="M${x0} ${(y0+y1)/2-7} a7 7 0 0 1 0 14" fill="#3a3f42"/><circle cx="${x0+12}" cy="${y1-8}" r="3" fill="#3a3f42"/>`;
+    s+=T((x0+x1)/2,(y0+y1)/2-1,d.mark||'UA741CN',{size:11,fill:'#d9dcde',a:'middle',w:600})+T((x0+x1)/2,(y0+y1)/2+11,d.mark2||'',{size:7.5,fill:'#9aa1a5',a:'middle'})}
+  return s}
+function partBody(type,L,sel,lit){const h=L/2,d=PARTS[type]||{t:type};const t=d.t;let s='';if(d.pins)return pkgBody(type,sel,true);
   const legs=(a,b,col='#9aa3a8')=>`<line x1="${-h}" y1="0" x2="${a}" y2="0" stroke="${col}" stroke-width="2.2"/><line x1="${b}" y1="0" x2="${h}" y2="0" stroke="${col}" stroke-width="2.2"/>`;
   const glow=sel?`<rect x="${-h-8}" y="-15" width="${L+16}" height="30" rx="8" fill="none" stroke="${CH1}" stroke-width="2.5"/>`:'';
   if(t==='BR')return `<rect x="${-h-6}" y="-8" width="${L+12}" height="16" rx="5" fill="#f4f6f6" stroke="${sel?CH1:'#9aa6aa'}" stroke-width="${sel?3:1.5}"/><rect x="${-h+4}" y="-4" width="${L-8}" height="8" rx="3" fill="#e2e7e8"/>`+pins();
@@ -154,12 +177,15 @@ function staticSVG(){let s=`<rect x="${BX}" y="${BY}" width="${BW}" height="${BH
   s+=T(BX+8,BY-8,'Plug-in panel · كل مربع node فيه 9 فتحات موصولة',{size:12,fill:'#7d8e93'});
   s+=`<rect x="${regions.board[0]+6}" y="${parkY-22}" width="${regions.board[2]-12}" height="44" rx="10" fill="#d9d1c0" opacity=".55"/>`;
   return s}
-function occupied(){const S=RT.S;const occ=new Set();S.parts.forEach(p=>{occ.add(p.a+':'+dirHole(p.a,p.b));occ.add(p.b+':'+dirHole(p.b,p.a))});S.wires.forEach(w=>{occ.add(w.a+':'+w.ha);occ.add(w.b+':'+w.hb)});LEADS.forEach(k=>{const l=S.leads[k];if(l.node!=null)occ.add(l.node+':'+l.hole)});return occ}
+function partHoles(p){if(MULTI(p.type))return pinNodes(p).map((n,k)=>n+':'+PARTS[p.type].pins[k].h);return [p.a+':'+dirHole(p.a,p.b),p.b+':'+dirHole(p.b,p.a)]}
+function occupied(skip){const S=RT.S;const occ=new Set();S.parts.forEach(p=>{if(p.id!==skip)partHoles(p).forEach(h=>occ.add(h))});S.wires.forEach(w=>{occ.add(w.a+':'+w.ha);occ.add(w.b+':'+w.hb)});LEADS.forEach(k=>{const l=S.leads[k];if(l.node!=null)occ.add(l.node+':'+l.hole)});return occ}
 function freeHole(node,pref=[4,0,2,6,8,1,3,5,7]){const occ=occupied();for(const h of pref)if(!occ.has(node+':'+h))return h;return null}
 function partsSVG(){const S=RT.S;let s='';
   S.wires.forEach(w=>{const a=holeP(w.a,w.ha),b=holeP(w.b,w.hb);const mx=(a.x+b.x)/2,my=(a.y+b.y)/2-Math.min(40,Math.hypot(b.x-a.x,b.y-a.y)*0.25);const sel=S.sel===w.id;const d=`M${a.x} ${a.y} Q${mx} ${my} ${b.x} ${b.y}`;
     s+=`<path d="${d}" fill="none" stroke="#5a4300" stroke-width="7" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${sel?'#fff2a8':'#e0b000'}" stroke-width="4.5" stroke-linecap="round"/><path d="${d}" fill="none" stroke="transparent" stroke-width="16" data-k="wire:${w.id}" style="cursor:pointer"/>`});
-  S.parts.forEach(p=>{if(drag&&drag.kind==='move'&&drag.id===p.id&&drag.active)return;const a=holeP(p.a,dirHole(p.a,p.b)),b=holeP(p.b,dirHole(p.b,p.a));const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;const ang=Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI;const L=Math.hypot(b.x-a.x,b.y-a.y);
+  S.parts.forEach(p=>{if(drag&&drag.kind==='move'&&drag.id===p.id&&drag.active)return;
+    if(MULTI(p.type)){const c=nodeC(p.n);s+=`<g transform="translate(${c.x} ${c.y})" data-k="part:${p.id}" style="cursor:grab">${pkgBody(p.type,S.sel===p.id)}</g>`;return}
+    const a=holeP(p.a,dirHole(p.a,p.b)),b=holeP(p.b,dirHole(p.b,p.a));const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;const ang=Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI;const L=Math.hypot(b.x-a.x,b.y-a.y);
     s+=`<g transform="translate(${mx} ${my}) rotate(${ang})" data-k="part:${p.id}" style="cursor:grab">${partBody(p.type,L,S.sel===p.id,p.lit)}</g>`;
     if(p.dead)s+=T(mx,my+5,'💥',{size:20,a:'middle'});
     const lab=PARTS[p.type].lab;if(lab){const vert=Math.abs(ang)>45;s+=T(vert?mx+20:mx,vert?my+4:my-17,lab,{size:9.5,fill:'#22302f',a:vert?'start':'middle',w:600})}});
@@ -167,7 +193,7 @@ function partsSVG(){const S=RT.S;let s='';
 /* selection toolbar (⇄ / ✕) and wire-start marker: drawn above the cables so a plug never hides them */
 function toolbarSVG(){const S=RT.S;let s='';
   const sp=S.parts.find(p=>p.id===S.sel),sw=S.wires.find(w=>w.id===S.sel);
-  if(sp||sw){let x,y;if(sp){const a=nodeC(sp.a),b=nodeC(sp.b);x=(a.x+b.x)/2;y=(a.y+b.y)/2-40}else{const a=holeP(sw.a,sw.ha),b=holeP(sw.b,sw.hb);x=(a.x+b.x)/2;y=(a.y+b.y)/2-44}
+  if(sp||sw){let x,y;if(sp&&MULTI(sp.type)){const c=fpC(sp.type,sp.n);x=c.x;y=nodeC(sp.n).y-34}else if(sp){const a=nodeC(sp.a),b=nodeC(sp.b);x=(a.x+b.x)/2;y=(a.y+b.y)/2-40}else{const a=holeP(sw.a,sw.ha),b=holeP(sw.b,sw.hb);x=(a.x+b.x)/2;y=(a.y+b.y)/2-44}
     const btn=(bx,lab,k,c)=>`<circle cx="${bx}" cy="${y}" r="15" fill="#141c20" stroke="${c}" stroke-width="2" data-k="${k}" style="cursor:pointer"/>`+T(bx,y+5,lab,{size:14,fill:c,a:'middle',w:600});
     s+=sp&&POLAR(sp.type)?btn(x-20,'⇄','tb:flip',CH2)+btn(x+20,'✕','tb:del',RED):btn(x,'✕','tb:del',RED)}
   if(S.wireMode&&S.wireStart!=null){const c=nodeC(S.wireStart);s+=`<rect x="${c.x-32}" y="${c.y-32}" width="64" height="64" rx="9" fill="none" stroke="#e0b000" stroke-width="3" pointer-events="none"/>`}
@@ -196,8 +222,16 @@ function labelsSVG(){const boxes=[];const all=plugs.map(q=>({x:q.p.x-10,y:q.p.y-
   return s}
 function cablesSVG(){plugs.length=0;const body=INST.map(i=>i.cables?i.cables(DRAW):'').join('');return `<g filter="url(#cabShadow)">${body}</g>`+labelsSVG()}
 function nearestEdge(x,y){let best=null,bd=34;EDGES.forEach(e=>{const a=nodeC(e[0]),b=nodeC(e[1]);const d=Math.hypot((a.x+b.x)/2-x,(a.y+b.y)/2-y);if(d<bd){bd=d;best=e}});return best}
+/* best anchor for a multi-pin part near (x,y): footprint inside the panel, every leg hole free */
+function nearestAnchor(t,x,y,skip,lim=90){const occ=occupied(skip);let best=null,bd=lim;for(let n=0;n<NN;n++){if(!fits(t,n))continue;const c=fpC(t,n);const d=Math.hypot(c.x-x,c.y-y);if(d>=bd)continue;
+    if(PARTS[t].pins.some(q=>occ.has((n+q.dy*COLS+q.dx)+':'+q.h)))continue;bd=d;best=n}return best}
+/* a two-leg part may not push a leg into a hole that is already taken (e.g. under an IC) */
+const edgeFree=(e,skip)=>{const occ=occupied(skip);return !occ.has(e[0]+':'+dirHole(e[0],e[1]))&&!occ.has(e[1]+':'+dirHole(e[1],e[0]))};
 function nearestNode(x,y){let best=null,bd=40;for(let i=0;i<NN;i++){const c=nodeC(i);const d=Math.hypot(c.x-x,c.y-y);if(d<bd){bd=d;best=i}}return best}
 function dragSVG(){if(!drag||!drag.active)return '';let s='';
+  if((drag.kind==='new'||drag.kind==='move')&&MULTI(drag.type)){const n=nearestAnchor(drag.type,drag.x,drag.y,drag.id);
+    if(n!=null)PARTS[drag.type].pins.forEach(q=>{const c=nodeC(n+q.dy*COLS+q.dx);s+=`<rect x="${c.x-32}" y="${c.y-32}" width="64" height="64" rx="9" fill="none" stroke="${CH2}" stroke-width="3" opacity=".6"/>`});
+    const c0=n!=null?nodeC(n):{x:drag.x-fpC(drag.type,0).x+nodeC(0).x,y:drag.y-fpC(drag.type,0).y+nodeC(0).y};return s+`<g transform="translate(${c0.x} ${c0.y})" opacity=".85">${pkgBody(drag.type,false)}</g>`}
   if(drag.kind==='new'||drag.kind==='move'){const e=nearestEdge(drag.x,drag.y);if(e){const a=nodeC(e[0]),b=nodeC(e[1]);s+=`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${CH2}" stroke-width="6" opacity=".5" stroke-linecap="round"/>`}
     s+=`<g transform="translate(${drag.x} ${drag.y}) rotate(${e&&e[1]-e[0]===COLS?90:0})" opacity=".9">${partBody(drag.type,52,false)}</g>`}
   if(drag.kind==='lead'){const n=nearestNode(drag.x,drag.y);if(n!=null){const c=nodeC(n);s+=`<rect x="${c.x-32}" y="${c.y-32}" width="64" height="64" rx="9" fill="none" stroke="${CH2}" stroke-width="3"/>`}}
@@ -245,7 +279,9 @@ svg.addEventListener('pointermove',e=>{if(press&&Math.hypot(e.clientX-press.x,e.
 function endDrag(){stopRep();if(press){clearTimeout(press.t);press=null}const S=RT.S;if(!drag)return;if(drag.fromTray&&Math.hypot(drag.x-drag.sx,drag.y-drag.sy)<8){S.armed=drag.type;drag=null;BENCH.drawerSync();render(true);return}const d=drag;drag=null;
   if(d.kind==='new'||d.kind==='move'){
     if(d.kind==='move'&&!d.active){S.sel=S.sel===d.id?null:d.id;render(true);return}
-    const e=nearestEdge(d.x,d.y);const taken=e&&S.parts.some(q=>q.id!==d.id&&((q.a===e[0]&&q.b===e[1])||(q.a===e[1]&&q.b===e[0])));
+    if(MULTI(d.type)){const n=nearestAnchor(d.type,d.x,d.y,d.id);if(d.kind==='move'){const pr=S.parts.find(q=>q.id===d.id);if(n!=null)pr.n=n;else if(d.x<BX-20||d.x>BX+BW+20||d.y<BY-20||d.y>BY+BH+20)S.parts=S.parts.filter(q=>q.id!==d.id)}
+      else if(n!=null)S.parts.push({id:RT.uid++,type:d.type,n});circuitChanged();render();return}
+    const e=nearestEdge(d.x,d.y);const taken=e&&(S.parts.some(q=>q.id!==d.id&&((q.a===e[0]&&q.b===e[1])||(q.a===e[1]&&q.b===e[0])))||!edgeFree(e,d.id));
     if(d.kind==='move'){const pr=S.parts.find(q=>q.id===d.id);if(e&&!taken){pr.a=e[0];pr.b=e[1]}else if(!e){S.parts=S.parts.filter(q=>q.id!==d.id)}}
     else if(e&&!taken){S.parts.push({id:RT.uid++,type:d.type,a:e[0],b:e[1]})}
     circuitChanged();render();return}
@@ -276,8 +312,9 @@ function openMenu(k,x,y){closeMenu();const host=$q('#bstage');const hr=host.getB
   m.querySelectorAll('button').forEach(b=>b.onclick=ev=>{ev.stopPropagation();RT.S.cab[k]=b.dataset.c;closeMenu();render(true)})}
 document.addEventListener('pointerdown',e=>{const m=$('cabMenu');if(m&&!m.contains(e.target)&&!svg.contains(e.target))closeMenu()},true);
 
-function placeArmed(p){const S=RT.S;let best=null,bd=70;EDGES.forEach(e=>{const a=nodeC(e[0]),b=nodeC(e[1]);const d=Math.hypot((a.x+b.x)/2-p.x,(a.y+b.y)/2-p.y);if(d<bd){bd=d;best=e}});
-  if(best&&!S.parts.some(q=>(q.a===best[0]&&q.b===best[1])||(q.a===best[1]&&q.b===best[0]))){S.parts.push({id:RT.uid++,type:S.armed,a:best[0],b:best[1]});circuitChanged()}
+function placeArmed(p){const S=RT.S;if(MULTI(S.armed)){const n=nearestAnchor(S.armed,p.x,p.y,null,120);if(n!=null){S.parts.push({id:RT.uid++,type:S.armed,n});circuitChanged()}S.armed=null;BENCH.drawerSync();render();return}
+  let best=null,bd=70;EDGES.forEach(e=>{const a=nodeC(e[0]),b=nodeC(e[1]);const d=Math.hypot((a.x+b.x)/2-p.x,(a.y+b.y)/2-p.y);if(d<bd){bd=d;best=e}});
+  if(best&&edgeFree(best)&&!S.parts.some(q=>(q.a===best[0]&&q.b===best[1])||(q.a===best[1]&&q.b===best[0]))){S.parts.push({id:RT.uid++,type:S.armed,a:best[0],b:best[1]});circuitChanged()}
   S.armed=null;BENCH.drawerSync();render()}
 function trayDown(t,e){const S=RT.S;if(t==='W'){S.wireMode=!S.wireMode;S.wireStart=null;S.sel=null;S.armed=null;BENCH.drawerSync();render();return}
   S.wireMode=false;if(S.armed===t){S.armed=null;BENCH.drawerSync();return}S.armed=null;const p=pt(e);drag={kind:'new',type:t,x:p.x,y:p.y,sx:p.x,sy:p.y,active:true,fromTray:true};try{svg.setPointerCapture(e.pointerId)}catch(_){}BENCH.drawerSync();render(true)}

@@ -7,7 +7,8 @@
      DC  {a,b,v,ilim,r}      floating dc supply unit, a = +, with current limit (CV/CC)
      XS  {a,b,s,vp,f,r}      transformer winding, s·vp·sin(2πft), series r
      C   {a,b,c}             capacitor (backward Euler in transient)
-     CCS {a,b,i0,vmax}       meter test source (Ω / diode / continuity): pushes i0 out of a, collapses as Va-Vb -> vmax */
+     CCS {a,b,i0,vmax}       meter test source (Ω / diode / continuity): pushes i0 out of a, collapses as Va-Vb -> vmax
+     OA  {p,m_,o,vp,vn,y,m}  op amp macro-model (pins +, −, out, V+, V−; y = internal node of the gain stage; m = model) */
 const SOLVER=(()=>{
   const VT=0.02585;
   function dexp(v,Is,nvt){const a=v/nvt;if(a>40){const e=Math.exp(40);return [Is*e*(1+a-40),Is*e/nvt]}const e=Math.exp(a);return [Is*(e-1),Is*e/nvt]}
@@ -30,6 +31,14 @@ const SOLVER=(()=>{
   /* 5 mm green LED (GaP): ≈1.8 V @ 1 mA, ≈2.1 V @ 20 mA; reverse breakdown well above 5 V */
   const led=junction({Is:1e-18,n:2.0,Rs:10,Vb:15,Ib:1e-4,nb:0.3});
   const MODELS={si:diodeSi,zener,ge:diodeGe,led};
+  /* µA741 (TI / Fairchild datasheet, typical at ±15 V): Rin 2 MΩ, Avol 200 V/mV, GBW 1 MHz, SR 0.5 V/µs,
+     output swing ≈ ±14 V into 10 kΩ and ≈ ±13 V into 2 kΩ, short-circuit current 25 mA, supply current 1.7 mA.
+     Macro-model: a saturating transconductance stage (gm, ±Imax) drives the internal node y loaded by G1 ∥ Cc
+     (dominant pole: GBW = gm/2πCc, slew rate = Imax/Cc); y is clamped Voff below / above the rails; the output
+     follows y through Rout with a current limit. Internal impedances are scaled (Cc = 300 pF) for conditioning. */
+  const UA741=(()=>{const Cc=300e-12,gbw=1e6,sr=0.5e6,A0=2e5;const gm=2*Math.PI*gbw*Cc;return {Rin:2e6,gm,Imax:sr*Cc,G1:gm/A0,Cc,Voff:1.0,Vc:0.03,Ic:1e-5,Rout:150,Ilim:0.025,Iq:1.7e-3}})();
+  MODELS.ua741=UA741;
+  const xexp=a=>{if(a>40){const E=Math.exp(40);return [E*(1+a-40),E]}const e=Math.exp(a);return [e,e]};
   function uf(n){const p=[...Array(n).keys()];const f=x=>p[x]===x?x:(p[x]=f(p[x]));return {f,u:(a,b)=>{a=f(a);b=f(b);if(a!==b)p[a]=b}}}
   function lsolve(A,b,n){for(let c=0;c<n;c++){let m=c;for(let r=c+1;r<n;r++)if(Math.abs(A[r*n+c])>Math.abs(A[m*n+c]))m=r;if(Math.abs(A[m*n+c])<1e-30)continue;
     if(m!==c){for(let k=0;k<n;k++){const t=A[c*n+k];A[c*n+k]=A[m*n+k];A[m*n+k]=t}const t=b[c];b[c]=b[m];b[m]=t}
@@ -56,12 +65,24 @@ const SOLVER=(()=>{
         else if(e.t==='XS'){const v=e.s*e.vp*Math.sin(2*Math.PI*e.f*ctx.t);const g=1/e.r;st(e.a,e.b,g*(V(e.a)-V(e.b)-v),g)}
         else if(e.t==='C'){if(ctx.dt){const g=e.c/ctx.dt;st(e.a,e.b,g*(V(e.a)-V(e.b)-ctx.vprev[ei]),g)}}
         else if(e.t==='CCS'){const [i,g]=ccs(e,V(e.a)-V(e.b));st(e.a,e.b,-i,g)}
+        else if(e.t==='OA')stampOA(e,V,F,A,n,st,ctx,ei);
       });
       const dx=lsolve(A,F.map(v=>-v),n);let mx=0;for(let k=0;k<n;k++)mx=Math.max(mx,Math.abs(dx[k]));
       const sc=mx>damp?damp/mx:1;for(let k=0;k<n;k++)x[k]+=dx[k]*sc;if(mx<tol)break;
     }
     return x;
   }
+  /* op amp stamp: rows get F (current leaving the node) and the Jacobian A */
+  function stampOA(e,V,F,A,n,st,ctx,ei){const M=e.m;const J=(r,c,g)=>{if(r>=0&&c>=0)A[r*n+c]+=g};
+    st(e.p,e.m_,(V(e.p)-V(e.m_))/M.Rin,1/M.Rin);
+    const vsup=V(e.vp)-V(e.vn);const gq=M.Iq/30;st(e.vp,e.vn,gq*vsup,gq);
+    const y=e.y;const vd=V(e.p)-V(e.m_);const th=Math.tanh(M.gm*vd/M.Imax);const it=M.Imax*th,gt=M.gm*(1-th*th);
+    F[y]+=M.G1*V(y)-it;J(y,y,M.G1);J(y,e.p,-gt);J(y,e.m_,gt);
+    if(ctx.dt){const g=M.Cc/ctx.dt;F[y]+=g*(V(y)-ctx.vprev[ei]);J(y,y,g)}
+    {const [ex]=xexp((V(y)-V(e.vp)+M.Voff)/M.Vc);const i=M.Ic*ex,g=i/M.Vc;F[y]+=i;J(y,y,g);J(y,e.vp,-g)}
+    {const [ex]=xexp((V(e.vn)+M.Voff-V(y))/M.Vc);const i=M.Ic*ex,g=i/M.Vc;F[y]-=i;J(y,y,g);J(y,e.vn,-g)}
+    const u=(V(y)-V(e.o))/M.Rout/M.Ilim,tu=Math.tanh(u);const io=M.Ilim*tu,go=(1-tu*tu)/M.Rout;
+    if(e.o>=0){F[e.o]-=io;J(e.o,y,-go);J(e.o,e.o,go)}}
   const dcI=(ck,x,cc)=>dcList(ck).map((ei,u)=>{const e=ck.els[ei];if(cc&&cc[u])return cc[u];const V=i=>i<0?0:x[i];return (e.v-(V(e.a)-V(e.b)))/e.r});
   /* dc operating point with CV/CC handling of every supply unit */
   function solveCC(ck,ctx,x0,maxIt,damp,tol){
@@ -91,7 +112,7 @@ const SOLVER=(()=>{
     const v1=new Float64Array(NS),v2=new Float64Array(NS),X=new Array(NS);let imax=0;const capMin={};const Iabs=new Array(nd).fill(0),ccs=new Array(nd).fill(false);
     const V=i=>i==null?0:i<0?0:x[i];
     for(let c=0;c<cycles;c++)for(let k=0;k<NS;k++){const t=(c*NS+k+1)*dt;const r=solveCC(ck,{t,dt,vprev,vs:vsFn?vsFn(t):0},x,60,0.5,1e-8);x=r.x;
-      ck.els.forEach((e,ei)=>{if(e.t==='C'){const v=V(e.a)-V(e.b);vprev[ei]=v;if(c===cycles-1)capMin[e.pid]=Math.min(capMin[e.pid]??1e9,v)}
+      ck.els.forEach((e,ei)=>{if(e.t==='OA')vprev[ei]=V(e.y);if(e.t==='C'){const v=V(e.a)-V(e.b);vprev[ei]=v;if(c===cycles-1)capMin[e.pid]=Math.min(capMin[e.pid]??1e9,v)}
         if(e.t==='XS'&&c===cycles-1){const v=e.s*e.vp*Math.sin(2*Math.PI*e.f*t);imax=Math.max(imax,Math.abs((V(e.a)-V(e.b)-v)/e.r))}});
       if(c===cycles-1){const kk=(k+1)%NS;v1[kk]=ck.p1==null?NaN:V(ck.p1);v2[kk]=ck.p2==null?NaN:V(ck.p2);X[kk]=Float64Array.from(x);r.Is.forEach((I,u)=>{Iabs[u]+=Math.abs(I)/NS;if(r.ccs[u])ccs[u]=true})}}
     return {kind:'tran',f,v1,v2,X,imax,capMin,has1:ck.p1!=null,has2:ck.p2!=null,Idc:Iabs,ccs}}

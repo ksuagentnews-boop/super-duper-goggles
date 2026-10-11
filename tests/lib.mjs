@@ -52,6 +52,13 @@ export function bench(page) {
       if (sel) return; const A = await H.node(a), B = await H.node(b); await H.tap((A.x + B.x) / 2, (A.y + B.y) / 2); },
     flip: async (a, b) => { await H.select(a, b); await H.key('tb:flip'); },
     del: async (a, b) => { await H.select(a, b); await H.key('tb:del'); },
+    /* multi-pin part: arm it from the bag, tap the centre of its footprint (pins: [[dx,dy],…] from the anchor node) */
+    placeIC: async (t, anchor, pins) => { await H.bag(t); const L = await H.L(); const ps = await Promise.all(pins.map(([dx, dy]) => H.node(anchor + dy * L.COLS + dx)));
+      await H.tap(ps.reduce((a, p) => a + p.x, 0) / ps.length, ps.reduce((a, p) => a + p.y, 0) / ps.length); },
+    wire: async (a, b) => { await H.bag('W'); const A = await H.node(a), B = await H.node(b); await H.tap(A.x, A.y); await H.tap(B.x, B.y); await H.bag('W'); },
+    delWire: async (a, b) => { const p = await page.evaluate(([a, b]) => { const S = BENCH.sim.RT.S; const w = S.wires.find(q => (q.a === a && q.b === b) || (q.a === b && q.b === a)); if (!w) return null;
+        const e = document.querySelector(`#bench [data-k="wire:${w.id}"]`); const pt = e.getPointAtLength(e.getTotalLength() / 2); return { x: pt.x, y: pt.y }; }, [a, b]);
+      if (!p) throw new Error('no wire'); await H.tap(p.x, p.y); await H.key('tb:del'); },
     gen: async (fk, digits, uk) => { await H.key('g:' + fk); for (const d of digits) await H.key('g:' + d); await H.key('g:' + uk); },
     steps: () => page.evaluate(() => ({ done: BENCH.done.filter(Boolean).length, total: BENCH.sim.steps.length, cur: BENCH.cur() })),
     S: f => page.evaluate(f),
