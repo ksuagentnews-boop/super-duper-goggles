@@ -81,7 +81,7 @@ const SOLVER=(()=>{
         else if(e.t==='VS'){const g=1/e.r;const i=g*(V(e.a)-ctx.vs);if(e.a>=0){F[e.a]+=i;A[e.a*n+e.a]+=g}}
         else if(e.t==='DC'){const u=dcs.indexOf(ei),cc=ctx.cc&&ctx.cc[u];if(cc)st(e.a,e.b,-cc,0);else{const g=1/e.r;st(e.a,e.b,g*(V(e.a)-V(e.b)-e.v),g)}}
         else if(e.t==='XS'){const v=e.s*e.vp*Math.sin(2*Math.PI*e.f*ctx.t);const g=1/e.r;st(e.a,e.b,g*(V(e.a)-V(e.b)-v),g)}
-        else if(e.t==='C'){if(ctx.dt){const g=e.c/ctx.dt;st(e.a,e.b,g*(V(e.a)-V(e.b)-ctx.vprev[ei]),g)}}
+        else if(e.t==='C'){if(ctx.dt){const g=e.c/ctx.dt;st(e.a,e.b,g*(V(e.a)-V(e.b)-ctx.vprev[ei]),g)}else if(ctx.leak)st(e.a,e.b,ctx.leak*(V(e.a)-V(e.b)),ctx.leak)}
         else if(e.t==='CCS'){const [i,g]=ccs(e,V(e.a)-V(e.b));st(e.a,e.b,-i,g)}
         else if(e.t==='OA')stampOA(e,V,F,A,n,st,ctx,ei);
         else if(e.t==='BJT'){const vb=V(e.b),vc=V(e.c),ve=V(e.e),h=1e-7;const [ic,ib]=e.m(vb-ve,vb-vc);
@@ -138,6 +138,10 @@ const SOLVER=(()=>{
   function simulate(ck,f,cycles=6,vsFn){const n=ck.n;const dt=1/f/NS;let x=new Float64Array(n);const vprev=ck.els.map(()=>0);const nd=dcList(ck).length;
     const v1=new Float64Array(NS),v2=new Float64Array(NS),X=new Array(NS);let imax=0;const capMin={};const Iabs=new Array(nd).fill(0),ccs=new Array(nd).fill(false);
     const V=i=>i==null?0:i<0?0:x[i];
+    /* start from the dc operating point at t = 0 (capacitors charged to it: the circuit has been powered for a while).
+       Capacitors leak 10 MΩ here so a section with no dc path to earth takes its potential through them instead of
+       sitting at an arbitrary level set by gmin */
+    {const r=solveCC(ck,{t:0,dt:0,vprev,leak:1e-7,vs:vsFn?vsFn(0):0},null,300,0.4,1e-9);x=r.x;ck.els.forEach((e,ei)=>{if(e.t==='C')vprev[ei]=V(e.a)-V(e.b);if(e.t==='OA')vprev[ei]=V(e.y)})}
     for(let c=0;c<cycles;c++)for(let k=0;k<NS;k++){const t=(c*NS+k+1)*dt;const r=solveCC(ck,{t,dt,vprev,vs:vsFn?vsFn(t):0},x,60,0.5,1e-8);x=r.x;
       ck.els.forEach((e,ei)=>{if(e.t==='OA')vprev[ei]=V(e.y);if(e.t==='C'){const v=V(e.a)-V(e.b);vprev[ei]=v;if(c===cycles-1)capMin[e.pid]=Math.min(capMin[e.pid]??1e9,v)}
         if(e.t==='XS'&&c===cycles-1){const v=e.s*e.vp*Math.sin(2*Math.PI*e.f*t);imax=Math.max(imax,Math.abs((V(e.a)-V(e.b)-v)/e.r))}});
