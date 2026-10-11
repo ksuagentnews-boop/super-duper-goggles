@@ -49,6 +49,34 @@ A static website (GitHub Pages, no server, no login) that simulates the EE depar
   - instruments are shared across labs (one scope/generator/DMM/supply implementation reused everywhere).
 - For now there is only `EE312`: the site can open straight into its room, but the corridor/door scene and the registry must already exist so adding a lab = adding a folder `labs/<code>/` + one registry entry.
 
+### The department corridor, ordered by study level (approved by the user)
+- The site link opens in the **corridor** (not inside a lab). The student stands at its entrance looking down it.
+- Along the corridor, **hanging ceiling signs mark the levels**, spaced apart, in this order: `المستوى الخامس · Level 5` → `المستوى السادس · Level 6` → `المستوى السابع · Level 7` → `المستوى الثامن · Level 8` → `الاختيارية · Electives`.
+- After each level sign come the doors of that level's labs, **facing each other** on the left and right walls (one lab = one door; with an odd count the last door has no opposite). Each door has its own sign above it: code + English name + Arabic name, e.g. `EE312 · Basic Electronics Lab`.
+- Labs not built yet: closed door with a "قريباً" plate; clicking/tapping it shows a toast, it does not open. Built labs: the door opens into the room; the room's exit door returns to the same spot in the corridor.
+- The corridor is generated from the registry only: every entry has `level` (5, 6, 7, 8 or `'elective'`); the order inside a level is the order in `labs/index.js`. Adding a lab later never changes corridor code.
+- Quick access (الوصول السريع) follows the same structure: level → lab → experiment; unbuilt labs/experiments greyed out with "قريباً".
+- Keep the corridor walk short enough on phone (tap-to-walk works along it; quick access is the shortcut).
+- The department's labs (all go into the registry now; only EE312 is built):
+
+| Level | Code | English name | الاسم |
+|---|---|---|---|
+| 5 | EE210 | Logic Design Lab | معمل التصميم المنطقي |
+| 6 | EE205 | Electric Circuits Lab | معمل الدوائر الكهربائية |
+| 6 | EE312 | Basic Electronics Lab | معمل أساسيات الإلكترونيات |
+| 7 | EE302 | Modeling and Simulation Lab | معمل النمذجة والمحاكاة |
+| 7 | EE357 | Microprocessors and Microcontrollers Lab | معمل المعالجات والحاكمات الصغرى |
+| 8 | EE356 | Control and Measurements Lab | معمل التحكم والقياسات |
+| Electives | EE402 | Electronic Circuits Lab | معمل الدوائر الإلكترونية |
+| Electives | EE406 | VLSI Design Lab | معمل تصميم VLSI |
+| Electives | EE421 | Communications Lab | معمل الاتصالات |
+| Electives | EE433 | Electromechanical Energy Conversion Lab | معمل التحويل الكهروميكانيكي للطاقة |
+| Electives | EE445 | Electric Power Lab | معمل القوى الكهربائية |
+| Electives | EE457 | Applied Control Lab | معمل التحكم التطبيقي |
+| Electives | EE459 | Advanced Logic Design Lab | معمل التصميم المنطقي المتقدم |
+
+- Unbuilt labs get registry entries with `exps: []` (no room yet); their rooms are designed later from their own manuals in `docs/<lab>/`.
+
 ## Quick access (الوصول السريع)
 - A "الوصول السريع" button is always visible in the hall (and reachable from the bench).
 - It opens a two-level menu: first the list of labs (for now only `EE312`; other labs appear later from the registry), then the selected lab's experiments by number and name (Exp 1, Exp 2, …).
