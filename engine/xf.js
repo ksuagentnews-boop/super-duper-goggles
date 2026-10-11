@@ -18,7 +18,9 @@ function xfSVG(){const x=XF0.x,y=XF0.y,X=RT.S.xf;let s=`<g>`;
   s+=`<path d="M${x} ${y+250} C${x-20} ${y+300} ${x+30} ${y+340} ${x+70} ${y+345}" fill="none" stroke="#111" stroke-width="6"/>`;
   s+=`<rect x="${x+70}" y="${y+328}" width="${X.plugged?150:150}" height="34" rx="8" fill="${X.plugged?'#3cd070':'#c7d0d4'}" stroke="#7d8c92" data-k="x:PLUG" style="cursor:pointer"/>`+T(x+145,y+350,X.plugged?'🔌 Plugged in (ON)':'🔌 Plug in',{size:12,a:'middle',w:600});
   s+=`<rect x="${x+232}" y="${y+328}" width="210" height="34" rx="8" fill="#eef2f3" stroke="#7d8c92" data-k="x:CHECK" style="cursor:pointer"/>`+T(x+337,y+350,'Ask instructor to check',{size:12,a:'middle',w:600});
-  if(X.say){s+=`<rect x="${x}" y="${y+372}" width="760" height="26" rx="6" fill="${X.ok?'#11241a':'#2a1513'}" stroke="${X.ok?'#2e6b44':RED}"/>`+`<text x="${x+750}" y="${y+390}" font-size="13" fill="${X.ok?'#9ff0b4':'#ffb3ab'}" text-anchor="end" direction="rtl" pointer-events="none" font-family="Plex Arabic, IBM Plex Sans Arabic, sans-serif">${X.say}</text>`}
+  if(X.say){const ws=X.say.split(' ');let l1=X.say,l2='';if(X.say.length>58){let n=0,i=0;while(i<ws.length&&n+ws[i].length<=Math.ceil(X.say.length/2)){n+=ws[i].length+1;i++}l1=ws.slice(0,i).join(' ');l2=ws.slice(i).join(' ')}
+    const tx=(t,yy)=>`<text x="${x+432}" y="${yy}" font-size="12" fill="${X.ok?'#9ff0b4':'#ffb3ab'}" text-anchor="end" direction="rtl" pointer-events="none" font-family="Plex Arabic, IBM Plex Sans Arabic, sans-serif">${t}</text>`;
+    s+=`<rect x="${x}" y="${y+370}" width="442" height="${l2?42:26}" rx="6" fill="${X.ok?'#11241a':'#2a1513'}" stroke="${X.ok?'#2e6b44':RED}"/>`+tx(l1,y+387)+(l2?tx(l2,y+404):'')}
   return s+`</g>`}
 function safety(){const ck=RT.buildUser(true);const L=RT.S.leads;
   if(L.tA.node==null||L.tB.node==null||L.tC.node==null)return [false,'المعيد: وصّل أطراف المحوّل الثلاثة A و B و C أول.'];
@@ -34,7 +36,7 @@ function xfKey(k){const X=RT.S.xf;if(k==='CHECK'){const [ok,say]=safety();X.ok=o
 /* the instructor inspects the circuit once before the first plug-in (manual's caution); later changes are the student's */
 function fresh(){return {plugged:false,ok:false,once:false,say:'',blown:null}}
 return {key:'xf',prefix:'x',fresh,svg:xfSVG,keyFn:xfKey,wheel:[],FQ,
-  size:[770,400],
+  size:[450,416],
   leads:['tA','tB','tC'].map(k=>({k,label:XT[k].l,from:XT[k],circuit:true,banana:true})),
   cables:D=>['tA','tB','tC'].map(k=>D.banana(XT[k],k)).join(''),
   stamp(ck,force){const L=RT.S.leads;const on=force||RT.S.xf.plugged;
@@ -43,4 +45,4 @@ return {key:'xf',prefix:'x',fresh,svg:xfSVG,keyFn:xfKey,wheel:[],FQ,
   onCircuitChange(){RT.S.xf.ok=false},
   postSim,safety};
 };
-ENGINE.xf.size=[770,400];
+ENGINE.xf.size=[450,416];

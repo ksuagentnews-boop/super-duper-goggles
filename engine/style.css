@@ -278,3 +278,11 @@ button.t.on{background:var(--accent);border-color:var(--accent);color:#fff}
   #drawer{width:96px;top:50px;bottom:8px;padding:5px 4px 4px}#drawer .dhead span{display:none}
   #drawer .bag-item{min-height:42px}#drawer .bag-item svg{width:48px;height:22px}#drawer .bag-item small{font-size:9.5px}
   #benchView:not(.no-bag) #stepCard{left:calc(50% + 52px);width:min(620px,calc(100% - 120px))}}
+
+/* movable instruments: grab handle cursor, reset-to-default button */
+#bench [data-k^="mv:"]{cursor:grab}
+#bench.grabbing,#bench.grabbing *{cursor:grabbing !important}
+.zback.lay{position:absolute;top:12px;right:12px;z-index:6;font-size:12.5px;padding:6px 11px}
+.zback.lay.dim{opacity:.55}
+#benchView.pc-mode .zback.lay{display:none}
+@media (max-width:900px),(max-height:500px){.zback.lay{top:6px;right:6px;font-size:11.5px;padding:5px 9px}}
