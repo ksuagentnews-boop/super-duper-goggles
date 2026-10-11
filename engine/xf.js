@@ -29,9 +29,10 @@ function safety(){const ck=RT.buildUser(true);const L=RT.S.leads;
 function postSim(){if(!RT.S.xf.plugged||!RT.TB)return;const ck=RT.buildUser(false);const r=SOLVER.simulate(ck,FQ,3);
   for(const id in r.capMin){if(r.capMin[id]<-0.8){const p=RT.S.parts.find(q=>q.id===+id);if(p&&!p.dead){p.dead=true;RT.S.xf.say='💥 المكثف انفجر لأنه معكوس! افصل المحوّل وبدّله بمكثف جديد بالاتجاه الصحيح.';RT.S.xf.ok=false;RT.dirty=true;RT.recompute()}}}
   if(r.imax>1.5){RT.S.xf.plugged=false;RT.S.xf.say='⚡ الفيوز ضرب: فيه short على المحوّل. افصل وراجع التوصيل.';RT.S.xf.ok=false;RT.dirty=true;RT.recompute()}}
-function xfKey(k){const X=RT.S.xf;if(k==='CHECK'){const [ok,say]=safety();X.ok=ok;X.say=say;return}
-  if(k==='PLUG'){if(X.plugged){X.plugged=false;X.say='تم فصل المحوّل.';RT.dirty=true;return}if(!X.ok){X.say='لازم المعيد يشيك على الدائرة أول (Ask instructor to check).';return}X.plugged=true;X.say='';RT.dirty=true}}
-function fresh(){return {plugged:false,ok:false,say:'',blown:null}}
+function xfKey(k){const X=RT.S.xf;if(k==='CHECK'){const [ok,say]=safety();X.ok=ok;X.say=say;if(ok)X.once=true;return}
+  if(k==='PLUG'){if(X.plugged){X.plugged=false;X.say='تم فصل المحوّل.';RT.dirty=true;return}if(!X.ok&&!X.once){X.say='لازم المعيد يشيك على الدائرة أول (Ask instructor to check).';return}X.plugged=true;X.say='';RT.dirty=true}}
+/* the instructor inspects the circuit once before the first plug-in (manual's caution); later changes are the student's */
+function fresh(){return {plugged:false,ok:false,once:false,say:'',blown:null}}
 return {key:'xf',prefix:'x',fresh,svg:xfSVG,keyFn:xfKey,wheel:[],FQ,
   size:[770,400],
   leads:['tA','tB','tC'].map(k=>({k,label:XT[k].l,from:XT[k],circuit:true,banana:true})),

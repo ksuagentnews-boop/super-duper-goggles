@@ -163,6 +163,9 @@ function partsSVG(){const S=RT.S;let s='';
     s+=`<g transform="translate(${mx} ${my}) rotate(${ang})" data-k="part:${p.id}" style="cursor:grab">${partBody(p.type,L,S.sel===p.id,p.lit)}</g>`;
     if(p.dead)s+=T(mx,my+5,'💥',{size:20,a:'middle'});
     const lab=PARTS[p.type].lab;if(lab){const vert=Math.abs(ang)>45;s+=T(vert?mx+20:mx,vert?my+4:my-17,lab,{size:9.5,fill:'#22302f',a:vert?'start':'middle',w:600})}});
+  return s}
+/* selection toolbar (⇄ / ✕) and wire-start marker: drawn above the cables so a plug never hides them */
+function toolbarSVG(){const S=RT.S;let s='';
   const sp=S.parts.find(p=>p.id===S.sel),sw=S.wires.find(w=>w.id===S.sel);
   if(sp||sw){let x,y;if(sp){const a=nodeC(sp.a),b=nodeC(sp.b);x=(a.x+b.x)/2;y=(a.y+b.y)/2-40}else{const a=holeP(sw.a,sw.ha),b=holeP(sw.b,sw.hb);x=(a.x+b.x)/2;y=(a.y+b.y)/2-44}
     const btn=(bx,lab,k,c)=>`<circle cx="${bx}" cy="${y}" r="15" fill="#141c20" stroke="${c}" stroke-width="2" data-k="${k}" style="cursor:pointer"/>`+T(bx,y+5,lab,{size:14,fill:c,a:'middle',w:600});
@@ -205,7 +208,7 @@ let staticDone=false;
 function render(light){
   if(!staticDone){$('Lstatic').innerHTML=staticSVG();staticDone=true}
   if(!light){if(RT.dirty){recompute();INST.forEach(i=>i.postSim&&i.postSim())}if(def.decorate)def.decorate(RT);$('Ldyn').innerHTML=INST.map(i=>i.svg()).join('');BENCH.onRender()}
-  $('Lparts').innerHTML=partsSVG();$('Lcables').innerHTML=cablesSVG();$('Ldrag').innerHTML=dragSVG();
+  $('Lparts').innerHTML=partsSVG();$('Lcables').innerHTML=cablesSVG();$('Ldrag').innerHTML=toolbarSVG()+dragSVG();
   if(hlEl&&!document.body.contains(hlEl))hlEl=null;
 }
 function circuitChanged(){RT.dirty=true;INST.forEach(i=>i.onCircuitChange&&i.onCircuitChange())}
