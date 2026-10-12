@@ -53,11 +53,11 @@ A static website (GitHub Pages, no server, no login) that simulates the EE depar
 - When the site opens, a calm welcome card is shown over the corridor, centred, in this order (top to bottom):
   1. «أهلاً بك في محاكي معامل الهندسة الكهربائية» — the title, the largest text on the card.
   2. «سائلاً المولى لنا ولكم التوفيق والسداد» — smaller, softer text under it.
-  3. A thin divider line, then at the bottom, small and light (muted grey, low emphasis — a discreet credit, never the biggest thing on the card): «تم التصميم من قبل عبدالرحمن القنيعة» with a small LinkedIn icon/link (opens in a new tab).
-  4. A "ابدأ" button closes it.
+  3. A "ابدأ" button closes it.
+  - Credit line (later, not now): when `author` in `labs/site.js` is filled, add under a thin divider, small and light grey: «تم التصميم من قبل <author>» with a small LinkedIn icon. While `author` is empty, no credit and no divider are shown.
 - Shown on every new visit (or once per session); an ⓘ button in the corridor HUD re-opens it.
 - The name and the LinkedIn URL come from one config object (`labs/site.js` or similar: `{author, linkedin}`) so the owner can change them without touching engine code. If `linkedin` is empty, show the name only (no link, no icon).
-- Current values: `author: 'عبدالرحمن القنيعة'`, `linkedin: 'https://www.linkedin.com/in/abdulrahman-algniah-3688673ab'`, `goatcounter: ''` (filled in when the owner creates the account).
+- Current values: `author: ''` (empty for now — the owner will add «عبدالرحمن القنيعة» later), `linkedin: 'https://www.linkedin.com/in/abdulrahman-algniah-3688673ab'`, `goatcounter: ''` (filled in when the owner creates the account).
 
 ## Usage statistics (anonymous)
 - The owner wants numbers: visitors, experiments run, time spent. Use **GoatCounter** (free, no cookies, no personal data, CSV export). The script `https://gc.zgo.at/count.js` is the one allowed exception to "scripts only from cdnjs".
