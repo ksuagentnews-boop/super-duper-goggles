@@ -51,7 +51,7 @@ A static website (GitHub Pages, no server, no login) that simulates the EE depar
 ## Welcome panel (first visit)
 - When the site opens, a calm welcome card is shown over the corridor: «أهلاً بك في محاكي معامل الهندسة الكهربائية» + one line of what the site is + «تصميم: <name>» with a LinkedIn link (icon + name, opens in a new tab). A "ابدأ" button closes it.
 - Shown on every new visit (or once per session); an ⓘ button in the corridor HUD re-opens it.
-- The name and the LinkedIn URL come from one config object (`labs/site.js` or similar: `{author, linkedin}`) so the owner can change them without touching engine code.
+- The name and the LinkedIn URL come from one config object (`labs/site.js` or similar: `{author, linkedin}`) so the owner can change them without touching engine code. If `linkedin` is empty, show the name only (no link, no icon).
 - **Component looks must match the real parts and the photos in `docs/`:** Zener drawn red as in the manual; silicon diode (e.g. 1N400x) black body with a grey cathode band; germanium diode in its small glass body with its band; LED as a 5 mm dome with two legs (longer anode); resistors with correct colour bands for their value; electrolytic capacitor with its polarity stripe. Cathode/polarity marks must be accurate because students learn orientation from them.
 
 ## Multi-lab building (plan for it now)
@@ -64,6 +64,7 @@ A static website (GitHub Pages, no server, no login) that simulates the EE depar
 
 ### The department corridor, ordered by study level (approved by the user)
 - The site link opens in the **corridor** (not inside a lab). The student stands at its entrance looking down it.
+- **Spawn point and sign spacing:** the student spawns a few metres before the first sign, so the department sign ("قسم الهندسة الكهربائية") stands clearly in front of him, fully readable and not overlapped by anything. The level signs come **one after another along the corridor with enough spacing** that, from the spawn point, they do not stack on top of each other or hide the department sign (today Level 5 hangs right under the department sign and Levels 6–7 pile up behind it). The student walks a short distance to reach Level 5 and its door, then on to the next level. Check the spawn view on desktop, phone landscape and portrait.
 - Along the corridor, **hanging ceiling signs mark the levels**, spaced apart, in this order: `المستوى الخامس · Level 5` → `المستوى السادس · Level 6` → `المستوى السابع · Level 7` → `المستوى الثامن · Level 8`.
 - After each level sign come the doors of that level's labs, **facing each other** on the left and right walls (one lab = one door; with an odd count the last door has no opposite). Each door has its own sign above it: code + English name + Arabic name, e.g. `EE312 · Basic Electronics Lab`.
 - **Electives courtyard:** after Level 8 the corridor ends in a wide gateway with the sign `الاختيارية · Electives` that opens into a **large square courtyard (باحة)**, because the electives have many doors. The elective doors are spread evenly over its three walls — left, front, right (e.g. 7 doors → 2 left, 3 front, 2 right; 6 → 2/2/2; 8 → 3/2/3) — each with its own sign. The courtyard grows with the number of electives (computed from the registry).
