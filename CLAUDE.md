@@ -48,6 +48,13 @@ A static website (GitHub Pages, no server, no login) that simulates the EE depar
 
 ## Two bench multimeters
 - Every EE312 table that has a DMM gets **two MCP MT3805 multimeters (DMM 1, DMM 2)**, as on the real lab benches, so two quantities can be read at the same time without moving leads (e.g. V_D and V_RS in Exp 1–2, V_GS/V_DS or V_RD in Exp 7, V_BE and V_O in Exp 9 A, the dc voltages in Exp 10 A). Steps and sheet say which meter reads what wherever the manual's figure shows two meters; where the manual measures one quantity, either meter is accepted. Update the default layouts (no crossings), the 3D tables and the tests.
+- The owner confirms from the real lab: some measurements are taken with the two meters at the same time on two different points and the student reads the difference, so both meters must be usable together on the board.
+
+## Diode test straight in the DMM jacks (Exp 1 Part A)
+- In the real lab the students take the diode out and **plug its two legs straight into the DMM's input jacks** (HI V·Ω and COM) with the meter on the diode-test function, then flip it:
+  - anode in HI, cathode in COM → forward reading (≈0.55 V 1N4001, ≈0.2–0.3 V Ge, ≈1.7–2 V green LED, Zener ≈0.7 V forward; the LED glows faintly);
+  - reversed → the meter's overload/open reading exactly as the real MT3805 shows it (the owner remembers something like "OL"/"OVLD" — use the real display text).
+- Build this: a diode can be dragged from the parts box (or lifted off the board) and dropped onto the DMM jack pair; it sits there drawn as the real part with its band showing which leg is where, a tap flips it, and a tap on "شيل" puts it back in the box. Measuring with the probe leads on the board stays possible too; the Manual steps for Part A use the jack method, like the lab.
 
 ## Welcome panel (first visit)
 - When the site opens, a calm welcome card is shown over the corridor, centred, in this order (top to bottom):
