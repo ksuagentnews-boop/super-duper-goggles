@@ -52,6 +52,7 @@ A static website (GitHub Pages, no server, no login) that simulates the EE depar
 - When the site opens, a calm welcome card is shown over the corridor: «أهلاً بك في محاكي معامل الهندسة الكهربائية» + one line of what the site is + «تصميم: <name>» with a LinkedIn link (icon + name, opens in a new tab). A "ابدأ" button closes it.
 - Shown on every new visit (or once per session); an ⓘ button in the corridor HUD re-opens it.
 - The name and the LinkedIn URL come from one config object (`labs/site.js` or similar: `{author, linkedin}`) so the owner can change them without touching engine code. If `linkedin` is empty, show the name only (no link, no icon).
+- Current values: `author: 'Abdulrahman Algniah'`, `linkedin: 'https://www.linkedin.com/in/abdulrahman-algniah-3688673ab'`.
 - **Component looks must match the real parts and the photos in `docs/`:** Zener drawn red as in the manual; silicon diode (e.g. 1N400x) black body with a grey cathode band; germanium diode in its small glass body with its band; LED as a 5 mm dome with two legs (longer anode); resistors with correct colour bands for their value; electrolytic capacitor with its polarity stripe. Cathode/polarity marks must be accurate because students learn orientation from them.
 
 ## Multi-lab building (plan for it now)
