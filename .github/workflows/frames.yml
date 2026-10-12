@@ -17,12 +17,26 @@ jobs:
           pip install -q -U yt-dlp
       - name: Download and extract
         run: |
-          mkdir -p out
+          mkdir -p out v
           while read name id; do
             [ -z "$id" ] && continue
             echo "== $name $id"
-            yt-dlp -q --no-warnings -f "bv*[height<=720]+ba/b[height<=720]/b" -o "v/$name.%(ext)s" \
-              --write-auto-subs --write-subs --sub-langs "ar.*,en.*" --convert-subs srt "https://youtu.be/$id" || echo "FAILED $name" >> out/failed.txt
+            ok=""
+            for client in "default" "tv" "web_safari" "mweb" "ios" "android_vr"; do
+              if [ "$client" = default ]; then ea=""; else ea="--extractor-args youtube:player_client=$client"; fi
+              if yt-dlp $ea --no-progress -f "bv*[height<=720]+ba/b[height<=720]/b/18" -o "v/$name.%(ext)s" \
+                   --write-auto-subs --write-subs --sub-langs "ar.*,en.*" --convert-subs srt "https://youtu.be/$id" > log.txt 2>&1; then ok=1; echo "ok via $client"; break; fi
+              echo "-- $client failed: $(grep -m1 ERROR log.txt)"
+            done
+            if [ -z "$ok" ]; then
+              for inst in https://inv.nadeko.net https://invidious.nerdvpn.de https://yewtu.be https://invidious.private.coffee; do
+                if curl -sSfL --max-time 300 -o "v/$name.mp4" "$inst/latest_version?id=$id&itag=18&local=true"; then
+                  if [ -s "v/$name.mp4" ] && ffprobe -v error "v/$name.mp4"; then ok=1; echo "ok via $inst"; break; fi
+                fi
+                rm -f "v/$name.mp4"
+              done
+            fi
+            [ -z "$ok" ] && echo "FAILED $name" >> out/failed.txt
             f=$(ls v/$name.* 2>/dev/null | grep -v '\.srt$' | head -1)
             if [ -n "$f" ]; then
               mkdir -p out/$name
