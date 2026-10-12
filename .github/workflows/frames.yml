@@ -7,49 +7,20 @@ permissions:
 jobs:
   frames:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - name: Tools
+      - name: Thumbnails and storyboards
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg jq
-          pip install -q -U yt-dlp bgutil-ytdlp-pot-provider
-          docker run -d --name pot -p 4416:4416 --init brainicism/bgutil-ytdlp-pot-provider
-          sleep 8
-      - name: Download and extract
-        run: |
-          mkdir -p out v
-          try_ytdlp() { # $1 name $2 id $3 extractor args
-            yt-dlp $3 --no-progress -f "bv*[height<=720]+ba/b[height<=720]/b/18" -o "v/$1.%(ext)s" \
-              --write-auto-subs --write-subs --sub-langs "ar.*,en.*" --convert-subs srt "https://youtu.be/$2" >> out/log.txt 2>&1; }
-          try_piped() { # $1 name $2 id
-            for api in https://pipedapi.kavin.rocks https://pipedapi.adminforge.de https://api.piped.private.coffee https://pipedapi.r4fo.com https://piped-api.lunar.icu; do
-              u=$(curl -sS --max-time 30 "$api/streams/$2" | jq -r '[.videoStreams[]? | select(.videoOnly==false)] | sort_by(.height) | last | .url // empty' 2>>out/log.txt)
-              echo "piped $api -> ${u:0:60}" >> out/log.txt
-              if [ -n "$u" ] && curl -sSfL --max-time 600 -o "v/$1.mp4" "$u" && ffprobe -v error "v/$1.mp4"; then echo "ok piped $api" >> out/log.txt; return 0; fi
-              rm -f "v/$1.mp4"
-            done; return 1; }
-          while read name id; do
-            [ -z "$id" ] && continue
-            echo "== $name $id" >> out/log.txt
-            ok=""
-            for ea in "" "--extractor-args youtube:player_client=web_embedded" "--extractor-args youtube:player_client=tv" "--extractor-args youtube:player_client=mweb"; do
-              if try_ytdlp "$name" "$id" "$ea"; then ok=1; echo "ok ytdlp [$ea]" >> out/log.txt; break; fi
-            done
-            [ -z "$ok" ] && try_piped "$name" "$id" && ok=1
-            if [ -z "$ok" ]; then echo "FAILED $name" >> out/failed.txt; continue; fi
-            f=$(ls v/$name.* | grep -v '\.srt$' | head -1)
-            mkdir -p out/$name
-            ffprobe -v error -show_entries format=duration -of csv=p=0 "$f" > out/$name/duration.txt
-            ffmpeg -loglevel error -i "$f" -vf "fps=1/4,scale=1024:-2" -q:v 6 "out/$name/t%04d.jpg"
-            cp v/$name*.srt out/$name/ 2>/dev/null || true
-          done < videos.txt
-      - name: Commit frames
+          mkdir -p out
+          python3 sb.py || true
+          du -sh out; cat out/log.txt | head -80
+      - name: Commit
         if: always()
         run: |
           git config user.name "frames-bot"; git config user.email "frames-bot@users.noreply.github.com"
           git checkout --orphan video-frames-out
-          git rm -rq --cached . ; rm -rf .github videos.txt v
+          git rm -rq --cached . ; rm -rf .github videos.txt videos.all sb.py
           mv out/* . ; rmdir out
-          git add -A && git commit -qm "EE205 video frames (1 frame / 4 s)"
+          git add -A && git commit -qm "EE205 thumbnails + storyboards"
           git push -f origin video-frames-out
