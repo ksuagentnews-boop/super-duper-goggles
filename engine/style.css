@@ -288,3 +288,16 @@ button.t.on{background:var(--accent);border-color:var(--accent);color:#fff}
 @media (max-width:900px),(max-height:500px){.zback.lay{top:6px;right:6px;font-size:11.5px;padding:5px 9px}}
 .quick .qi.off[data-lab]{cursor:pointer}.quick .qi.off[data-lab]:hover{border-color:var(--line)}
 .quick .qt b.ar{font:600 14px var(--f-ui);direction:rtl}
+
+/* welcome card */
+.hud-btns{display:flex;gap:8px;pointer-events:none}.hud-btn.info{padding:8px 11px;font-size:15px;line-height:1}
+#welcome{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;background:rgba(30,42,40,.30);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);direction:rtl;animation:fadeIn .35s ease}
+#welcome[hidden]{display:none}
+.wl-card{background:#fff;border-radius:22px;padding:30px 28px 24px;max-width:520px;width:100%;text-align:center;box-shadow:0 24px 60px rgba(20,30,28,.25)}
+.wl-card h1{margin:0 0 10px;font-size:26px;line-height:1.45;color:var(--ink);text-wrap:balance}
+.wl-dua{margin:0 0 22px;font-size:15.5px;color:var(--muted)}
+.wl-go{border:0;background:var(--accent);color:#fff;font:600 16px var(--f-ui);border-radius:12px;padding:10px 38px;cursor:pointer}
+.wl-go:hover{filter:brightness(1.06)}
+.wl-credit{margin-top:20px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:#9aa5a2;display:flex;gap:6px;justify-content:center;align-items:center}
+.wl-credit a{color:inherit;text-decoration:none;display:inline-flex;gap:5px;align-items:center}.wl-credit svg{width:13px;height:13px;fill:#9aa5a2}
+@media (max-height:500px){.wl-card{padding:18px 18px 16px}.wl-card h1{font-size:20px;margin-bottom:6px}.wl-dua{margin-bottom:14px;font-size:14px}}

@@ -11,5 +11,5 @@ ENGINE.sheet={
   capture(RT,id){if(RT.dirty)RT.recompute();const sc=RT.S.sc;const mm=sc.msg;sc.msg='';const inner=sc.run?RT.screenInner():sc.frozen;sc.msg=mm;
     document.getElementById(id).innerHTML=`<svg viewBox="12 26 336 286" direction="ltr" font-family="IBM Plex Mono, monospace"><defs><clipPath id="gridclip"><rect x="22" y="48" width="300" height="200"/></clipPath></defs>${inner}</svg>`},
   grader(){const res=[];return {add(ok,t,why){res.push([!!ok,t,why]);return ok},
-    show(el){const sc=res.filter(r=>r[0]).length;el.innerHTML=`<div class="result"><b>النتيجة: ${sc} / ${res.length}</b>`+res.map(([ok,t,w])=>`<div class="${ok?'good':'bad'}">${ok?'✓':'✗'} <span class="m">${t}</span>${ok||!w?'':' — '+w}</div>`).join('')+`</div>`;el.scrollIntoView({behavior:'smooth',block:'nearest'});return [sc,res.length]}}}
+    show(el){const sc=res.filter(r=>r[0]).length;try{if(res.length&&typeof STATS!=='undefined')STATS.graded(BENCH.exp,sc/res.length*100)}catch(_){}el.innerHTML=`<div class="result"><b>النتيجة: ${sc} / ${res.length}</b>`+res.map(([ok,t,w])=>`<div class="${ok?'good':'bad'}">${ok?'✓':'✗'} <span class="m">${t}</span>${ok||!w?'':' — '+w}</div>`).join('')+`</div>`;el.scrollIntoView({behavior:'smooth',block:'nearest'});return [sc,res.length]}}}
 };

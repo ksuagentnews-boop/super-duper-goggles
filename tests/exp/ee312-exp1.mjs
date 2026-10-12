@@ -49,4 +49,6 @@ export async function run(page, vp, ok) {
   const res = await page.$eval('#result', e => e.innerText);
   const full = /النتيجة: (\d+) \/ \1/.test(res); ok(full, 'manual sheet graded full marks: ' + res.split('\n')[0]); if (!full) console.log(res);
   await page.click('#bStand'); await page.waitForTimeout(300);
+  const tr = await page.evaluate(() => STATS.trace.join());
+  ok(['exp/ee312/exp1/start/manual', 'exp/ee312/exp1/done', 'exp/ee312/exp1/graded/100', 'time/ee312/exp1/'].every(p => tr.includes(p)), 'usage events: start, done, graded/100, time bucket');
 }

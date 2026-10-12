@@ -1,6 +1,13 @@
 import { sit, bench } from '../lib.mjs';
 export async function run(page, vp, ok) {
   console.log(`[${vp}] hall + quick access`);
+  // welcome card: title, du'a line, ابدأ; no credit while SITE.author is empty; ⓘ reopens it
+  await page.click('#infoBtn');
+  const wl = await page.evaluate(() => ({ open: !document.getElementById('welcome').hidden, t: document.getElementById('wlTitle').textContent, d: document.querySelector('.wl-dua').textContent, go: document.getElementById('wlStart').textContent, credit: !document.getElementById('wlCredit').hidden, author: SITE.author }));
+  ok(wl.open && wl.t === 'أهلاً بك في محاكي معامل الهندسة الكهربائية' && wl.d === 'سائلاً المولى لنا ولكم التوفيق والسداد' && wl.go === 'ابدأ', 'ⓘ opens the welcome card (title, du\'a line, ابدأ)');
+  ok(!wl.credit && wl.author === '', 'no credit line while SITE.author is empty');
+  await page.click('#wlStart'); ok(await page.$eval('#welcome', e => e.hidden), 'ابدأ closes it');
+  ok(await page.evaluate(() => STATS.on === false), 'statistics off (no GoatCounter code, test host)');
   // the site opens at the corridor entrance; doors follow the registry by study level, electives in the courtyard
   ok(await page.evaluate(() => { const c = HALL.debug.cur(), P = HALL.debug.P, S = HALL.debug.START; return c.kind === 'corridor' && Math.hypot(P.x - S.x, P.z - S.z) < 0.01 && P.yaw === 0; }), 'the site opens at the corridor entrance');
   const cor = await page.evaluate(() => { const D = HALL.debug.doors().filter(d => d.kind === 'lab'); return { codes: D.map(d => d.label), all: REGISTRY.labs.map(l => l.code), D: D.map(d => ({ lab: d.lab, x: d.x, z: d.z, closed: d.closed, court: d.court, ry: d.ry })) }; });

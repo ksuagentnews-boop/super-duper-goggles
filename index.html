@@ -16,7 +16,7 @@
   <div class="loading" id="hallLoading">جاري تجهيز القاعة…</div>
   <div class="hud-top">
     <div class="brand"><b>محاكي معامل قسم الكهرباء</b><span>EE312 · Basic Electronics Lab</span></div>
-    <button class="hud-btn" id="quickBtn" aria-expanded="false" aria-haspopup="true">⚡ الوصول السريع</button>
+    <div class="hud-btns"><button class="hud-btn" id="quickBtn" aria-expanded="false" aria-haspopup="true">⚡ الوصول السريع</button><button class="hud-btn info" id="infoBtn" aria-label="عن المحاكي">ⓘ</button></div>
   </div>
   <div class="tip" id="tip" hidden></div>
   <div id="crosshair" hidden></div>
@@ -45,6 +45,16 @@
   </div>
 </div>
 <div id="fade"></div>
+
+<!-- welcome card (every new visit; ⓘ reopens it) -->
+<div id="welcome" hidden>
+  <div class="wl-card" role="dialog" aria-modal="true" aria-labelledby="wlTitle">
+    <h1 id="wlTitle">أهلاً بك في محاكي معامل الهندسة الكهربائية</h1>
+    <p class="wl-dua">سائلاً المولى لنا ولكم التوفيق والسداد</p>
+    <button class="wl-go" id="wlStart">ابدأ</button>
+    <div class="wl-credit" id="wlCredit" hidden></div>
+  </div>
+</div>
 
 <!-- ================= BENCH ================= -->
 <div id="benchView" hidden data-mode="manual">
@@ -112,8 +122,11 @@
 <script src="engine/bench.js"></script>
 <script src="engine/quick.js"></script>
 <script src="engine/hall.js"></script>
+<script src="labs/site.js"></script>
+<script src="engine/stats.js"></script>
 <script src="labs/index.js"></script>
 <script src="engine/registry.js"></script>
-<script>BENCH.init();HALL.init();</script>
+<script src="engine/welcome.js"></script>
+<script>BENCH.init();HALL.init();WELCOME.init();</script>
 </body>
 </html>

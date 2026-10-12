@@ -26,6 +26,7 @@ export async function openPage(browser, vp, errors, name) {
   });
   await page.goto('http://app.local/');
   await page.waitForFunction(() => document.querySelector('#hallLoading').hidden, null, { timeout: 20000 });
+  if (await page.$eval('#welcome', e => !e.hidden)) await page.click('#wlStart');
   return { ctx, page };
 }
 
