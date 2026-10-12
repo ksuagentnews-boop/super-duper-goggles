@@ -1,0 +1,180 @@
+_Qvl8vkexYs client WEB_EMBEDDED_PLAYER status ERROR sb False
+_Qvl8vkexYs client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+_Qvl8vkexYs client WEB status LOGIN_REQUIRED sb False
+_Qvl8vkexYs client MWEB status LOGIN_REQUIRED sb False
+_Qvl8vkexYs client TVHTML5 status LOGIN_REQUIRED sb False
+== exp1-p1 spec via None
+4pM2GUrgPD4 client WEB_EMBEDDED_PLAYER status ERROR sb False
+4pM2GUrgPD4 client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+4pM2GUrgPD4 client WEB status LOGIN_REQUIRED sb False
+4pM2GUrgPD4 client MWEB status LOGIN_REQUIRED sb False
+4pM2GUrgPD4 client TVHTML5 status LOGIN_REQUIRED sb False
+== exp1-p2 spec via None
+30dhIilpPVA client WEB_EMBEDDED_PLAYER status ERROR sb False
+30dhIilpPVA client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+30dhIilpPVA client WEB status LOGIN_REQUIRED sb False
+30dhIilpPVA client MWEB status LOGIN_REQUIRED sb False
+30dhIilpPVA client TVHTML5 status LOGIN_REQUIRED sb False
+== exp1-p3 spec via None
+mIId7_zEAr8 client WEB_EMBEDDED_PLAYER status ERROR sb False
+mIId7_zEAr8 client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+mIId7_zEAr8 client WEB status LOGIN_REQUIRED sb False
+mIId7_zEAr8 client MWEB status LOGIN_REQUIRED sb False
+mIId7_zEAr8 client TVHTML5 status LOGIN_REQUIRED sb False
+== exp1-p4a spec via None
+yL-VVR7o3Jo client WEB_EMBEDDED_PLAYER status ERROR sb False
+yL-VVR7o3Jo client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+yL-VVR7o3Jo client WEB status LOGIN_REQUIRED sb False
+yL-VVR7o3Jo client MWEB status LOGIN_REQUIRED sb False
+yL-VVR7o3Jo client TVHTML5 status LOGIN_REQUIRED sb False
+== exp1-p4b spec via None
+_InaeNJyAzE client WEB_EMBEDDED_PLAYER status ERROR sb False
+_InaeNJyAzE client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+_InaeNJyAzE client WEB status LOGIN_REQUIRED sb False
+_InaeNJyAzE client MWEB status LOGIN_REQUIRED sb False
+_InaeNJyAzE client TVHTML5 status LOGIN_REQUIRED sb False
+== exp2-intro spec via None
+XKkaIq4QYDc client WEB_EMBEDDED_PLAYER status ERROR sb False
+XKkaIq4QYDc client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+XKkaIq4QYDc client WEB status LOGIN_REQUIRED sb False
+XKkaIq4QYDc client MWEB status LOGIN_REQUIRED sb False
+XKkaIq4QYDc client TVHTML5 status LOGIN_REQUIRED sb False
+== exp2-p1a spec via None
+wtOq5w2aNU0 client WEB_EMBEDDED_PLAYER status ERROR sb False
+wtOq5w2aNU0 client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+wtOq5w2aNU0 client WEB status LOGIN_REQUIRED sb False
+wtOq5w2aNU0 client MWEB status LOGIN_REQUIRED sb False
+wtOq5w2aNU0 client TVHTML5 status LOGIN_REQUIRED sb False
+== exp2-p1b spec via None
+N5V-oAyGxmI client WEB_EMBEDDED_PLAYER status ERROR sb False
+N5V-oAyGxmI client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+N5V-oAyGxmI client WEB status LOGIN_REQUIRED sb False
+N5V-oAyGxmI client MWEB status LOGIN_REQUIRED sb False
+N5V-oAyGxmI client TVHTML5 status LOGIN_REQUIRED sb False
+== exp2-p2a spec via None
+i3LuRbYUHDU client WEB_EMBEDDED_PLAYER status ERROR sb False
+i3LuRbYUHDU client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+i3LuRbYUHDU client WEB status LOGIN_REQUIRED sb False
+i3LuRbYUHDU client MWEB status LOGIN_REQUIRED sb False
+i3LuRbYUHDU client TVHTML5 status LOGIN_REQUIRED sb False
+== exp2-p2b spec via None
+UJ44fcJb9Eo client WEB_EMBEDDED_PLAYER status ERROR sb False
+UJ44fcJb9Eo client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+UJ44fcJb9Eo client WEB status LOGIN_REQUIRED sb False
+UJ44fcJb9Eo client MWEB status LOGIN_REQUIRED sb False
+UJ44fcJb9Eo client TVHTML5 status LOGIN_REQUIRED sb False
+== exp3-p1 spec via None
+iLQz6BZyHYo client WEB_EMBEDDED_PLAYER status ERROR sb False
+iLQz6BZyHYo client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+iLQz6BZyHYo client WEB status LOGIN_REQUIRED sb False
+iLQz6BZyHYo client MWEB status LOGIN_REQUIRED sb False
+iLQz6BZyHYo client TVHTML5 status LOGIN_REQUIRED sb False
+== exp3-p2 spec via None
+vISxcEE3kBw client WEB_EMBEDDED_PLAYER status ERROR sb False
+vISxcEE3kBw client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+vISxcEE3kBw client WEB status LOGIN_REQUIRED sb False
+vISxcEE3kBw client MWEB status LOGIN_REQUIRED sb False
+vISxcEE3kBw client TVHTML5 status LOGIN_REQUIRED sb False
+== exp4-intro spec via None
+x7owoQ79kJc client WEB_EMBEDDED_PLAYER status ERROR sb False
+x7owoQ79kJc client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+x7owoQ79kJc client WEB status LOGIN_REQUIRED sb False
+x7owoQ79kJc client MWEB status LOGIN_REQUIRED sb False
+x7owoQ79kJc client TVHTML5 status LOGIN_REQUIRED sb False
+== exp4-p1 spec via None
+xWAfyHNZOZc client WEB_EMBEDDED_PLAYER status ERROR sb False
+xWAfyHNZOZc client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+xWAfyHNZOZc client WEB status LOGIN_REQUIRED sb False
+xWAfyHNZOZc client MWEB status LOGIN_REQUIRED sb False
+xWAfyHNZOZc client TVHTML5 status LOGIN_REQUIRED sb False
+== exp5-intro spec via None
+mR1xZszq4pY client WEB_EMBEDDED_PLAYER status ERROR sb False
+mR1xZszq4pY client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+mR1xZszq4pY client WEB status LOGIN_REQUIRED sb False
+mR1xZszq4pY client MWEB status LOGIN_REQUIRED sb False
+mR1xZszq4pY client TVHTML5 status LOGIN_REQUIRED sb False
+== exp5-p1 spec via None
+rdGeUz3OpMs client WEB_EMBEDDED_PLAYER status ERROR sb False
+rdGeUz3OpMs client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+rdGeUz3OpMs client WEB status LOGIN_REQUIRED sb False
+rdGeUz3OpMs client MWEB status LOGIN_REQUIRED sb False
+rdGeUz3OpMs client TVHTML5 status LOGIN_REQUIRED sb False
+== exp5-p2 spec via None
+2ho4Kn03gKM client WEB_EMBEDDED_PLAYER status ERROR sb False
+2ho4Kn03gKM client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+2ho4Kn03gKM client WEB status LOGIN_REQUIRED sb False
+2ho4Kn03gKM client MWEB status LOGIN_REQUIRED sb False
+2ho4Kn03gKM client TVHTML5 status LOGIN_REQUIRED sb False
+== exp5-p3 spec via None
+hvncFWTUdsQ client WEB_EMBEDDED_PLAYER status ERROR sb False
+hvncFWTUdsQ client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+hvncFWTUdsQ client WEB status LOGIN_REQUIRED sb False
+hvncFWTUdsQ client MWEB status LOGIN_REQUIRED sb False
+hvncFWTUdsQ client TVHTML5 status LOGIN_REQUIRED sb False
+== exp6-p1a spec via None
+dX2v9NpRGxc client WEB_EMBEDDED_PLAYER status ERROR sb False
+dX2v9NpRGxc client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+dX2v9NpRGxc client WEB status LOGIN_REQUIRED sb False
+dX2v9NpRGxc client MWEB status LOGIN_REQUIRED sb False
+dX2v9NpRGxc client TVHTML5 status LOGIN_REQUIRED sb False
+== exp6-p1b spec via None
+4ypzrETHlG8 client WEB_EMBEDDED_PLAYER status ERROR sb False
+4ypzrETHlG8 client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+4ypzrETHlG8 client WEB status LOGIN_REQUIRED sb False
+4ypzrETHlG8 client MWEB status LOGIN_REQUIRED sb False
+4ypzrETHlG8 client TVHTML5 status LOGIN_REQUIRED sb False
+== exp6-p1c spec via None
+cDv830vu1TY client WEB_EMBEDDED_PLAYER status ERROR sb False
+cDv830vu1TY client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+cDv830vu1TY client WEB status LOGIN_REQUIRED sb False
+cDv830vu1TY client MWEB status LOGIN_REQUIRED sb False
+cDv830vu1TY client TVHTML5 status LOGIN_REQUIRED sb False
+== exp6-p2 spec via None
+uiNdee6mjnk client WEB_EMBEDDED_PLAYER status ERROR sb False
+uiNdee6mjnk client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+uiNdee6mjnk client WEB status LOGIN_REQUIRED sb False
+uiNdee6mjnk client MWEB status LOGIN_REQUIRED sb False
+uiNdee6mjnk client TVHTML5 status LOGIN_REQUIRED sb False
+== exp7-intro spec via None
+fEBdqOVdT9I client WEB_EMBEDDED_PLAYER status ERROR sb False
+fEBdqOVdT9I client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+fEBdqOVdT9I client WEB status LOGIN_REQUIRED sb False
+fEBdqOVdT9I client MWEB status LOGIN_REQUIRED sb False
+fEBdqOVdT9I client TVHTML5 status LOGIN_REQUIRED sb False
+== exp7-p1 spec via None
+jHBfDmaThyI client WEB_EMBEDDED_PLAYER status ERROR sb False
+jHBfDmaThyI client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+jHBfDmaThyI client WEB status LOGIN_REQUIRED sb False
+jHBfDmaThyI client MWEB status LOGIN_REQUIRED sb False
+jHBfDmaThyI client TVHTML5 status LOGIN_REQUIRED sb False
+== exp7-p2 spec via None
+3YO2TqHCTXU client WEB_EMBEDDED_PLAYER status ERROR sb False
+3YO2TqHCTXU client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+3YO2TqHCTXU client WEB status LOGIN_REQUIRED sb False
+3YO2TqHCTXU client MWEB status LOGIN_REQUIRED sb False
+3YO2TqHCTXU client TVHTML5 status LOGIN_REQUIRED sb False
+== exp7-p3 spec via None
+zyM40x0JyEI client WEB_EMBEDDED_PLAYER status ERROR sb False
+zyM40x0JyEI client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+zyM40x0JyEI client WEB status LOGIN_REQUIRED sb False
+zyM40x0JyEI client MWEB status LOGIN_REQUIRED sb False
+zyM40x0JyEI client TVHTML5 status LOGIN_REQUIRED sb False
+== exp7-p4 spec via None
+QwDXjyJHaHE client WEB_EMBEDDED_PLAYER status ERROR sb False
+QwDXjyJHaHE client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+QwDXjyJHaHE client WEB status LOGIN_REQUIRED sb False
+QwDXjyJHaHE client MWEB status LOGIN_REQUIRED sb False
+QwDXjyJHaHE client TVHTML5 status LOGIN_REQUIRED sb False
+== exp8-p1 spec via None
+sbmLMFCrmrQ client WEB_EMBEDDED_PLAYER status ERROR sb False
+sbmLMFCrmrQ client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+sbmLMFCrmrQ client WEB status LOGIN_REQUIRED sb False
+sbmLMFCrmrQ client MWEB status LOGIN_REQUIRED sb False
+sbmLMFCrmrQ client TVHTML5 status LOGIN_REQUIRED sb False
+== exp8-p2 spec via None
+lUID5ORRzXQ client WEB_EMBEDDED_PLAYER status ERROR sb False
+lUID5ORRzXQ client TVHTML5_SIMPLY_EMBEDDED_PLAYER status ERROR sb False
+lUID5ORRzXQ client WEB status LOGIN_REQUIRED sb False
+lUID5ORRzXQ client MWEB status LOGIN_REQUIRED sb False
+lUID5ORRzXQ client TVHTML5 status LOGIN_REQUIRED sb False
+== exp8-p3 spec via None
