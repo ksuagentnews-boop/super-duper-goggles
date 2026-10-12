@@ -14,7 +14,8 @@ for (const vp of VPS) {
     const { run } = await import(`./exp/${m}.mjs`);
     const { ctx, page } = await openPage(browser, vp, errors, `${vp}/${m}`);
     console.log(`[${vp}] ${m}`);
-    try { await run(page, vp, ok); }
+    try { await run(page, vp, ok);
+      const ll = await page.evaluate(() => (window.BENCH && BENCH.lineLog) || []); if (m.startsWith('ee312-')) ok(!ll.length, `build lines match the board when each build step ticks` + (ll.length ? ': ' + JSON.stringify(ll) : '')); }
     catch (e) { fails.push(`[${vp}] ${m}: ${e.message}`); console.log('  ✗ ' + e.stack.split('\n').slice(0, 10).join(' | ')); await page.screenshot({ path: `/tmp/e2e-fail-${vp}-${m}.png` }).catch(() => {}); }
     await ctx.close();
   }

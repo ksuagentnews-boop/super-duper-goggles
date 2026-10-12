@@ -71,13 +71,14 @@ const HALL=(()=>{
     boxM(2.5,0.05,1.05,lam,x,top-0.025,z);[[-1.18,-0.45],[1.18,-0.45],[-1.18,0.45],[1.18,0.45]].forEach(([dx,dz])=>boxM(0.06,top-0.05,0.06,frame,x+dx,(top-0.05)/2,z+dz));
     boxM(2.3,0.5,0.03,std('#cfd8d4'),x,0.5,z-0.48,false);
     boxM(2.5,0.12,0.04,std('#d9e1de'),x,top+0.06,z-0.53);
-    const kinds=e.bench.filter(k=>k!=='dbox'&&k!=='pc');
+    /* a second DMM stands on top of the first (two bench meters per table) */
+    const kinds=e.bench.filter((k,i)=>k!=='dbox'&&k!=='pc'&&!(k==='dmm'&&e.bench.indexOf('dmm')!==i));const dmm2=e.bench.filter(k=>k==='dmm').length>1;
     if(e.bench.includes('pc')){
       const mon=instrument('pc',0.62,0.4,0.04,x,z-0.32,top+0.12);boxM(0.06,0.12,0.06,frame,x,top+0.06,z-0.32);boxM(0.26,0.015,0.18,frame,x,top+0.008,z-0.32);
       boxM(0.48,0.02,0.16,std('#2a3034'),x-0.05,top+0.01,z+0.12);boxM(0.07,0.025,0.11,std('#2a3034'),x+0.34,top+0.012,z+0.14);
       boxM(0.2,0.42,0.42,std('#2a3034'),x+0.95,top+0.21,z-0.2)}
     else{const gap=0.06;let tot=kinds.reduce((s,k)=>s+SIZE[k][0],0)+gap*(kinds.length-1);let cx=x-tot/2;
-      kinds.forEach(k=>{const [w,h,d]=SIZE[k];instrument(k,w,h,d,cx+w/2,z-0.26,top);cx+=w+gap});
+      kinds.forEach(k=>{const [w,h,d]=SIZE[k];instrument(k,w,h,d,cx+w/2,z-0.26,top);if(k==='dmm'&&dmm2)instrument(k,w,h,d,cx+w/2,z-0.26,top+h+0.004);cx+=w+gap});
       if(e.bench.includes('dbox')){instrument('dbox',...SIZE.dbox,x-0.95,z+0.2,top);instrument('dbox',...SIZE.dbox,x-0.68,z+0.2,top)}
       const bb=new THREE.Mesh(new THREE.BoxGeometry(0.48,0.02,0.32),[std('#c3cbc8'),std('#c3cbc8'),std('#fff',{map:boardTex()}),std('#c3cbc8'),std('#c3cbc8'),std('#c3cbc8')]);bb.position.set(x+0.05,top+0.01,z+0.2);bb.receiveShadow=true;scene.add(bb)}
     // stool

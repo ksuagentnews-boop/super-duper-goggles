@@ -46,7 +46,8 @@ instruments:[
   {type:'gen',prev:{wave:'Sine',freq:1000,amp:0.4,off:0}},
   {type:'psu',res:{c:0.1,f:0.001},prev:d=>{d.u[0].v=10;d.u[0].ilim=0.1;d.u[1].v=3.2;d.u[1].ilim=0.5}},
   {type:'scope',probes:2},
-  {type:'dmm',prev:d=>{d.fn='DIODE'}},
+  {type:'dmm',n:1,prev:d=>{d.fn='DIODE'}},
+  {type:'dmm',n:2,prev:d=>{d.fn='OHM'}},
   {type:'dbox',prev:d=>{d.a=[0,0,7,2,0];d.b=[0,0,0,1,0]}}],
 parts:{BD137:{t:'BJT',pkg:'TO126',mark:'BD137',lab:'BD137',pins:[{n:'E',dx:0,dy:0,h:1,role:'e'},{n:'C',dx:1,dy:0,h:1,role:'c'},{n:'B',dx:2,dy:0,h:1,role:'b'}],
     stamp:(els,R,inner,p)=>{els.push({t:'BJT',c:R.c,b:R.b,e:R.e,m:SOLVER.MODELS.bd137,pid:p.id})}},
@@ -69,14 +70,15 @@ setup(RT){
         if(ok){c.kind='B';c.vcc=v2;c.rc=DB.value(kc.toLowerCase());c.rb=DB.value(kb.toLowerCase());return c}}}
     return c}
   const ST={vbe:{},vi:{}};
-  function status(){const S=RT.S,D=S.dmm,g=S.gen,r=RT.dmm()||{};const c=circuit();const st={kind:c&&c.kind,c};
-    const dcv=D.pwr&&D.fn==='DCV'&&D.jack==='HI'&&r.val!=null&&!r.ol;const hi=RT.leadNet('mh'),lo=RT.leadNet('ml');const across=(a,b)=>dcv&&a!=null&&b!=null&&((hi===a&&lo===b)||(hi===b&&lo===a));
+  /* two meters: DMM 1 on C–E (v_O), DMM 2 on B–E (v_BE) and then on V_I; any meter on the right nodes counts */
+  function status(){const S=RT.S,g=S.gen;const c=circuit();const st={kind:c&&c.kind,c};
+    const across=(a,b)=>RT.meterOn(a,b);
     if(c&&c.kind){const V=RT.nodeV,n=c.n;st.vcc5=c.vcc.on&&A(c.vcc.U.v-5)<0.003;st.vo=V(n.c)-V(n.e);
       if(c.kind==='A'&&st.vcc5&&c.vi.on){const j=VO.findIndex(v=>A(st.vo-v)<=0.008);st.row=j;
         /* a row is set while the DMM reads VO on C–E; the meter then moves to B–E and to VI (its 10 MΩ slightly loads the
            base, so VO itself moves a little) — readings count as long as VI is not touched */
-        if(across(n.c,n.e))ST.set=j>=0?{j,vi:c.vi.U.v}:null;
-        if(ST.set&&A(c.vi.U.v-ST.set.vi)<1e-9){const k=ST.set.j;if(across(n.b,n.e))ST.vbe[k]=A(r.val);if(across(c.vi.P,n.e))ST.vi[k]=A(r.val)}}
+        if(across(n.c,n.e)){if(j>=0)ST.set={j,vi:c.vi.U.v};else if(ST.set&&A(c.vi.U.v-ST.set.vi)>=1e-9)ST.set=null}
+        if(ST.set&&A(c.vi.U.v-ST.set.vi)<1e-9){const k=ST.set.j;const qb=across(n.b,n.e),qi=across(c.vi.P,n.e);if(qb)ST.vbe[k]=A(qb.val);if(qi)ST.vi[k]=A(qi.val)}}
       if(c.kind==='B'){const p=RT.parts('LED')[0];const iw=p&&p.iw||[0];st.ledMax=Math.max(...iw);st.ledMin=Math.min(...iw);
         const sq=g.pwr&&g.out&&g.wave==='Square'&&A(g.off+g.amp/2-5)<0.002&&A(g.off-g.amp/2)<0.002;st.sq=sq;
         const blink=sq&&st.vcc5&&st.ledMax>0.008&&st.ledMin<1e-4;st.blink=blink;
@@ -113,15 +115,22 @@ setup(RT){
     g.show($('result'))});
   return {status,
     steps:[
-      {dev:'board',t:'Procedure A: ركّب Fig. 9.2a: الـ BD137 (E C B)، R<sub>C</sub> = 2.7 kΩ من + وحدة V<sub>CC</sub> للـ collector، و R<sub>B</sub> = 27 kΩ من + وحدة V<sub>I</sub> للـ base، والسالب للوحدتين على الـ emitter.',ok:s=>s.kind==='A'},
+      {dev:'board',fig:'labs/ee312/fig/fig9-2.png',figCap:'Fig. 9.2',
+        lines:[{t:'BD137: E → node 15, C → node 16, B → node 17',note:'الوجه المكتوب عليه للأمام',ic:'BD137',pins:{E:15,C:16,B:17}},{t:'R<sub>C</sub> = 2.7 kΩ: node 16 ↔ node 23',part:['R2k7',16,23]},{t:'R<sub>B</sub> = 27 kΩ: node 17 ↔ node 24',part:['R27k',17,24]},
+          {t:'DC + (L +) → node 23',note:'V<sub>CC</sub>',lead:'Lp',at:23},{t:'DC − (L −) → node 15',note:'على E',lead:'Lm',at:15},{t:'DC + (R +) → node 24',note:'V<sub>I</sub>',lead:'Rp',at:24},{t:'DC − (R −) → node 15',lead:'Rm',at:15}],
+        t:'Procedure A: ركّب Fig. 9.2a: الـ BD137 (E C B)، R<sub>C</sub> = 2.7 kΩ من + وحدة V<sub>CC</sub> للـ collector، و R<sub>B</sub> = 27 kΩ من + وحدة V<sub>I</sub> للـ base، والسالب للوحدتين على الـ emitter.',ok:s=>s.kind==='A'},
       {dev:'psu',t:'شغّل المصدر: V<sub>CC</sub> = 5.00 V، ووحدة V<sub>I</sub> تبدأ من 0 V، وشغّل الـ dc للوحدتين.',ok:s=>s.kind==='A'&&s.vcc5&&s.c.vi.on},
-      {dev:'psu',t:'الـ DMM على DCV وأطرافه على C–E: ارفع V<sub>I</sub> لين V<sub>O</sub> = 4.900 V ثم 4.500 V، وفي كل مرة قِس V<sub>BE</sub> و V<sub>I</sub> وسجّلهم.',ok:s=>s.rows([0,1])},
+      {dev:'psu',fig:'labs/ee312/fig/fig9-2.png',figCap:'Fig. 9.2',lines:[{t:'DMM 1 HI → node 16',note:'v<sub>O</sub> = v<sub>CE</sub>',lead:'mh',at:16},{t:'DMM 1 COM → node 15',lead:'ml',at:15},{t:'DMM 2 HI → node 17',note:'v<sub>BE</sub> (وبعدها node 24 لـ V<sub>I</sub>)',lead:'m2h',at:17},{t:'DMM 2 COM → node 15',lead:'m2l',at:15}],t:'الملتيميترين على DCV: DMM 1 على C–E و DMM 2 على B–E. ارفع V<sub>I</sub> لين DMM 1 يقرا V<sub>O</sub> = 4.900 V ثم 4.500 V، وفي كل مرة سجّل V<sub>BE</sub> من DMM 2، وبعدها انقل HI حق DMM 2 لـ node 24 وسجّل V<sub>I</sub>.',ok:s=>s.rows([0,1])},
       {dev:'psu',t:'كمّل: V<sub>O</sub> = 3.500 و 3.400 V.',ok:s=>s.rows([2,3])},
       {dev:'psu',t:'كمّل: V<sub>O</sub> = 2.000 و 1.000 و 0.500 V.',ok:s=>s.rows([4,5,6])},
       {dev:'psu',t:'كمّل: V<sub>O</sub> = 0.200 و 0.100 V (الـ FINE بشويش).',ok:s=>s.rows([7,8])},
       {dev:'board',t:'Procedure B: احسب R<sub>C</sub> و I<sub>B</sub> و R<sub>B</sub> (eq. 9.3–9.5) واكتبهم في الـ sheet.',ok:s=>s.design},
       {dev:'dbox',t:'اضبط صندوقي المقاومات: واحد على R<sub>C</sub> = 280 Ω والثاني على R<sub>B</sub> = 4.3 kΩ.',ok:s=>s.boxOK},
-      {dev:'board',t:'ركّب Fig. 9.2b: صندوق R<sub>C</sub> والـ LED (الأنود جهة V<sub>CC</sub>) للـ collector، وصندوق R<sub>B</sub> من GEN OUT للـ base، والـ emitter على الأرضي (GEN ⏚ و − الـ V<sub>CC</sub>). V<sub>CC</sub> = 5 V شغّال.',ok:s=>s.kind==='B'&&s.vcc5},
+      {dev:'board',fig:'labs/ee312/fig/fig9-2.png',figCap:'Fig. 9.2',
+        lines:[{t:'LED: anode → node 23, cathode → node 16',note:'الرجل الطويلة جهة V<sub>CC</sub> (شيل R<sub>C</sub> و R<sub>B</sub>)',part:['LED',23,16],pol:true},{t:'DC + (L +) → node 30',lead:'Lp',at:30},
+          {t:'R<sub>C</sub> box: A1 → node 30, A2 → node 23',note:'صندوق A',lead:'dA1',at:30},{t:'A2 → node 23',lead:'dA2',at:23},{t:'GEN OUT → node 25',lead:'gr',at:25},
+          {t:'R<sub>B</sub> box: B1 → node 25',note:'صندوق B',lead:'dB1',at:25},{t:'B2 → node 17',note:'على B',lead:'dB2',at:17},{t:'GEN ⏚ → node 15',note:'على E',lead:'gb',at:15}],
+        t:'ركّب Fig. 9.2b: صندوق R<sub>C</sub> والـ LED (الأنود جهة V<sub>CC</sub>) للـ collector، وصندوق R<sub>B</sub> من GEN OUT للـ base، والـ emitter على الأرضي (GEN ⏚ و − الـ V<sub>CC</sub>). V<sub>CC</sub> = 5 V شغّال.',ok:s=>s.kind==='B'&&s.vcc5},
       {dev:'gen',t:'الجنريتر: Square، Hi_Level (F4) = 5 V و Lo_Level (F5) = 0 V، والتردد 0.2 Hz، وشغّل CH1. لاحظ الـ LED يولّع ويطفي.',ok:s=>!!ST.f02},
       {dev:'gen',t:'غيّر التردد لـ 2 Hz.',ok:s=>!!ST.f2},
       {dev:'gen',t:'غيّر التردد لـ 60 Hz: ليش ما تلاحظ الـ switching؟ جاوب في الـ sheet.',ok:s=>!!ST.f60},

@@ -43,11 +43,12 @@ const DEF={};{
   col(L,i=>BX-CG-i.size[0]);col(R,()=>BX+BW+CG);
   const row=ord=>{const W=ord.reduce((t,i)=>t+i.size[0],0)+Math.max(0,ord.length-1)*RG;let x=BX+BW/2-W/2;const yb=parkY-22-34;
     ord.forEach(i=>{DEF[i.key]={x:Math.round(x),y:yb-i.size[1]};x+=i.size[0]+RG})};
-  /* order of the top row: the one with the shortest cables to the rack */
+  /* order of the top row: no parked cable crossing another cable or an instrument, then the shortest cables */
   const perms=a=>a.length<2?[a]:a.flatMap((x,i)=>perms([...a.slice(0,i),...a.slice(i+1)]).map(p=>[x,...p]));
   let best=null;for(const ord of perms(T)){row(ord);const term=k=>{const f=fromOf(k),p=DEF[LEADDEF[k].inst.key];return {x:f.x+p.x,y:f.y+p.y}};
     const pk=parkFor(LEADS.map(k=>({k,x:term(k).x})));const len=LEADS.reduce((t,k)=>{const a=term(k);return t+Math.hypot(a.x-pk[k].x,a.y-pk[k].y)},0);
-    if(!best||len<best.len-1)best={len,ord}}
+    const x=crossCount(parkedCables(DEF,pk),DEF);const score=x.cc.length*1e6+x.ci.length*1e6+len;
+    if(!best||score<best.score-1)best={score,ord}}
   row(best?best.ord:T);
   /* shift so the whole desk starts at (20,20) */
   let x0=BX-66,y0=parkY-34;INST.forEach(i=>{x0=Math.min(x0,DEF[i.key].x);y0=Math.min(y0,DEF[i.key].y-46)});
@@ -321,13 +322,25 @@ function resetLayout(){try{localStorage.removeItem(LSK)}catch(_){}const from={};
   requestAnimationFrame(step)}
 const isDefault=()=>INST.every(i=>Math.abs(POS[i.key].x-DEF[i.key].x)<1&&Math.abs(POS[i.key].y-DEF[i.key].y)<1);
 /* crossings of the cables as drawn now: cable over cable, cable over another instrument (used by the tests) */
-function crossings(){const smp=c=>{const out=[];for(let i=0;i<=28;i++){const t=i/28,u=1-t;out.push({x:u*u*u*c[0].x+3*u*u*t*c[1].x+3*u*t*t*c[2].x+t*t*t*c[3].x,y:u*u*u*c[0].y+3*u*u*t*c[1].y+3*u*t*t*c[2].y+t*t*t*c[3].y})}return out};
+
+/* parked cables of an arrangement (pos: key → {x,y}, park: lead → plug point), drawn like DRAW does */
+function parkedCables(pos,park){const out=[];const seen=new Set();
+  LEADS.forEach(k=>{const L=LEADDEF[k],ik=L.inst.key,inst=L.inst,f=FV[FACE[ik]],f0=fromOf(k),P0=pos[ik];
+    const clr=q=>{const [w,h]=inst.size,F=FACE[ik];return 18+(F==='down'?h-q.y:F==='up'?q.y:F==='right'?w-q.x:q.x)};
+    if(!L.coax){out.push({k,grp:k,inst:ik,c:curve({x:f0.x+P0.x,y:f0.y+P0.y},f,park[k],clr(f0))});return}
+    if(L.earth||seen.has(k))return;const kb=LEADS.find(q=>LEADDEF[q].coax&&LEADDEF[q].earth&&LEADDEF[q].inst===inst&&!seen.has(q)&&Math.abs(fromOf(q).x-f0.x)<40);if(!kb)return;seen.add(k);seen.add(kb);
+    const A0={x:(f0.x+fromOf(kb).x)/2,y:f0.y},A={x:A0.x+P0.x,y:A0.y+P0.y},M={x:(park[k].x+park[kb].x)/2,y:(park[k].y+park[kb].y)/2},Sp={x:M.x-f.x*34,y:M.y-f.y*34};
+    out.push({k,grp:k,inst:ik,c:curve(A,f,Sp,clr(A0))},{k,grp:k,inst:ik,c:curve(Sp,f,park[k])},{k:kb,grp:k,inst:ik,c:curve(Sp,f,park[kb])})});
+  return out}
+/* cable over cable / cable over another instrument, for a list of cables and an arrangement */
+function crossCount(list,pos){const smp=c=>{const out=[];for(let i=0;i<=28;i++){const t=i/28,u=1-t;out.push({x:u*u*u*c[0].x+3*u*u*t*c[1].x+3*u*t*t*c[2].x+t*t*t*c[3].x,y:u*u*u*c[0].y+3*u*u*t*c[1].y+3*u*t*t*c[2].y+t*t*t*c[3].y})}return out};
   const segX=(p1,p2,p3,p4)=>{const d=(p2.x-p1.x)*(p4.y-p3.y)-(p2.y-p1.y)*(p4.x-p3.x);if(!d)return false;const u=((p3.x-p1.x)*(p4.y-p3.y)-(p3.y-p1.y)*(p4.x-p3.x))/d,v=((p3.x-p1.x)*(p2.y-p1.y)-(p3.y-p1.y)*(p2.x-p1.x))/d;return u>0&&u<1&&v>0&&v<1};
-  const C=CAB.map(c=>({...c,pts:smp(c.c)}));const cc=[],ci=[];
+  const C=list.map(c=>({...c,pts:smp(c.c)}));const cc=[],ci=[];
   for(let a=0;a<C.length;a++)for(let b=a+1;b<C.length;b++){if(C[a].grp===C[b].grp)continue;const A=C[a].pts,B=C[b].pts;let hit=false;
     for(let i=1;i<A.length-1&&!hit;i++)for(let j=1;j<B.length-1&&!hit;j++)if(segX(A[i],A[i+1],B[j],B[j+1]))hit=true;if(hit)cc.push(C[a].k+'×'+C[b].k)}
-  C.forEach(c=>INST.forEach(i=>{if(i.key===c.inst)return;const p=POS[i.key],[w,h]=i.size;if(c.pts.some(q=>q.x>p.x+3&&q.x<p.x+w-3&&q.y>p.y+3&&q.y<p.y+h-3))ci.push(c.k+'/'+i.key)}));
+  C.forEach(c=>INST.forEach(i=>{if(i.key===c.inst||!pos[i.key])return;const p=pos[i.key],[w,h]=i.size;if(c.pts.some(q=>q.x>p.x+3&&q.x<p.x+w-3&&q.y>p.y+3&&q.y<p.y+h-3))ci.push(c.k+'/'+i.key)}));
   return {cc:[...new Set(cc)],ci:[...new Set(ci)]}}
+function crossings(){return crossCount(CAB,POS)}
 
 /* ---------- wiring guide: one connection per line of a build step ----------
    line = {t, part:[type,a,b], pol?} | {ic:type, pins:{E:n,…}} | {lead:k, at:n} | {wire:[a,b]}; a, b, n are panel nodes.

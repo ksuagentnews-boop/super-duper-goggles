@@ -45,7 +45,8 @@ ${t71}${t72}${plq}
 params:()=>({}),
 instruments:[
   {type:'psu',prev:d=>{d.u[0].v=12;d.u[0].ilim=0.5;d.u[1].v=5;d.u[1].ilim=1}},
-  {type:'dmm',prev:d=>{d.fn='OHM'}}],
+  {type:'dmm',n:1,prev:d=>{d.fn='OHM'}},
+  {type:'dmm',n:2,prev:d=>{d.fn='DIODE'}}],
 parts:{IRF620:{t:'FET',pkg:'TO220',mark:'IRF620',lab:'IRF620',pins:[{n:'G',dx:0,dy:0,h:1,role:'g'},{n:'D',dx:1,dy:0,h:1,role:'d'},{n:'S',dx:2,dy:0,h:1,role:'s'}],
     stamp:(els,R,inner,p)=>{els.push({t:'FET',d:R.d,g:R.g,s:R.s,m:SOLVER.MODELS.irf620,pid:p.id},{t:'D',a:R.s,b:R.d,f:SOLVER.diodeSi,pid:p.id})}},
   R1k:{t:'R',r:1000,lab:'1kΩ'},R470:{t:'R',r:470,lab:'470Ω'},R270:{t:'R',r:270,lab:'270Ω'},BR:{t:'BR',lab:''}},
@@ -65,16 +66,17 @@ setup(RT){
       const o=U[1-x.u];if(o.P===n.g&&o.N===n.s&&n.g!=null){c.kind='B';c.vgs=o;break}}
     return c}
   const ST={b:{},c:{}};let st0={};
-  function status(){const S=RT.S,P=S.psu,D=S.dmm,r=RT.dmm()||{};const c=circuit();const st={kind:c&&c.kind,c};
-    const dcv=D.pwr&&D.fn==='DCV'&&D.jack==='HI'&&r.val!=null&&!r.ol;const hi=RT.leadNet('mh'),lo=RT.leadNet('ml');const across=(a,b)=>dcv&&a!=null&&b!=null&&((hi===a&&lo===b)||(hi===b&&lo===a));
+  /* two meters: DMM 1 on R_D (V_RD), DMM 2 on G–S (V_GS) or D–S (V_DS); any meter on the right nodes counts */
+  function status(){const S=RT.S,P=S.psu;const c=circuit();const st={kind:c&&c.kind,c};
+    const across=(a,b)=>RT.meterOn(a,b);
     const unitOn=x=>x&&P.pwr&&S.psu.u[x.u].on;st.vddOn=!!(c&&unitOn(c.vdd));st.vgsOn=!!(c&&c.vgs&&unitOn(c.vgs));
     if(c&&c.kind){const n=c.n;const V=RT.nodeV;st.vrd=V(c.vdd.P)-V(n.d);st.vds=V(n.d)-V(n.s);st.vgs=V(n.g)-V(n.s);
       st.ilim=Math.abs(S.psu.u[c.vdd.u].ilim-0.1)<5e-4;
       const onRD=across(c.vdd.P,n.d),onDS=across(n.d,n.s),onGS=across(n.g,n.s);
-      if(c.kind==='A'&&st.vddOn&&st.ilim&&A(st.vrd-0.25)<=0.005){if(onRD)ST.vrd=true;if(onGS&&ST.vrd)ST.vth=A(r.val)}
+      if(c.kind==='A'&&st.vddOn&&st.ilim&&A(st.vrd-0.25)<=0.005){if(onRD)ST.vrd=true;if(onGS&&ST.vrd)ST.vth=A(onGS.val)}
       if(c.kind==='B'&&ST.vth!=null&&st.vddOn&&st.vgsOn){
-        if(c.R===1000)[1,2,3].forEach(k=>{if(A(st.vgs-(ST.vth+0.15*k))>0.006)return;st.curve=k;const j=VDS.findIndex(v=>A(st.vds-v)<=0.006);if(j<0)return;ST.b[k]=ST.b[k]||{};if(onRD)ST.b[k][j]=A(r.val)});
-        if(A(st.vgs-(ST.vth+0.3))<=0.006&&A(S.psu.u[c.vdd.u].v-10)<0.006){st.cset=true;const i=RDS.findIndex(x=>x[0]===c.rd.type);ST.c[i]=ST.c[i]||{};if(onRD)ST.c[i].vrd=A(r.val);if(onDS)ST.c[i].vds=A(r.val)}}}
+        if(c.R===1000)[1,2,3].forEach(k=>{if(A(st.vgs-(ST.vth+0.15*k))>0.006)return;st.curve=k;const j=VDS.findIndex(v=>A(st.vds-v)<=0.006);if(j<0)return;ST.b[k]=ST.b[k]||{};if(onRD){const x=A(onRD.val),o=ST.b[k][j];ST.b[k][j]=o?{lo:Math.min(o.lo,x),hi:Math.max(o.hi,x)}:{lo:x,hi:x}}});
+        if(A(st.vgs-(ST.vth+0.3))<=0.006&&A(S.psu.u[c.vdd.u].v-10)<0.006){st.cset=true;const i=RDS.findIndex(x=>x[0]===c.rd.type);ST.c[i]=ST.c[i]||{};if(onRD)ST.c[i].vrd=A(onRD.val);if(onDS)ST.c[i].vds=A(onDS.val)}}}
     const anyOn=P.pwr&&P.u.some(u=>u.on);
     if(ST.vth!=null&&!anyOn)ST.offA=true;
     st.curveDone=k=>VDS.every((_,j)=>ST.b[k]&&ST.b[k][j]!=null);if(st.curveDone(3)&&!anyOn)ST.offB=true;
@@ -89,7 +91,8 @@ setup(RT){
   $('plotBtn').addEventListener('click',plot);
   $('submit').addEventListener('click',()=>{const g=G.grader(),v=G.v;const tl=e=>Math.max(0.004,A(e)*0.004);
     g.add(G.near(v('a_vth'),vthRef,0.01)&&ST.vth!=null&&G.near(v('a_vth'),ST.vth,0.004),'VGS(TH)',`≈ ${vthRef.toFixed(3)} V at VRD = 0.25 V`);
-    [1,2,3].forEach(k=>{const bad=[];VDS.forEach((vd,j)=>{const e=ST.b[k]&&ST.b[k][j];if(e==null){bad.push(`${vd} V: ما انقاس`);return}if(!G.near(A(v(`b${k}_${j}`)),e,tl(e)))bad.push(`${vd} V ≈ ${e.toFixed(3)}`)});
+    [1,2,3].forEach(k=>{const bad=[];VDS.forEach((vd,j)=>{const e=ST.b[k]&&ST.b[k][j];if(e==null){bad.push(`${vd} V: ما انقاس`);return}const x=A(v(`b${k}_${j}`));
+      /* with DMM 1 left on R_D, every reading seen while V_DS sat in this row's window counts */if(!(x>=e.lo-tl(e.lo)&&x<=e.hi+tl(e.hi)))bad.push(`${vd} V ≈ ${((e.lo+e.hi)/2).toFixed(3)}`)});
       g.add(!bad.length,`Table 7.1 · VGS${k}`,bad.slice(0,3).join('، ')+(bad.length>3?` … (+${bad.length-3})`:''))});
     RDS.forEach(([,R],i)=>{const e=ST.c[i]||{};const ok=e.vrd!=null&&e.vds!=null&&G.near(v('c_vrd'+i),e.vrd,tl(e.vrd))&&G.near(v('c_vds'+i),e.vds,tl(e.vds))&&G.near(v('c_id'+i),v('c_vrd'+i)/R*1e3,Math.max(0.004,A(v('c_vrd'+i)/R*1e3)*0.004));
       g.add(ok,`Table 7.2 · RD = ${R} Ω`,e.vrd!=null?`VRD ≈ ${e.vrd.toFixed(3)}, ID = VRD/RD, VDS ≈ ${e.vds!=null?e.vds.toFixed(3):'?'}`:'ما انقاس')});
@@ -104,21 +107,25 @@ setup(RT){
   const pts=k=>VDS.filter((_,j)=>ST.b[k]&&ST.b[k][j]!=null).length;
   return {status,
     steps:[
-      {dev:'board',t:'Procedure A: ركّب Fig. 7.1a: الـ IRF620 (G D S)، والـ gate موصول بالـ drain (bridging plug)، و R<sub>D</sub> = 1 kΩ من + الوحدة للـ drain، و − الوحدة على الـ source.',ok:s=>s.kind==='A'},
+      {dev:'board',fig:'labs/ee312/fig/fig7-1.png',figCap:'Fig. 7.1',t:'Procedure A: ركّب Fig. 7.1a (الـ gate موصول بالـ drain)، ووصّل الملتيميترين: DMM 1 على R<sub>D</sub> و DMM 2 على G–S.',
+        lines:[{t:'IRF620: G → node 15, D → node 16, S → node 17',note:'الوجه المكتوب عليه للأمام',ic:'IRF620',pins:{G:15,D:16,S:17}},{t:'bridging plug: node 15 ↔ node 16',note:'G مع D',wire:[15,16]},
+          {t:'R<sub>D</sub> = 1 kΩ: node 16 ↔ node 23',part:['R1k',16,23]},{t:'DC + (L +) → node 23',note:'V<sub>DD</sub>',lead:'Lp',at:23},{t:'DC − (L −) → node 17',note:'على S',lead:'Lm',at:17},
+          {t:'DMM 1 HI → node 23',note:'V<sub>RD</sub>',lead:'mh',at:23},{t:'DMM 1 COM → node 16',lead:'ml',at:16},{t:'DMM 2 HI → node 15',note:'V<sub>GS</sub>',lead:'m2h',at:15},{t:'DMM 2 COM → node 17',lead:'m2l',at:17}],ok:s=>s.kind==='A'},
       {dev:'psu',t:'شغّل المصدر، واضبط CURRENT لين حد التيار 0.100 A (يبين على AMPS والـ dc OFF)، وبعدها حوّل مفتاح الـ dc على ON.',ok:s=>s.kind==='A'&&s.vddOn&&s.ilim},
-      {dev:'psu',t:'الـ DMM على DCV وأطرافه على R<sub>D</sub>: ارفع V<sub>DD</sub> (COARSE ثم FINE) لين V<sub>RD</sub> = 0.25 V (I<sub>D</sub> = 250 µA).',ok:s=>!!ST.vrd},
-      {dev:'dmm',t:'انقل أطراف الـ DMM على G–S وسجّل V<sub>GS</sub> = V<sub>GS(TH)</sub>.',ok:s=>ST.vth!=null},
+      {dev:'psu',t:'الملتيميترين على DCV. ارفع V<sub>DD</sub> (COARSE ثم FINE) لين DMM 1 يقرا V<sub>RD</sub> = 0.25 V (I<sub>D</sub> = 250 µA).',ok:s=>!!ST.vrd},
+      {dev:'dmm2',t:'سجّل V<sub>GS</sub> اللي يقراه DMM 2: هذي V<sub>GS(TH)</sub>.',ok:s=>ST.vth!=null},
       {dev:'psu',t:'طفّ الـ dc.',ok:s=>!!ST.offA},
-      {dev:'board',t:'Procedure B: شيل التوصيل بين الـ drain والـ gate، ووصّل الوحدة الثانية بين الـ gate (+) والـ source (−) (Fig. 7.1b).',ok:s=>s.kind==='B'&&ST.offA},
+      {dev:'board',fig:'labs/ee312/fig/fig7-1.png',figCap:'Fig. 7.1',t:'Procedure B: شيل الـ bridging plug بين G و D، ووصّل الوحدة الثانية بين الـ gate والـ source (Fig. 7.1b)، وانقل DMM 2 على D–S.',
+        lines:[{t:'DC + (R +) → node 15',note:'V<sub>GS</sub> على G',lead:'Rp',at:15},{t:'DC − (R −) → node 17',note:'على S',lead:'Rm',at:17},{t:'DMM 2 HI → node 16',note:'V<sub>DS</sub>',lead:'m2h',at:16},{t:'DMM 2 COM → node 17',lead:'m2l',at:17}],ok:s=>s.kind==='B'&&ST.offA},
       {dev:'psu',t:`ثبّت V<sub>GS</sub> = V<sub>GS(TH)</sub> + 0.15 V بالوحدة الثانية وشغّلها.`,ok:s=>s.kind==='B'&&s.vgsOn&&s.curve===1},
-      {dev:'psu',t:'غيّر V<sub>DD</sub> لين V<sub>DS</sub> (DMM على D–S) = كل قيمة في Table 7.1، وسجّل V<sub>RD</sub> (DMM على R<sub>D</sub>) لكل وحدة.',ok:s=>pts(1)===VDS.length},
+      {dev:'psu',t:'غيّر V<sub>DD</sub> لين V<sub>DS</sub> (DMM 2) = كل قيمة في Table 7.1، وسجّل V<sub>RD</sub> (DMM 1) لكل وحدة.',ok:s=>pts(1)===VDS.length},
       {dev:'psu',t:'زِد V<sub>GS</sub> بـ 0.15 V (V<sub>GS(TH)</sub> + 0.30 V) وكرّر.',ok:s=>pts(2)===VDS.length},
       {dev:'psu',t:'زِد V<sub>GS</sub> بـ 0.15 V ثانية (V<sub>GS(TH)</sub> + 0.45 V) وكرّر.',ok:s=>pts(3)===VDS.length},
       {dev:'psu',t:'طفّ المصدر.',ok:s=>!!ST.offB},
-      {dev:'board',t:'Procedure C: بدّل R<sub>D</sub> بـ 270 Ω، وشغّل المصدر: V<sub>DD</sub> = 10.00 V و V<sub>GS</sub> = V<sub>GS(TH)</sub> + 0.3 V.',ok:s=>ST.offB&&s.kind==='B'&&s.cset&&s.c.rd.type==='R270'&&s.vddOn},
-      {dev:'dmm',t:'قِس V<sub>DS</sub> و V<sub>RD</sub> وسجّلهم في Table 7.2، واحسب I<sub>D</sub>.',ok:s=>s.cDone(0)},
-      {dev:'board',t:'بدّل R<sub>D</sub> بـ 470 Ω وكرّر.',ok:s=>s.cDone(1)},
-      {dev:'board',t:'بدّل R<sub>D</sub> بـ 1 kΩ وكرّر.',ok:s=>s.cDone(2)},
+      {dev:'board',lines:[{t:'R<sub>D</sub> = 270 Ω: node 16 ↔ node 23',part:['R270',16,23]}],t:'Procedure C: بدّل R<sub>D</sub> بـ 270 Ω، وشغّل المصدر: V<sub>DD</sub> = 10.00 V و V<sub>GS</sub> = V<sub>GS(TH)</sub> + 0.3 V.',ok:s=>ST.offB&&s.kind==='B'&&s.cset&&s.c.rd.type==='R270'&&s.vddOn},
+      {dev:'dmm',t:'سجّل V<sub>DS</sub> (DMM 2) و V<sub>RD</sub> (DMM 1) في Table 7.2، واحسب I<sub>D</sub>.',ok:s=>s.cDone(0)},
+      {dev:'board',lines:[{t:'R<sub>D</sub> = 470 Ω: node 16 ↔ node 23',part:['R470',16,23]}],t:'بدّل R<sub>D</sub> بـ 470 Ω وكرّر.',ok:s=>s.cDone(1)},
+      {dev:'board',lines:[{t:'R<sub>D</sub> = 1 kΩ: node 16 ↔ node 23',part:['R1k',16,23]}],t:'بدّل R<sub>D</sub> بـ 1 kΩ وكرّر.',ok:s=>s.cDone(2)},
       {dev:'psu',t:'طفّ المصدر، وفصّل القطع ورتّب طاولتك.',ok:s=>!!ST.offC}
     ],
     onReset(){for(const k in ST)delete ST[k];ST.b={};ST.c={};$('result').innerHTML='';$('ivplot').innerHTML=''}};
