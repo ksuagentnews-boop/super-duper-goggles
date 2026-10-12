@@ -178,7 +178,7 @@ RT.litNow=litNow;
 function partI(p){const d=PARTS[p.type];if(d.pins)return 0;const [a,b]=partNets(p);if(!live(a)&&a!==-1||!live(b)&&b!==-1)return 0;const va=samples(a,60),vb=samples(b,60);let s=0;
   const f=d.t==='R'?(v=>v*(d.g||1/d.r)):['D','Z','GE','LED'].includes(d.t)?(v=>SOLVER.MODELS[d.model||{D:'si',Z:'zener',GE:'ge',LED:'led'}[d.t]](v)[0]):()=>0;
   for(let k=0;k<60;k++)s+=f((a===-1?0:va[k])-(b===-1?0:vb[k]));return s/60}
-Object.assign(RT,{nodeV,partNets,pinNet,partV,partI,PARTS,
+Object.assign(RT,{partBody:(t,L,sel,lit)=>partBody(t,L,sel,lit),nodeV,partNets,pinNet,partV,partI,PARTS,
   leadNet:k=>RT.S.leads[k]&&RT.S.leads[k].node!=null?RT.netOf(RT.S.leads[k].node):null,
   parts:type=>RT.S.parts.filter(p=>!type||p.type===type||PARTS[p.type].t===type),
   /* parts whose two ends are exactly the nets a and b; dir=+1 means p.a on a */
@@ -384,6 +384,7 @@ svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;close
   showHL(el,true);
   const cab=e.target.closest&&e.target.closest('[data-cab]');const lk=el&&el.dataset.k.startsWith('lead:')?el.dataset.k.slice(5):cab&&cab.dataset.cab;
   if(BENCH.paint!==null&&el&&el.dataset.k.startsWith('wire:')){const id=+el.dataset.k.slice(5);if(BENCH.paint){S.wcol[id]=BENCH.paint;render(true)}else BENCH.say('اختر لون من الشريط أول');return}
+  if(S.armed&&jackDrop(S.armed,p)){S.armed=null;BENCH.drawerSync();return}
   if(S.armed&&(!el||el.dataset.k.startsWith('node:'))){placeArmed(p);return}
   if(!el){const r=BENCH.regionAt(p);if(r&&r!==BENCH.view){BENCH.focus(r);return}if(S.sel){S.sel=null;render(true)}return}
   const k=el.dataset.k;
@@ -409,6 +410,7 @@ function endDrag(){stopRep();if(press){clearTimeout(press.t);press=null}const S=
     if(d.kind==='move'&&!d.active){S.sel=S.sel===d.id?null:d.id;render(true);return}
     if(MULTI(d.type)){const n=nearestAnchor(d.type,d.x,d.y,d.id);if(d.kind==='move'){const pr=S.parts.find(q=>q.id===d.id);if(n!=null)pr.n=n;else if(d.x<BX-20||d.x>BX+BW+20||d.y<BY-20||d.y>BY+BH+20)S.parts=S.parts.filter(q=>q.id!==d.id)}
       else if(n!=null)S.parts.push({id:RT.uid++,type:d.type,n});circuitChanged();render();return}
+    if(jackDrop(d.type,d)){if(d.kind==='move'){S.parts=S.parts.filter(q=>q.id!==d.id);circuitChanged();render()}return}
     const e=nearestEdge(d.x,d.y);const taken=e&&(S.parts.some(q=>q.id!==d.id&&((q.a===e[0]&&q.b===e[1])||(q.a===e[1]&&q.b===e[0])))||!edgeFree(e,d.id));
     if(d.kind==='move'){const pr=S.parts.find(q=>q.id===d.id);if(e&&!taken){pr.a=e[0];pr.b=e[1]}else if(!e){S.parts=S.parts.filter(q=>q.id!==d.id)}}
     else if(e&&!taken){S.parts.push({id:RT.uid++,type:d.type,a:e[0],b:e[1]})}
@@ -439,6 +441,10 @@ function openMenu(id,x,y){closeMenu();const host=$q('#bstage');const hr=host.get
   m.querySelectorAll('button').forEach(b=>b.onclick=ev=>{ev.stopPropagation();if(b.dataset.c)RT.S.wcol[id]=b.dataset.c;else delete RT.S.wcol[id];closeMenu();render(true)})}
 document.addEventListener('pointerdown',e=>{const m=$('cabMenu');if(m&&!m.contains(e.target)&&!svg.contains(e.target))closeMenu()},true);
 
+/* a diode dropped on a multimeter's HI / COM jacks plugs straight in (the lab's diode test) */
+function jackDrop(t,p){if(!['D','Z','GE','LED'].includes((PARTS[t]||{}).t))return false;
+  for(const i of INST){if(!i.jackSlot)continue;const P=POS[i.key],r=i.jackSlot;if(p.x>=P.x+r.x&&p.x<=P.x+r.x+r.w&&p.y>=P.y+r.y&&p.y<=P.y+r.y+r.h){i.insert(t);RT.dirty=true;render();return true}}
+  return false}
 function placeArmed(p){const S=RT.S;if(MULTI(S.armed)){const n=nearestAnchor(S.armed,p.x,p.y,null,120);if(n!=null){S.parts.push({id:RT.uid++,type:S.armed,n});circuitChanged()}S.armed=null;BENCH.drawerSync();render();return}
   let best=null,bd=70;EDGES.forEach(e=>{const a=nodeC(e[0]),b=nodeC(e[1]);const d=Math.hypot((a.x+b.x)/2-p.x,(a.y+b.y)/2-p.y);if(d<bd){bd=d;best=e}});
   if(best&&edgeFree(best)&&!S.parts.some(q=>(q.a===best[0]&&q.b===best[1])||(q.a===best[1]&&q.b===best[0]))){S.parts.push({id:RT.uid++,type:S.armed,a:best[0],b:best[1]});circuitChanged()}

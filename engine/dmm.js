@@ -21,16 +21,21 @@ const RANGES={
   HZ:[[2e5,'Auto',1,'Hz']],
   CAP:[[2e-9,'2nF',1e9,'nF'],[2e-8,'20nF',1e9,'nF'],[2e-7,'200nF',1e9,'nF'],[2e-6,'2µF',1e6,'µF'],[2e-5,'20µF',1e6,'µF'],[2e-4,'200µF',1e6,'µF'],[2e-3,'2mF',1e3,'mF']]};
 const FNAME={DCV:'DCV',ACV:'ACV',DCI:'DCI',ACI:'ACI',OHM:'OHM',CONT:'CONT',DIODE:'DIODE',HZ:'FREQ',CAP:'CAP'};
-function fresh(){const d={pwr:false,fn:'DCV',auto:true,rng:1,jack:'HI',hold:null,rel:null,mm:null,mmv:null,acdc:false,sto:null,rcl:false,fuse:true,msg:''};if(opt.prev)opt.prev(d);return d}
+function fresh(){const d={pwr:false,fn:'DCV',auto:true,rng:1,jack:'HI',hold:null,rel:null,mm:null,mmv:null,acdc:false,sto:null,rcl:false,fuse:true,msg:'',jd:null};if(opt.prev)opt.prev(d);return d}
 let RD={val:null,ol:false,rng:1,beep:false};          // last computed reading (not part of the saved state)
 
 /* ---------- reading ---------- */
 const meanOf=a=>a.reduce((x,y)=>x+y,0)/a.length;
 const acRms=a=>{const m=meanOf(a);return Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/a.length)};
 const totRms=a=>Math.sqrt(a.reduce((x,y)=>x+y*y,0)/a.length);
-function nets(ck){const L=RT.S.leads,d=RT.S[KEY];const h=L[KH],l=L[KL];if(h.node==null||l.node==null)return null;return {hi:ck.idx(h.node),lo:ck.idx(l.node)}}
+function nets(ck){const L=RT.S.leads,d=RT.S[KEY];if(d.jd)return null;const h=L[KH],l=L[KL];if(h.node==null||l.node==null)return null;return {hi:ck.idx(h.node),lo:ck.idx(l.node)}}
 /* test-source measurement (Ω, ▶|, ·)))): separate dc solve with the meter source in the circuit */
-function testSolve(i0,vmax){const ck=RT.buildUser(false,{meter:{i0,vmax,key:KEY}});if(!ck.meter)return null;const r=SOLVER.point(ck,0,null);const V=i=>i<0?0:r.x[i];
+/* a diode plugged straight into HI / COM (Exp 1 Part A, as in the lab): the meter's test source drives it alone;
+   jd.flip = false → anode in HI (forward), true → cathode in HI (reverse) */
+const MODEL_OF={D:'si',Z:'zener',GE:'ge',LED:'led'};
+function jackSolve(i0,vmax){const d=RT.S[KEY],P=RT.PARTS[d.jd.type];const f=SOLVER.MODELS[P.model||MODEL_OF[P.t]];
+  const ck={n:1,els:[{t:'CCS',a:0,b:-1,i0,vmax},{t:'D',a:d.jd.flip?-1:0,b:d.jd.flip?0:-1,f}],dcs:[]};const v=SOLVER.point(ck,0).x[0];const [i]=SOLVER.ccs({i0,vmax},v);return {v,i}}
+function testSolve(i0,vmax){if(RT.S[KEY].jd)return jackSolve(i0,vmax);const ck=RT.buildUser(false,{meter:{i0,vmax,key:KEY}});if(!ck.meter)return null;const r=SOLVER.point(ck,0,null);const V=i=>i<0?0:r.x[i];
   const v=V(ck.meter.a)-V(ck.meter.b);const [i]=SOLVER.ccs({i0,vmax},v);return {v,i}}
 function compute(){const d=RT.S[KEY];RD={val:null,ol:false,rng:d.rng,beep:false};if(!d.pwr)return;
   const fn=d.fn,R=RANGES[fn];
@@ -99,12 +104,19 @@ function svg(){const d=RT.S[KEY];let s=`<g transform="translate(${M0.x} ${M0.y})
   s+=T(440,194,'MAX 10A',{size:6,fill:'#c9d3d8',a:'middle'})+T(440,201,'FUSED',{size:6,fill:'#c9d3d8',a:'middle'});
   // power (rear switch, drawn on the side)
   s+=`<rect x="372" y="186" width="34" height="26" rx="4" fill="${d.pwr?'#3a8f55':'#555c60'}" stroke="#11161a" data-k="${PFX}:PWR" style="cursor:pointer"/>`+T(389,203,d.pwr?'ON':'OFF',{size:8,fill:'#fff',a:'middle',w:600})+T(389,183,'POWER',{size:6,fill:'#c9d3d8',a:'middle'});
+  if(d.jd){const P=RT.PARTS[d.jd.type],fwd=!d.jd.flip;const lit=P.t==='LED'&&d.pwr&&fwd&&d.fn==='DIODE'?0.22:0;
+    /* drawn as the real part between HI (top) and COM: rotate(90) puts the anode in HI, the band (cathode) in COM */
+    s+=`<g data-k="${PFX}:JDFLIP" style="cursor:pointer"><rect x="${J.HI.x-22}" y="${J.HI.y-10}" width="44" height="${J.COM.y-J.HI.y+20}" fill="transparent"/>`+
+      `<g transform="translate(${J.HI.x} ${(J.HI.y+J.COM.y)/2}) rotate(${fwd?90:-90})" pointer-events="none">${RT.partBody(d.jd.type,J.COM.y-J.HI.y,false,lit)}</g></g>`;
+    s+=`<g data-k="${PFX}:JDOUT" style="cursor:pointer"><rect x="${W+6}" y="${(J.HI.y+J.COM.y)/2-12}" width="52" height="24" rx="12" fill="#fffdf7" stroke="#9aa6a9"/>`+T(W+32,(J.HI.y+J.COM.y)/2+4.5,'شيل ✕',{size:11,a:'middle',w:600,fill:'#26343a'})+`</g>`}
   return s+'</g>'}
 function key(x,y,w,h,k,l,o={}){return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="${o.fill||'#22282b'}" stroke="#11161a" data-k="${k}" style="cursor:pointer"/>`+T(x+w/2,y+h/2+3,l,{size:o.size||8,fill:o.ink||'#e9eef0',a:'middle',w:600})}
 
 let msgT=null;function flash(m){const d=RT.S[KEY];d.msg=m;clearTimeout(msgT);msgT=setTimeout(()=>{RT.S[KEY].msg='';RT.render()},1200)}
 function keyFn(k){const d=RT.S[KEY];
   if(k==='PWR'){const on=!d.pwr;Object.assign(d,{pwr:on,hold:null,rel:null,mm:null,mmv:null,rcl:false});if(on){d.fn='DCV';d.auto=true}RT.dirty=true;return}
+  if(k==='JDFLIP'){if(d.jd){d.jd.flip=!d.jd.flip;RT.dirty=true}return}
+  if(k==='JDOUT'){d.jd=null;RT.dirty=true;return}
   if(k==='JHI'||k==='JA'){const want=k==='JHI'?'HI':'A';if(d.jack!==want){d.jack=want;RT.dirty=true}return}
   if(!d.pwr)return;
   if(RANGES[k]){d.fn=k;d.auto=true;d.rng=0;d.hold=null;d.rel=null;d.mm=null;d.mmv=null;d.rcl=false;RT.dirty=true;return}
@@ -124,12 +136,13 @@ function measure(){compute();const d=RT.S[KEY];if(d.mm&&RD.val!=null){d.mmv=d.mm
 const redFrom=()=>abs(RT.S&&RT.S[KEY].jack==='A'?J.A:J.HI);
 return {key:KEY,prefix:PFX,size:[W,H],name:opt.n?['MCP MT3805 · DMM '+N,N===1?'الملتيميتر الأول':'الملتيميتر الثاني']:null,fresh,svg,keyFn,measure,
   leads:[{k:KH,label:()=>(RT.S&&RT.S[KEY].jack==='A'?'A':'HI')+TAG,from:redFrom,banana:true,pol:'+'},{k:KL,label:'COM'+TAG,from:abs(J.COM),banana:true,pol:'-'}],
-  cables:D=>D.banana(redFrom(),KH)+D.banana(abs(J.COM),KL),
+  cables:D=>RT.S[KEY].jd?'':D.banana(redFrom(),KH)+D.banana(abs(J.COM),KL),
   /* V modes: 10 MΩ input; A jack: 10 mΩ shunt; Ω / ▶| test source only in its own solve (opts.meter) */
   stamp(ck,force,opts){const d=RT.S[KEY],L=RT.S.leads;if(L[KH].node==null||L[KL].node==null)return;const a=ck.idx(L[KH].node),b=ck.idx(L[KL].node);
     if(d.jack==='A'){if(d.fuse)ck.els.push({t:'G',a,b,g:100});return}
     if(opts&&opts.meter&&opts.meter.key===KEY){ck.meter={a,b};ck.els.push({t:'CCS',a,b,i0:opts.meter.i0,vmax:opts.meter.vmax});return}
     if(d.pwr&&['DCV','ACV','HZ'].includes(d.fn))ck.els.push({t:'G',a,b,g:1e-7})},
+  jackSlot:{x:J.HI.x-36,y:J.HI.y-26,w:72,h:J.COM.y-J.HI.y+52},insert(t){/* the diode's legs take the jacks: the probe leads come out */RT.S[KEY].jd={type:t,flip:false};[KH,KL].forEach(k=>{RT.S.leads[k].node=null;RT.S.leads[k].hole=null});RT.dirty=true},
   reading:()=>({...RD,fn:RT.S[KEY].fn,shown:RT.S[KEY].pwr?display():null}),leadKeys:[KH,KL]};
 };
 ENGINE.dmm.size=[480,232];
