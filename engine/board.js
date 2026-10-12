@@ -87,7 +87,7 @@ function fpC(t,n){const ps=PARTS[t].pins;let x=0,y=0;ps.forEach(q=>{const c=node
 
 /* ---------- state ---------- */
 function fresh(){
-  const S={parts:[],wires:[],leads:{},cab:{}};
+  const S={parts:[],wires:[],leads:{},wcol:{}};
   INST.forEach(i=>S[i.key]=i.fresh());
   Object.assign(S,{sel:null,wireMode:false,wireStart:null,armed:null});
   LEADS.forEach(k=>S.leads[k]={node:null,hole:null});
@@ -232,7 +232,7 @@ function occupied(skip){const S=RT.S;const occ=new Set();S.parts.forEach(p=>{if(
 function freeHole(node,pref=[4,0,2,6,8,1,3,5,7]){const occ=occupied();for(const h of pref)if(!occ.has(node+':'+h))return h;return null}
 function partsSVG(){const S=RT.S;let s='';
   S.wires.forEach(w=>{const a=holeP(w.a,w.ha),b=holeP(w.b,w.hb);const mx=(a.x+b.x)/2,my=(a.y+b.y)/2-Math.min(40,Math.hypot(b.x-a.x,b.y-a.y)*0.25);const sel=S.sel===w.id;const d=`M${a.x} ${a.y} Q${mx} ${my} ${b.x} ${b.y}`;
-    s+=`<path d="${d}" fill="none" stroke="#5a4300" stroke-width="7" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${sel?'#fff2a8':'#e0b000'}" stroke-width="4.5" stroke-linecap="round"/><path d="${d}" fill="none" stroke="transparent" stroke-width="16" data-k="wire:${w.id}" style="cursor:pointer"/>`});
+    const wc=wireCol(w);s+=`<path d="${d}" fill="none" stroke="${sel?'#fff2a8':wc.d}" stroke-width="7" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${wc.c}" stroke-width="4.5" stroke-linecap="round"/><path d="${d}" fill="none" stroke="transparent" stroke-width="16" data-k="wire:${w.id}" style="cursor:pointer"/>`});
   S.parts.forEach(p=>{if(drag&&drag.kind==='move'&&drag.id===p.id&&drag.active)return;
     if(MULTI(p.type)){const c=nodeC(p.n);s+=`<g transform="translate(${c.x} ${c.y})" data-k="part:${p.id}" style="cursor:grab">${pkgBody(p.type,S.sel===p.id)}</g>`;return}
     const a=holeP(p.a,dirHole(p.a,p.b)),b=holeP(p.b,dirHole(p.b,p.a));const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;const ang=Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI;const L=Math.hypot(b.x-a.x,b.y-a.y);
@@ -250,9 +250,12 @@ function toolbarSVG(){const S=RT.S;let s='';
   return s}
 function leadPos(k){const l=RT.S.leads[k];if(drag&&drag.kind==='lead'&&drag.key===k&&drag.active)return {x:drag.x,y:drag.y};if(l.node!=null)return holeP(l.node,l.hole);return PARK[k]}
 /* cable colours: neutral by default; the student can colour any lead (right-click / long-press) */
-const NEUTRAL={c:'#8d969a',d:'#4f585c'};
-const SWATCH={red:{c:'#e2453b',d:'#5a1414',ar:'أحمر'},black:{c:'#30363a',d:'#000',ar:'أسود'},blue:{c:'#2f6bd9',d:'#173a7a',ar:'أزرق'},yellow:{c:'#f0c419',d:'#7a5f00',ar:'أصفر'},green:{c:'#2f9a4c',d:'#164a24',ar:'أخضر'},white:{c:'#f4f4f2',d:'#8a8f93',ar:'أبيض'}};
-const colOf=(k,def)=>{const c=RT.S.cab[k];return c==='none'?NEUTRAL:c&&SWATCH[c]?SWATCH[c]:def||NEUTRAL};
+/* colours: instrument leads keep their real colours (red = signal / +, black = ground / −); wires on the board come
+   neutral and the student paints them with the "لون السلك" toolbar (or right-click on desktop) */
+const NEUTRAL={c:'#e9e5da',d:'#8a8578'};
+const SWATCH={black:{c:'#30363a',d:'#000',ar:'أسود'},red:{c:'#e2453b',d:'#5a1414',ar:'أحمر'},blue:{c:'#2f6bd9',d:'#173a7a',ar:'أزرق'},grey:{c:'#9aa1a5',d:'#4f585c',ar:'رمادي'},yellow:{c:'#f0c419',d:'#7a5f00',ar:'أصفر'},green:{c:'#2f9a4c',d:'#164a24',ar:'أخضر'}};
+const leadCol=k=>LEADDEF[k].earth||LEADDEF[k].pol==='-'?SWATCH.black:SWATCH.red;
+const wireCol=w=>SWATCH[RT.S.wcol[w.id]]||NEUTRAL;
 const plugs=[];
 /* cables: a natural curve that leaves the terminal in the direction it faces and runs into the plug; recomputed on every
    render, so they follow an instrument that is being moved. CAB keeps the geometry (crossing checks, tests). */
@@ -266,12 +269,12 @@ const clearOf=(ik,f0)=>{const [w,h]=byKey[ik].size,F=FACE[ik];return 18+(F==='do
 const DRAW={leadPos,
   plug:(k,p,col,dark)=>{const l=RT.S.leads[k];plugs.push({k,p});return `<circle cx="${p.x}" cy="${p.y}" r="${l.node!=null?7:9}" fill="${col}" stroke="${dark}" stroke-width="2"/>`+(l.node==null?`<circle cx="${p.x}" cy="${p.y}" r="3" fill="#c8a24a"/>`:'')+`<circle cx="${p.x}" cy="${p.y}" r="16" fill="transparent" data-k="lead:${k}" style="cursor:grab"/>`},
   wire:(c,col,dark,k,w=3)=>{const d=bz(c);return `<g data-cab="${k||''}"><path d="${d}" fill="none" stroke="${dark}" stroke-width="${w+2}" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/></g>`},
-  banana:(from,k)=>{const ik=instOf(k);const a=addP(from,POS[ik]);const p=leadPos(k);const c=colOf(k);const cv=curve(a,FV[FACE[ik]],p,clearOf(ik,from));CAB.push({k,grp:k,inst:ik,c:cv});return DRAW.wire(cv,c.c,c.d,k)+DRAW.plug(k,p,c.c,c.d)},
+  banana:(from,k)=>{const ik=instOf(k);const a=addP(from,POS[ik]);const p=leadPos(k);const c=leadCol(k);const cv=curve(a,FV[FACE[ik]],p,clearOf(ik,from));CAB.push({k,grp:k,inst:ik,c:cv});return DRAW.wire(cv,c.c,c.d,k)+DRAW.plug(k,p,c.c,c.d)},
   coax:(A0,kr,kb)=>{const ik=instOf(kr);const A=addP(A0,POS[ik]);const pr=leadPos(kr),pb=leadPos(kb);const M={x:(pr.x+pb.x)/2,y:(pr.y+pb.y)/2};
     const f2=FV[FACE[ik]];const Sp={x:M.x-f2.x*34,y:M.y-f2.y*34};
     const trunk=curve(A,f2,Sp,clearOf(ik,A0));
     const lr=curve(Sp,f2,pr),lb=curve(Sp,f2,pb);CAB.push({k:kr,grp:kr,inst:ik,c:trunk},{k:kr,grp:kr,inst:ik,c:lr,leg:1},{k:kb,grp:kr,inst:ik,c:lb,leg:1});
-    const cr=colOf(kr,SWATCH.red),cb=colOf(kb,SWATCH.black);
+    const cr=leadCol(kr),cb=leadCol(kb);
     return `<g data-cab="${kr}"><path d="${bz(trunk)}" fill="none" stroke="#1e2326" stroke-width="9" stroke-linecap="round"/><path d="${bz(trunk)}" fill="none" stroke="#4a555b" stroke-width="5" stroke-linecap="round"/></g><rect x="${Sp.x-7}" y="${Sp.y-7}" width="14" height="14" rx="3" fill="#2b3236" pointer-events="none"/>`+DRAW.wire(lr,cr.c,cr.d,kr)+DRAW.wire(lb,cb.c,cb.d,kb)+DRAW.plug(kr,pr,cr.c,cr.d)+DRAW.plug(kb,pb,cb.c,cb.d)}};
 /* small readable label next to each plug, never overlapping another label or plug */
 function labelsSVG(){const boxes=[];const all=plugs.map(q=>({x:q.p.x-10,y:q.p.y-10,w:20,h:20}));let s='';
@@ -343,7 +346,7 @@ svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;close
   if(BENCH.view==='ov'&&!S.armed&&!S.wireMode&&(!el||el.dataset.k.startsWith('node:'))){BENCH.ovClick(p);return}
   showHL(el,true);
   const cab=e.target.closest&&e.target.closest('[data-cab]');const lk=el&&el.dataset.k.startsWith('lead:')?el.dataset.k.slice(5):cab&&cab.dataset.cab;
-  if(lk&&e.pointerType!=='mouse'){press={k:lk,x:e.clientX,y:e.clientY,t:setTimeout(()=>{press=null;drag=null;openMenu(lk,e.clientX,e.clientY)},550)}}
+  if(BENCH.paint!==null&&el&&el.dataset.k.startsWith('wire:')){const id=+el.dataset.k.slice(5);if(BENCH.paint){S.wcol[id]=BENCH.paint;render(true)}else BENCH.say('اختر لون من الشريط أول');return}
   if(S.armed&&(!el||el.dataset.k.startsWith('node:'))){placeArmed(p);return}
   if(!el){const r=BENCH.regionAt(p);if(r&&r!==BENCH.view){BENCH.focus(r);return}if(S.sel){S.sel=null;render(true)}return}
   const k=el.dataset.k;
@@ -378,8 +381,7 @@ function endDrag(){stopRep();if(press){clearTimeout(press.t);press=null}const S=
 svg.addEventListener('pointerup',e=>{endDrag();if(e.pointerType!=='mouse')setTimeout(()=>showHL(null),220)});
 svg.addEventListener('pointercancel',()=>{stopRep();if(drag&&drag.kind==='inst'&&drag.active)savePos();drag=null;svg.classList.remove('grabbing');render(true)});
 svg.addEventListener('pointerleave',()=>{stopRep();if(!drag)showHL(null)});
-svg.addEventListener('contextmenu',e=>{e.preventDefault();const cab=e.target.closest&&e.target.closest('[data-cab]');const el=e.target.closest&&e.target.closest('[data-k^="lead:"]');
-  const k=el?el.dataset.k.slice(5):cab&&cab.dataset.cab;if(k)openMenu(k,e.clientX,e.clientY)});
+svg.addEventListener('contextmenu',e=>{e.preventDefault();const w=e.target.closest&&e.target.closest('[data-k^="wire:"]');if(w)openMenu(+w.dataset.k.slice(5),e.clientX,e.clientY)});
 const WHEEL=INST.filter(i=>i.wheel&&i.wheel.length).map(i=>`${i.prefix}:(${i.wheel.join('|')})`);
 const wheelRe=new RegExp(`^(${WHEEL.join('|')})[c+-]?$`);
 svg.addEventListener('wheel',e=>{const el=targetOf(e);if(!el)return;const k=el.dataset.k;const m=k.match(wheelRe);if(!m)return;e.preventDefault();const base=m[1];const dir=e.deltaY<0?'+':'-';
@@ -394,10 +396,10 @@ function showHL(el,touch){const L=$('Lhl2');if(!L)return;if(el===hlEl&&!touch)re
 
 /* colour menu for cables */
 function closeMenu(){const m=$('cabMenu');if(m)m.remove()}
-function openMenu(k,x,y){closeMenu();const host=$q('#bstage');const hr=host.getBoundingClientRect();const m=document.createElement('div');m.id='cabMenu';m.className='cabmenu';
-  m.innerHTML=`<b>لون السلك · <span class="m">${labelOf(k)||k}</span></b><div>`+Object.entries(SWATCH).map(([id,s])=>`<button data-c="${id}" title="${s.ar}" style="background:${s.c}"></button>`).join('')+`<button data-c="none" class="none" title="بدون لون">∅</button></div>`;
+function openMenu(id,x,y){closeMenu();const host=$q('#bstage');const hr=host.getBoundingClientRect();const m=document.createElement('div');m.id='cabMenu';m.className='cabmenu';
+  m.innerHTML=`<b>لون السلك</b><div>`+Object.entries(SWATCH).map(([c,s])=>`<button data-c="${c}" title="${s.ar}" style="background:${s.c}"></button>`).join('')+`<button data-c="" class="none" title="بدون لون">∅</button></div>`;
   host.appendChild(m);const mw=m.offsetWidth,mh=m.offsetHeight;m.style.left=clamp(x-hr.left-mw/2,8,hr.width-mw-8)+'px';m.style.top=clamp(y-hr.top-mh-14,8,hr.height-mh-8)+'px';
-  m.querySelectorAll('button').forEach(b=>b.onclick=ev=>{ev.stopPropagation();RT.S.cab[k]=b.dataset.c;closeMenu();render(true)})}
+  m.querySelectorAll('button').forEach(b=>b.onclick=ev=>{ev.stopPropagation();if(b.dataset.c)RT.S.wcol[id]=b.dataset.c;else delete RT.S.wcol[id];closeMenu();render(true)})}
 document.addEventListener('pointerdown',e=>{const m=$('cabMenu');if(m&&!m.contains(e.target)&&!svg.contains(e.target))closeMenu()},true);
 
 function placeArmed(p){const S=RT.S;if(MULTI(S.armed)){const n=nearestAnchor(S.armed,p.x,p.y,null,120);if(n!=null){S.parts.push({id:RT.uid++,type:S.armed,n});circuitChanged()}S.armed=null;BENCH.drawerSync();render();return}

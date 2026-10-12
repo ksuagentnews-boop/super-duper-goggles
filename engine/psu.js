@@ -52,7 +52,7 @@ function key(k){const d=RT.S.psu;
 const LEADS=[{k:'Lm',label:'L −',t:TERM[0].m},{k:'Lp',label:'L +',t:TERM[0].p},{k:'Rm',label:'R −',t:TERM[1].m},{k:'Rp',label:'R +',t:TERM[1].p}];
 return {key:'psu',prefix:'p',size:[W,H],fresh,svg,keyFn:key,
   wheel:['LVC','LVF','LI','RVC','RVF','RI'],
-  leads:LEADS.map(l=>({k:l.k,label:l.label,from:abs(l.t),banana:true})),
+  leads:LEADS.map(l=>({k:l.k,label:l.label,from:abs(l.t),banana:true,pol:l.k.endsWith('m')?'-':'+'})),
   cables:D=>LEADS.map(l=>D.banana(abs(l.t),l.k)).join(''),
   /* each unit is a floating source between its + and − terminals (output resistance 20 mΩ) */
   stamp(ck){const d=RT.S.psu,L=RT.S.leads;ck.dcs=ck.dcs||[];ck.psu=[null,null];

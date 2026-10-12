@@ -121,7 +121,7 @@ function keyFn(k){const d=RT.S.dmm;
 function measure(){compute();const d=RT.S.dmm;if(d.mm&&RD.val!=null){d.mmv=d.mmv==null?RD.val:d.mm==='MAX'?Math.max(d.mmv,RD.val):Math.min(d.mmv,RD.val)}}
 const redFrom=()=>abs(RT.S&&RT.S.dmm.jack==='A'?J.A:J.HI);
 return {key:'dmm',prefix:'m',size:[W,H],fresh,svg,keyFn,measure,
-  leads:[{k:'mh',label:()=>RT.S&&RT.S.dmm.jack==='A'?'A':'HI',from:redFrom,banana:true},{k:'ml',label:'COM',from:abs(J.COM),banana:true}],
+  leads:[{k:'mh',label:()=>RT.S&&RT.S.dmm.jack==='A'?'A':'HI',from:redFrom,banana:true,pol:'+'},{k:'ml',label:'COM',from:abs(J.COM),banana:true,pol:'-'}],
   cables:D=>D.banana(redFrom(),'mh')+D.banana(abs(J.COM),'ml'),
   /* V modes: 10 MΩ input; A jack: 10 mΩ shunt; Ω / ▶| test source only in its own solve (opts.meter) */
   stamp(ck,force,opts){const d=RT.S.dmm,L=RT.S.leads;if(L.mh.node==null||L.ml.node==null)return;const a=ck.idx(L.mh.node),b=ck.idx(L.ml.node);

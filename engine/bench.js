@@ -3,7 +3,7 @@
    Two modes: 'manual' (follows the lab manual step by step, live checks, manual sheet graded at the end)
    and 'free' (same table and instruments, no steps and no checks). */
 const BENCH={
-  view:'ov',mode:'manual',exp:null,sim:null,done:[],drawer:false,vb:null,anim:0,built:null,
+  view:'ov',mode:'manual',paint:null,exp:null,sim:null,done:[],drawer:false,vb:null,anim:0,built:null,
   el:{},
   init(){
     const E=this.el={view:$q('#benchView'),stage:$q('#bstage'),svgHost:$q('#svgHost'),paperHost:$q('#paperHost'),zoomUI:$q('#zoomUI'),zEn:$q('#zEn'),zAr:$q('#zAr'),
@@ -15,6 +15,9 @@ const BENCH={
     $q('#bPanelClose').onclick=()=>this.togglePanel(false);
     $q('#bReset').onclick=()=>{this.sim.reset();this.done=[];this.sim.render();this.say('بدأت من جديد')};
     $q('#bSwitch').onclick=()=>{this.enter(this.exp,this.mode==='free'?'manual':'free',true)};
+    /* paint bucket: open → pick a swatch → tap wires; ✕ or the bucket again leaves the mode */
+    $q('#pBucket').onclick=()=>this.setPaint(this.paint===null?'':null);
+    $q('#pSw').querySelectorAll('button').forEach(b=>b.onclick=()=>this.setPaint(b.dataset.c==='x'?null:b.dataset.c));
     $q('#bLayout').onclick=()=>{if(this.sim&&this.sim.resetLayout){this.sim.resetLayout();this.say('رجعت الأجهزة لترتيبها الافتراضي')}};
     $q('#bQuick').onclick=()=>QUICK.open($q('#bQuick'));
     $q('#bStand').onclick=()=>this.leave();
@@ -34,7 +37,7 @@ const BENCH={
     this.exp=exp;this.mode=mode;this.built=exp+'|'+mode;STATS.start(exp,mode);this.view='ov';this.done=[];this.sim=null;
     E.view.dataset.mode=mode;
     /* the parts box stays open next to the board (its arrow collapses it); none on PC tables or benches without parts */
-    const hasBag=!EXP_DEFS[exp].pc&&!!(EXP_DEFS[exp].tray&&EXP_DEFS[exp].tray.length);E.view.classList.toggle('no-bag',!hasBag);this.drawer=hasBag;E.view.classList.toggle('drawer-open',hasBag);$q('#dClose').textContent='◂';
+    const hasBag=!EXP_DEFS[exp].pc&&!!(EXP_DEFS[exp].tray&&EXP_DEFS[exp].tray.length);E.view.classList.toggle('no-wires',!(EXP_DEFS[exp].tray||[]).some(t=>t[0]==='W'));this.setPaint(null);E.view.classList.toggle('no-bag',!hasBag);this.drawer=hasBag;E.view.classList.toggle('drawer-open',hasBag);$q('#dClose').textContent='◂';
     E.svgHost.innerHTML='';E.paperHost.innerHTML='';const PC=!!EXP_DEFS[exp].pc;E.view.classList.toggle('pc-mode',PC);
     if(!PC)E.svgHost.appendChild(document.getElementById('tpl-svg').content.cloneNode(true));
     E.paperHost.innerHTML=EXP_DEFS[exp].sheet;
@@ -54,6 +57,9 @@ const BENCH={
     sim.tray.forEach(({t,l})=>{const b=document.createElement('button');b.className='bag-item';b.dataset.t=t;b.innerHTML=sim.icon(t)+`<small>${l}</small>`;
       b.addEventListener('pointerdown',e=>{e.preventDefault();sim.trayDown(t,e)});b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sim.trayDown(t,{clientX:0,clientY:0,pointerId:0});}});bag.appendChild(b)});
   },
+  setPaint(c){this.paint=c;const on=c!==null;$q('#pSw').hidden=!on;$q('#pBucket').setAttribute('aria-pressed',on);
+    $q('#pSw').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.c===c));if(this.svg)this.svg.classList.toggle('painting',on);
+    if(on&&!c)this.say('اختر لون، وبعدها اضغط على السلك اللي تبي تلوّنه')},
   calcOv(){const R=this.sim.regions;let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const k in R){const r=R[k];x0=Math.min(x0,r[0]);y0=Math.min(y0,r[1]);x1=Math.max(x1,r[0]+r[2]);y1=Math.max(y1,r[1]+r[3])}
     this.ovRect=[x0,y0,x1-x0,y1-y0]},
   /* an instrument was moved (k) or the default arrangement restored: the overview takes in the new desk; the camera only

@@ -50,6 +50,16 @@ export async function run(page, vp, ok) {
   await page.click('#dClose'); ok(await page.$eval('#drawer', e => e.offsetWidth < 50), 'the arrow folds the parts box');
   await page.click('#dClose'); ok(await page.$eval('#drawer', e => e.offsetWidth > 60), 'and opens it again');
   await page.waitForTimeout(300);
+  // wire colours: bucket → swatch → tap the wire; instrument leads keep red (+/signal) and black (−/ground)
+  await H.wire(32, 33); const wid = await page.evaluate(() => BENCH.sim.RT.S.wires.at(-1).id);
+  ok(await page.evaluate(id => !BENCH.sim.RT.S.wcol[id], wid), 'a new wire on the board is uncoloured');
+  await page.click('#pBucket'); await page.click('#pSw [data-c="red"]');
+  const wpt = await page.evaluate(id => { const e = document.querySelector(`#bench [data-k="wire:${id}"]`); const q = e.getPointAtLength(e.getTotalLength() / 2); const s = document.getElementById('bench'); const P = s.createSVGPoint(); P.x = q.x; P.y = q.y; const r = P.matrixTransform(s.getScreenCTM()); return [r.x, r.y]; }, wid);
+  if (H.touch) await page.touchscreen.tap(wpt[0], wpt[1]); else await page.mouse.click(wpt[0], wpt[1]); await page.waitForTimeout(80);
+  ok(await page.evaluate(id => BENCH.sim.RT.S.wcol[id] === 'red', wid), 'pick red, tap the wire: it turns red');
+  await page.click('#pSw .px'); ok(await page.evaluate(() => BENCH.paint === null && document.getElementById('pSw').hidden), '✕ leaves colour mode');
+  const lc = await page.evaluate(() => ['Lp', 'Lm', 'mh', 'ml'].map(k => document.querySelector(`#Lcables [data-cab="${k}"] path:nth-child(2)`).getAttribute('stroke')).join());
+  ok(lc === '#e2453b,#30363a,#e2453b,#30363a', 'supply and DMM leads: red on +/HI, black on −/COM (' + lc + ')');
   // movable instruments: the ✥ handle moves the DMM (mouse or finger), its cables follow, nothing on it is pressed;
   // the arrangement is remembered for this experiment and "ترتيب افتراضي" restores the default
   const pos = () => page.evaluate(() => ({ ...BENCH.sim.RT.layout.POS.dmm }));
