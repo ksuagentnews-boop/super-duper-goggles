@@ -107,12 +107,13 @@
   </defs>
   <rect x="-3000" y="-3000" width="8400" height="6900" fill="url(#deskG)"/>
   <rect x="-3000" y="-3000" width="8400" height="6900" fill="url(#deskP)" opacity=".55"/>
-  <g id="Lstatic"></g><g id="Ldyn"></g><g id="Lparts"></g><g id="Lcables"></g><g id="Ldrag"></g><g id="Lhl" pointer-events="none"></g><g id="Lhl2" pointer-events="none"></g>
+  <g id="Lstatic"></g><g id="Ldyn"></g><g id="Lparts"></g><g id="Lcables"></g><g id="Ldrag"></g><g id="Lguide" pointer-events="none"></g><g id="Lhl" pointer-events="none"></g><g id="Lhl2" pointer-events="none"></g>
 </svg>
 </template>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="engine/util.js"></script>
+<script src="engine/bidi.js"></script>
 <script src="engine/solver.js"></script>
 <script src="engine/scope.js"></script>
 <script src="engine/gen.js"></script>
@@ -130,7 +131,8 @@
 <script src="engine/stats.js"></script>
 <script src="labs/index.js"></script>
 <script src="engine/registry.js"></script>
+<script src="engine/fig.js"></script>
 <script src="engine/welcome.js"></script>
-<script>BENCH.init();HALL.init();WELCOME.init();</script>
+<script>BENCH.init();HALL.init();WELCOME.init();['#stepCard','#paperHost','#toast','#prompt','#tip','#seatModal','#hallHint','#zoomUI','#dHint'].forEach(s=>BIDI.watch($q(s)));</script>
 </body>
 </html>

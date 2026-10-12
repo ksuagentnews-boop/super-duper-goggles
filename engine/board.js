@@ -69,7 +69,7 @@ const EDGES=[];for(let i=0;i<NN;i++){if(i%COLS<COLS-1)EDGES.push([i,i+1]);if(i+C
 function dirHole(a,b){if(b===a+1)return 5;if(b===a-1)return 3;if(b===a+COLS)return 7;return 1}
 const regions={},names={};
 const updRegions=()=>INST.forEach(i=>{const p=POS[i.key];regions[i.key]=[p.x-6,p.y-44,i.size[0]+12,i.size[1]+50]});
-updRegions();INST.forEach(i=>names[i.key]=ENGINE.NAMES[i.key]);
+updRegions();INST.forEach(i=>names[i.key]=i.name||ENGINE.NAMES[i.key]);
 regions.board=[BX-66,parkY-34,BW+132,BY+BH+16-(parkY-34)];names.board=ENGINE.NAMES.board;
 RT.inst=byKey;RT.layout={BX,BY,P,COLS,ROWS,parkY,PARK,regions,POS,DEF,FACE};
 
@@ -183,7 +183,12 @@ Object.assign(RT,{nodeV,partNets,pinNet,partV,partI,PARTS,
   /* parts whose two ends are exactly the nets a and b; dir=+1 means p.a on a */
   between:(a,b)=>RT.S.parts.filter(p=>{if(MULTI(p.type))return false;const [x,y]=partNets(p);return PARTS[p.type].t!=='BR'&&a!=null&&b!=null&&((x===a&&y===b)||(x===b&&y===a))}).map(p=>({p,dir:partNets(p)[0]===a?1:-1})),
   at:net=>RT.S.parts.filter(p=>PARTS[p.type].t!=='BR'&&partNets(p).includes(net)),
-  dmm:()=>byKey.dmm?byKey.dmm.reading():null});
+  dmm:()=>byKey.dmm?byKey.dmm.reading():null,
+  /* every bench multimeter (DMM 1, DMM 2) with its state, reading and the nets its HI / COM leads are on */
+  meters:()=>INST.filter(i=>i.leadKeys).map(i=>({key:i.key,D:RT.S[i.key],r:i.reading(),hi:RT.leadNet(i.leadKeys[0]),lo:RT.leadNet(i.leadKeys[1])})),
+  /* the first meter reading a dc voltage across nets a and b (either way round; dir=true: HI on a): {val, m} — val as displayed */
+  meterOn:(a,b,dir,fn='DCV')=>{if(a==null||b==null)return null;for(const m of RT.meters()){const D=m.D;if(!(D.pwr&&D.fn===fn&&D.jack==='HI'&&m.r.val!=null&&!m.r.ol))continue;
+    if((m.hi===a&&m.lo===b)||(!dir&&m.hi===b&&m.lo===a))return {val:m.r.val,m}}return null}});
 
 /* ---------- part drawings (top view, real looks: cathode bands, polarity stripes, colour codes) ---------- */
 const BANDC=['#111','#7a4a1d','#d22','#f08a1c','#f3d21c','#2a9a3c','#2160c9','#7d3fb8','#8a8f93','#f7f7f7'];
@@ -324,12 +329,31 @@ function crossings(){const smp=c=>{const out=[];for(let i=0;i<=28;i++){const t=i
   C.forEach(c=>INST.forEach(i=>{if(i.key===c.inst)return;const p=POS[i.key],[w,h]=i.size;if(c.pts.some(q=>q.x>p.x+3&&q.x<p.x+w-3&&q.y>p.y+3&&q.y<p.y+h-3))ci.push(c.k+'/'+i.key)}));
   return {cc:[...new Set(cc)],ci:[...new Set(ci)]}}
 
+/* ---------- wiring guide: one connection per line of a build step ----------
+   line = {t, part:[type,a,b], pol?} | {ic:type, pins:{E:n,…}} | {lead:k, at:n} | {wire:[a,b]}; a, b, n are panel nodes.
+   lineDone checks it on the live netlist (any node of the same net counts); the current line's nodes and jacks glow. */
+function lineDone(L){const N=RT.netOf;if(RT.dirty)recompute();
+  if(L.part){const [t,a,b]=L.part;return RT.between(N(a),N(b)).some(x=>x.p.type===t&&(!L.pol||x.dir===1))}
+  if(L.ic)return RT.S.parts.some(p=>p.type===L.ic&&Object.entries(L.pins).every(([r,n])=>pinNet(p,r)===N(n)));
+  if(L.lead)return RT.leadNet(L.lead)!=null&&RT.leadNet(L.lead)===N(L.at);
+  if(L.wire){const [a,b]=L.wire;return N(a)!=null&&N(a)===N(b)}
+  return true}
+function lineSpots(L){if(L.part)return {nodes:L.part.slice(1,3),jacks:[]};if(L.ic)return {nodes:Object.values(L.pins),jacks:[]};
+  if(L.lead)return {nodes:[L.at],jacks:[L.lead]};if(L.wire)return {nodes:L.wire,jacks:[]};return {nodes:[],jacks:[]}}
+let GUIDE=null;
+function guideSVG(){if(!GUIDE)return '';let s='';const pulse=GUIDE.flash?' class="gflash"':'';
+  GUIDE.nodes.forEach(n=>{if(n==null||n<0||n>=NN)return;const c=nodeC(n);s+=`<rect${pulse} x="${c.x-34}" y="${c.y-34}" width="68" height="68" rx="11" fill="rgba(44,122,107,.14)" stroke="#2c7a6b" stroke-width="4" stroke-dasharray="9 6"/>`+T(c.x,c.y-38,'node '+n,{size:11,fill:'#1f5b50',a:'middle',w:700})});
+  GUIDE.jacks.forEach(k=>{if(!LEADDEF[k])return;const a=termOf(k);s+=`<circle${pulse} cx="${a.x}" cy="${a.y}" r="22" fill="rgba(44,122,107,.16)" stroke="#2c7a6b" stroke-width="4" stroke-dasharray="8 5"/>`;
+    const p=leadPos(k);s+=`<circle${pulse} cx="${p.x}" cy="${p.y}" r="17" fill="none" stroke="#2c7a6b" stroke-width="3"/>`});
+  return s}
+function setGuide(g){GUIDE=g;const L=$('Lguide');if(L)L.innerHTML=guideSVG()}
+
 /* ---------- render ---------- */
 let staticDone=false;
 function render(light){
   if(!staticDone){$('Lstatic').innerHTML=staticSVG();staticDone=true}
   if(!light){if(RT.dirty){recompute();INST.forEach(i=>i.postSim&&i.postSim())}if(def.decorate)def.decorate(RT);$('Ldyn').innerHTML=INST.map(i=>`<g data-inst="${i.key}" transform="translate(${POS[i.key].x} ${POS[i.key].y})">${i.svg()}${handleSVG(i)}</g>`).join('');BENCH.onRender()}
-  $('Lparts').innerHTML=partsSVG();$('Lcables').innerHTML=cablesSVG();$('Ldrag').innerHTML=toolbarSVG()+dragSVG();
+  $('Lparts').innerHTML=partsSVG();$('Lcables').innerHTML=cablesSVG();if($('Lguide'))$('Lguide').innerHTML=guideSVG();$('Ldrag').innerHTML=toolbarSVG()+dragSVG();
   if(hlEl&&!document.body.contains(hlEl))hlEl=null;
 }
 function circuitChanged(){RT.dirty=true;INST.forEach(i=>i.onCircuitChange&&i.onCircuitChange())}
@@ -418,9 +442,9 @@ BENCH.register({
   trayDown,isWire:()=>RT.S.wireMode,armed:()=>RT.S&&RT.S.armed,
   status:X.status||(()=>({})),P:PX,steps:X.steps||[],
   reset(){fresh();X.onReset&&X.onReset();render()},
-  render:()=>render(),RT,resetLayout,isDefault,crossings
+  render:()=>render(),RT,resetLayout,isDefault,crossings,lineDone,lineSpots,setGuide
 });
 RT.crossings=crossings;RT.resetLayout=resetLayout;
 fresh();render();
 };
-ENGINE.NAMES={gen:['PeakTech 4124','مولّد الإشارات'],psu:['TTi EL302RD','مصدر الجهد المستمر (وحدتين)'],sc:['GW Instek GDS-1104B','راسم الإشارة'],dmm:['MCP MT3805','الملتيميتر'],xf:['Center-tapped Transformer','المحوّل'],dbox:['Decade resistance boxes','صناديق المقاومات'],board:['Plug-in panel','لوحة التوصيل']};
+ENGINE.NAMES={dmm2:['MCP MT3805 · DMM 2','الملتيميتر الثاني'],gen:['PeakTech 4124','مولّد الإشارات'],psu:['TTi EL302RD','مصدر الجهد المستمر (وحدتين)'],sc:['GW Instek GDS-1104B','راسم الإشارة'],dmm:['MCP MT3805','الملتيميتر'],xf:['Center-tapped Transformer','المحوّل'],dbox:['Decade resistance boxes','صناديق المقاومات'],board:['Plug-in panel','لوحة التوصيل']};

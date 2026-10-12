@@ -4,18 +4,19 @@ const key = (t, b, v) => `${t}_${b}_${String(v).replace('.', 'p')}`;
 export async function run(page, vp, ok) {
   await sit(page, 'ee312/exp2', 'manual');
   const H = bench(page); H.touch = vp === 'phone';
-  const rd = () => page.evaluate(() => BENCH.sim.RT.dmm().val);
+  const rd = (k = 0) => page.evaluate(k => BENCH.sim.RT.meters()[k].r.val, k);
   const done = async n => (await H.steps()).done >= n;
   const setV = async target => { await H.focus('psu'); for (let i = 0; i < 300; i++) { const v = await page.evaluate(() => BENCH.sim.RT.S.psu.u[0].v); const d = +(target - v).toFixed(2); if (Math.abs(d) < 0.005) return;
     await H.key(Math.abs(d) >= 1 ? (d > 0 ? 'p:LVC+' : 'p:LVC-') : (d > 0 ? 'p:LVF+' : 'p:LVF-')); } };
   const F = {};
-  const measure = async (t, b, v) => { await setV(v); await H.focus('board'); await H.lead('mh', 22); await H.lead('ml', 15); F[key(t, b, v) + '_vd'] = (await rd()).toFixed(3);
-    await H.lead('mh', 14); await H.lead('ml', 15); F[key(t, b, v) + '_vrs'] = (await rd()).toFixed(3); };
+  /* two meters as in Fig. 2.3: DMM 1 on RS, DMM 2 on the diode — read both, no lead moves */
+  const measure = async (t, b, v) => { await setV(v); F[key(t, b, v) + '_vd'] = (await rd(1)).toFixed(3); F[key(t, b, v) + '_vrs'] = (await rd(0)).toFixed(3); };
   await H.focus('board'); await H.place('R1k', 14, 15); await H.place('D4001', 15, 22); await H.flip(15, 22); await H.lead('Lp', 14); await H.lead('Lm', 22);
   ok(await done(1), 'A1 Fig. 2.3a with the 1N4001 reverse-biased');
   await H.focus('psu'); await H.key('p:PWR'); await setV(25); await H.key('p:LON');
   ok(await done(2), 'A2 VBB = 25 V, 0.05 A, dc ON');
-  await H.focus('dmm'); await H.key('m:PWR');
+  await H.focus('board'); await H.lead('mh', 14); await H.lead('ml', 15); await H.lead('m2h', 22); await H.lead('m2l', 15);
+  await H.focus('dmm'); await H.key('m:PWR'); await H.key('m:DCV'); await H.focus('dmm2'); await H.key('m2:PWR'); await H.key('m2:DCV');
   await measure('D4001', 'R', 25); ok(await done(3), `A3 rectifier @25 V: VD ${F[key('D4001', 'R', 25) + '_vd']}, VRS ${F[key('D4001', 'R', 25) + '_vrs']}`);
   for (const v of REV.slice(1)) await measure('D4001', 'R', v);
   await H.focus('board'); await H.del(15, 22); await H.place('Z4733', 15, 22); await H.flip(15, 22);

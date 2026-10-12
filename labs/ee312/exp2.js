@@ -44,7 +44,8 @@ ${t22}${plq}
 params:()=>({}),
 instruments:[
   {type:'psu',prev:d=>{d.u[0].v=5;d.u[0].ilim=0.05;d.u[1].v=12;d.u[1].ilim=0.4}},
-  {type:'dmm',prev:d=>{d.fn='DIODE'}}],
+  {type:'dmm',n:1,prev:d=>{d.fn='DIODE'}},
+  {type:'dmm',n:2,prev:d=>{d.fn='OHM'}}],
 parts:{R1k:{t:'R',r:1000,lab:'1kΩ'},D4001:{t:'D',lab:'1N4001'},Z4733:{t:'Z',lab:'1N4733A'},BR:{t:'BR',lab:''}},
 tray:[['R1k','1 kΩ'],['D4001','1N4001'],['Z4733','1N4733A'],['BR','Bridging plug'],['W','Wire']],
 setup(RT){
@@ -64,11 +65,11 @@ setup(RT){
         const fwd=T1===P?d.dir===1:d.dir===-1;const U=S.psu.u[u];return {u,U,P,N,X,T1,T2,rs,d:d.p,type:d.p.type,fwd,on:S.psu.pwr&&U.on}}}}
     return null}
   function snap(v,list){return list.find(x=>Math.abs(x-v)<0.006)}
-  function status(){const S=RT.S,D=S.dmm,r=RT.dmm()||{};const L=loop();const st={L,dcv:D.pwr&&D.fn==='DCV'&&D.jack==='HI'};
-    if(L&&L.on&&st.dcv&&!r.ol&&r.val!=null){const hi=RT.leadNet('mh'),lo=RT.leadNet('ml');const b=L.fwd?'F':'R';const v=snap(L.U.v,L.fwd?FWD:REV);
-      if(v!=null&&L.U.ilim<=0.0501){const k=key(L.type,b,v);const across=(a,c)=>(hi===a&&lo===c)||(hi===c&&lo===a);
-        const dn=L.T1===L.P?[L.X,L.T2]:[L.T2,L.X];
-        if(across(L.X,L.T2))ST[k+'_vd']=r.val;if(across(L.T1,L.X))ST[k+'_vrs']=r.val}}
+  /* Fig. 2.3 draws two meters: DMM 1 on R_S (V_RS), DMM 2 on the diode (V_D); any meter on the right nodes counts */
+  function status(){const S=RT.S,M=RT.meters();const L=loop();const st={L,dcv:M.some(m=>m.D.pwr&&m.D.fn==='DCV'&&m.D.jack==='HI')};
+    if(L&&L.on){const b=L.fwd?'F':'R';const v=snap(L.U.v,L.fwd?FWD:REV);
+      if(v!=null&&L.U.ilim<=0.0501){const k=key(L.type,b,v);const qd=RT.meterOn(L.X,L.T2),qr=RT.meterOn(L.T1,L.X);
+        if(qd)ST[k+'_vd']=qd.val;if(qr)ST[k+'_vrs']=qr.val}}
     if(L&&!L.on&&ST._revAll&&!L.fwd)ST.offA=true;
     const all=(t,b,list)=>list.every(v=>ST[key(t,b,v)+'_vd']!=null&&ST[key(t,b,v)+'_vrs']!=null);
     st.revR=all('D4001','R',REV);st.revZ=all('Z4733','R',REV);if(st.revR&&st.revZ)ST._revAll=true;
@@ -106,17 +107,23 @@ setup(RT){
     g.show($('result'))});
   return {status,
     steps:[
-      {dev:'board',t:'Procedure A: ركّب Fig. 2.3a بالـ 1N4001: RS = 1 kΩ مع طرف من الوحدة، والدايود بين RS والطرف الثاني بحيث يكون reverse biased (الكاثود جهة +).',ok:s=>s.L&&s.L.type==='D4001'&&!s.L.fwd},
+      {dev:'board',fig:'labs/ee312/fig/fig2-3.png',figCap:'Fig. 2.3',t:'Procedure A: ركّب Fig. 2.3a بالـ 1N4001 reverse biased (الكاثود جهة R<sub>S</sub> و +).',
+        lines:[{t:'R<sub>S</sub> = 1 kΩ: node 14 ↔ node 15',part:['R1k',14,15]},{t:'1N4001: cathode → node 15, anode → node 22',note:'الحلقة جهة R<sub>S</sub>',part:['D4001',22,15],pol:true},
+          {t:'DC + (L +) → node 14',note:'الوحدة اليسار',lead:'Lp',at:14},{t:'DC − (L −) → node 22',lead:'Lm',at:22}],ok:s=>s.L&&s.L.type==='D4001'&&!s.L.fwd},
       {dev:'psu',t:'شغّل ∼POWER، واضبط CURRENT على 0.05 A و V<sub>BB</sub> = 25 V، وبعدها حوّل الـ dc على ON.',ok:s=>s.L&&!s.L.fwd&&s.L.on&&Math.abs(s.L.U.v-25)<0.006&&s.L.U.ilim<=0.0501},
-      {dev:'dmm',t:'الـ DMM على DCV: قِس V<sub>D</sub> (على الدايود) و V<sub>RS</sub> (على RS) وسجّلهم في Table 2.2.',ok:s=>s.has('D4001','R',25)},
-      {dev:'board',t:'بدّل الـ 1N4001 بالزينر 1N4733A (نفس الاتجاه)، وسجّل V<sub>D</sub> و V<sub>RS</sub>.',ok:s=>s.has('Z4733','R',25)},
+      {dev:'board',fig:'labs/ee312/fig/fig2-3.png',figCap:'Fig. 2.3',t:'وصّل الملتيميترين مثل Fig. 2.3 (الاثنين على DCV): DMM 1 يقيس V<sub>RS</sub> و DMM 2 يقيس V<sub>D</sub>. سجّلهم في Table 2.2.',
+        lines:[{t:'DMM 1 HI → node 14',note:'V<sub>RS</sub>',lead:'mh',at:14},{t:'DMM 1 COM → node 15',lead:'ml',at:15},{t:'DMM 2 HI → node 22',note:'V<sub>D</sub>',lead:'m2h',at:22},{t:'DMM 2 COM → node 15',lead:'m2l',at:15}],ok:s=>s.has('D4001','R',25)},
+      {dev:'board',t:'بدّل الـ 1N4001 بالزينر 1N4733A (نفس الاتجاه)، وسجّل V<sub>D</sub> (DMM 2) و V<sub>RS</sub> (DMM 1).',
+        lines:[{t:'1N4733A: cathode → node 15, anode → node 22',note:'الحلقة جهة R<sub>S</sub>',part:['Z4733',22,15],pol:true}],ok:s=>s.has('Z4733','R',25)},
       {dev:'psu',t:'كرّر للقيم الباقية من V<sub>BB</sub> (20، 15، 10، 7، 5، 4، 3 V) للدايودين.',ok:s=>ST._revAll},
       {dev:'psu',t:'طفّ مفتاح الـ dc.',ok:s=>ST.offA||ST._fwdAll},
-      {dev:'board',t:'Procedure B: غيّر توصيل المصدر بس (اعكس طرفي الوحدة) عشان يصير Fig. 2.3b (forward bias).',ok:s=>s.L&&s.L.fwd},
-      {dev:'psu',t:'اضبط V<sub>FF</sub> = 0.3 V بمقابض VOLTAGE، وشغّل الـ dc، وسجّل V<sub>RS</sub> و V<sub>D</sub> للـ 1N4001.',ok:s=>s.has('D4001','F',0.3)},
+      {dev:'board',fig:'labs/ee312/fig/fig2-3.png',figCap:'Fig. 2.3',t:'Procedure B: اعكس طرفي الوحدة بس عشان يصير Fig. 2.3b (forward bias). الملتيميترات تبقى مكانها.',
+        lines:[{t:'DC + (L +) → node 22',lead:'Lp',at:22},{t:'DC − (L −) → node 14',lead:'Lm',at:14}],ok:s=>s.L&&s.L.fwd},
+      {dev:'psu',t:'اضبط V<sub>FF</sub> = 0.3 V بمقابض VOLTAGE، وشغّل الـ dc، وسجّل V<sub>RS</sub> (DMM 1) و V<sub>D</sub> (DMM 2) للـ 1N4001.',ok:s=>s.has('D4001','F',0.3)},
       {dev:'board',t:'بدّل بالزينر وسجّل V<sub>RS</sub> و V<sub>D</sub>.',ok:s=>s.has('Z4733','F',0.3)},
       {dev:'psu',t:'كرّر لباقي قيم V<sub>FF</sub> (0.4 … 20.7 V) للدايودين.',ok:s=>ST._fwdAll},
       {dev:'psu',t:'طفّ الـ dc supply (وفصّل القطع ورتّب طاولتك).',ok:s=>ST.offB}
     ],
+
     onReset(){ST={};$('result').innerHTML='';$('ivplot').innerHTML=''}};
 }};})();

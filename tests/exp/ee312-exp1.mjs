@@ -2,7 +2,8 @@ import { sit, bench } from '../lib.mjs';
 export async function run(page, vp, ok) {
   await sit(page, 'ee312/exp1', 'manual');
   const H = bench(page); H.touch = vp === 'phone';
-  const rd = () => page.evaluate(() => { const r = BENCH.sim.RT.dmm(); return { val: r.val, ol: r.ol, shown: r.shown && r.shown.main.trim() }; });
+  const rd = (k = 0) => page.evaluate(k => { const r = BENCH.sim.RT.meters()[k].r; return { val: r.val, ol: r.ol, shown: r.shown && r.shown.main.trim() }; }, k);
+  const rd2 = () => rd(1);
   const done = async n => (await H.steps()).done >= n;
   await H.focus('dmm'); await H.key('m:PWR'); await H.key('m:DIODE');
   ok(await done(1), 'A1 DMM on diode test');
@@ -15,28 +16,30 @@ export async function run(page, vp, ok) {
   ok(vf.z > 0.6 && vf.z < 0.75 && vf.led > 1.6 && vf.led < 2.0 && vf.ge > 0.18 && vf.ge < 0.32, `A5 Zener ${vf.z.toFixed(3)}, LED ${vf.led.toFixed(3)}, Ge ${vf.ge.toFixed(3)} V`);
   ok(await done(5), 'A5 all four diodes tested');
   ok(await page.evaluate(() => BENCH.sim.RT.S.parts.find(p => p.type === 'GE') != null), 'Ge diode on the panel');
-  // ---- Procedure B ----
-  await H.del(0, 1); await H.place('R100', 14, 15); await H.lead('Lp', 14); await H.lead('Lm', 22); await H.lead('mh', 15); await H.lead('ml', 22);
-  ok(await done(6), 'B1 Fig. 1.3a built');
-  await H.focus('dmm'); await H.key('m:DCV'); ok(await done(7), 'B2 DMM on DCV');
+  // ---- Procedure B: DMM 1 on RS, DMM 2 on the diode (Fig. 1.3) ----
+  await H.del(0, 1); await H.lead('mh', null); await H.lead('ml', null);
+  await H.place('R100', 14, 15); await H.lead('Lp', 14); await H.lead('Lm', 22); await H.lead('m2h', 15); await H.lead('m2l', 22);
+  ok(await done(6), 'B1 Fig. 1.3a built (DMM 2 across the open circuit)');
+  await H.focus('dmm2'); await H.key('m2:PWR'); await H.key('m2:DCV'); ok(await done(7), 'B2 DMM 2 on DCV');
   await H.focus('psu'); await H.key('p:PWR'); await H.key('p:LI-', 45); await H.key('p:LVC-', 7); await H.key('p:LON');
   ok(await done(8), 'B3 5 V / 0.05 A, dc ON');
-  const voc = (await rd()).val; ok(await done(9) && voc > 4.99, `B4 VOC = ${voc}`);
+  const voc = (await rd2()).val; ok(await done(9) && voc > 4.99, `B4 VOC = ${voc} (DMM 2)`);
   await H.focus('board'); await H.place('D4001', 15, 22); await H.flip(15, 22);
-  const vrev = (await rd()).val; ok(await done(10) && vrev > 4.99, `B5 Vrev = ${vrev}`);
+  const vrev = (await rd2()).val; ok(await done(10) && vrev > 4.99, `B5 Vrev = ${vrev}`);
   await H.focus('psu'); await H.key('p:LON'); await H.focus('board'); await H.flip(15, 22);
   ok(await done(11), 'B6 dc OFF, diode flipped');
   await H.focus('psu'); await H.key('p:LON');
-  const adjust = async target => { await H.focus('board'); await H.lead('mh', 14); await H.lead('ml', 15); await H.focus('psu');
-    for (let i = 0; i < 400; i++) { const r = (await rd()).val; if (Math.abs(r - target) <= 0.004) return r; const big = Math.abs(r - target) > 0.6;
+  await H.focus('board'); await H.lead('mh', 14); await H.lead('ml', 15); await H.focus('dmm'); await H.key('m:DCV'); await H.focus('psu');
+  const adjust = async target => { for (let i = 0; i < 400; i++) { const r = (await rd()).val; if (Math.abs(r - target) <= 0.004) return r; const big = Math.abs(r - target) > 0.6;
       await H.key(big ? (r < target ? 'p:LVC+' : 'p:LVC-') : (r < target ? 'p:LVF+' : 'p:LVF-')); } return null; };
   const vd = {};
   for (const [t, k, n] of [[0.1, 1, 12], [1, 10, 13], [2, 20, 14]]) {
-    const vrs = await adjust(t); await H.focus('board'); await H.lead('mh', 15); await H.lead('ml', 22); vd[k] = (await rd()).val;
-    ok(vrs != null && await done(n), `B${n - 5} VRS = ${vrs && vrs.toFixed(4)} V → VD = ${vd[k].toFixed(3)} V`);
+    const vrs = await adjust(t); vd[k] = (await rd2()).val;
+    ok(vrs != null && await done(n), `B${n - 5} DMM 1: VRS = ${vrs && vrs.toFixed(4)} V → DMM 2: VD = ${vd[k].toFixed(3)} V`);
   }
+  await H.focus('board');
   await H.place('BR', 15, 16); await H.place('BR', 22, 23); await H.place('R100', 16, 23);
-  const vdl = (await rd()).val; ok(await done(15) && vdl < vd[20], `B10 VD′ with RL = ${vdl.toFixed(3)} V`);
+  const vdl = (await rd2()).val; ok(await done(15) && vdl < vd[20], `B10 VD′ with RL = ${vdl.toFixed(3)} V`);
   await page.screenshot({ path: '/tmp/exp1-' + vp + '-board.png' }); await H.focus('psu'); await H.key('p:LON'); ok(await done(16), 'B11 supply off — all steps done');
   // ---- sheet ----
   const r3 = x => x.toFixed(3);

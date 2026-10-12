@@ -48,6 +48,8 @@ const BENCH={
     if(!PC){this.svg.addEventListener('pointermove',e=>this.hover(e));this.svg.addEventListener('pointerleave',()=>{if(this.view==='ov')this.hl.innerHTML=''})}
     this._bagShown=false;
     if(PC){this.view='pc';ENGINE.runPC(EXP_DEFS[exp])}else ENGINE.run(EXP_DEFS[exp]);
+    /* small screens: the step card starts folded so the overview gets the height */
+    E.card.classList.toggle('min',!PC&&(innerHeight<=500||innerWidth<=600));E.card.dataset.key='';
     this.ui();this.syncLayoutBtn();
     requestAnimationFrame(()=>{this.refit(false)});
   },
@@ -114,14 +116,23 @@ const BENCH={
     el.innerHTML=`<div class="sh"><b>خطوات التجربة</b><span dir="ltr">${n} / ${S.length}</span></div><div class="prog"><i style="width:${n/S.length*100}%"></i></div>`+
       S.map((s,i)=>`<div class="step ${this.done[i]?'done':i===c?'cur':'todo'}"><span class="m">${this.done[i]?'✓':i+1}</span><span class="x">${s.t}</span>${i===c?`<button class="eye" data-dev="${s.dev}">وريني</button>`:''}</div>`).join('');
     el.querySelectorAll('.eye').forEach(b=>b.onclick=()=>{this.focus(b.dataset.dev);if(innerWidth<=900)this.togglePanel(false)})},
+  /* step card: header, text, for build steps one connection per line (ticks itself, the current one glows on the
+     board), the manual figure beside it (tap → full screen); folded to one line by default on small screens */
   drawStepCard(){const c=this.el.card;if(!this.sim||this.mode!=='manual'){c.hidden=true;return}c.hidden=false;
     const S=this.sim.steps,i=this.cur(),all=i>=S.length;const min=c.classList.contains('min');
-    const key=this.built+'|'+all+'|'+i+'|'+this.view;if(c.dataset.key===key)return;c.dataset.key=key;
+    const s=S[i],L=!all&&s.lines&&!this.sim.pc?s.lines:null;const done=L?L.map(l=>this.sim.lineDone(l)):[];const cur=L?done.indexOf(false):-1;
+    if(this.sim.setGuide)this.sim.setGuide(L&&cur>=0?this.sim.lineSpots(L[cur]):null);
+    const key=this.built+'|'+all+'|'+i+'|'+this.view+'|'+done.join('')+'|'+min;if(c.dataset.key===key)return;c.dataset.key=key;
     if(all){c.innerHTML=`<div class="num done">✓</div><div class="body"><div class="k">خلصت خطوات المانيوال 🎉</div><div class="t">كل الخطوات تمت. كمّل الـ sheet (الشاشات والقراءات والأسئلة) واضغط "صحّح" عشان تشوف درجتك.</div><div class="acts"><button class="go" id="scSheet">افتح الـ sheet</button></div></div>`;
-      c.querySelector('#scSheet').onclick=()=>{this.togglePanel(true);const r=$q('#submit');if(r)r.scrollIntoView({block:'center'})};return}
-    const s=S[i];const here=this.view===s.dev&&!this.sim.pc;
-    c.innerHTML=`<div class="num">${i+1}</div><div class="body"><div class="k">الخطوة ${i+1} من ${S.length}</div><div class="t">${s.t}</div><div class="acts">${here?'':`<button class="go" id="scGo">وريني وين</button>`}<button id="scAll">كل الخطوات</button></div></div><button class="mini" id="scMin" aria-label="تصغير">${min?'▴':'▾'}</button>`;
-    const g=c.querySelector('#scGo');if(g)g.onclick=()=>this.focus(s.dev);
+      BIDI.fix(c);c.querySelector('#scSheet').onclick=()=>{this.togglePanel(true);const r=$q('#submit');if(r)r.scrollIntoView({block:'center'})};return}
+    const here=this.view===(L?'board':s.dev)&&!this.sim.pc;const CN='①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮';
+    const lines=L?`<ol class="wl">${L.map((l,j)=>`<li class="${done[j]?'ok':j===cur?'cur':''}"><span class="n">${CN[j]||j+1}</span><span class="lt"><bdi dir="ltr">${l.t}</bdi>${l.note?` <span class="nt">(${l.note})</span>`:''}</span>${done[j]?'<span class="tk">✓</span>':''}</li>`).join('')}</ol>`:'';
+    const fig=s.fig?`<div class="sfig"><img class="figimg" src="${s.fig}" alt="${s.figCap||'Figure'}"><span>🔍</span></div>`:'';
+    c.classList.toggle('has-lines',!!L);const h0=c.offsetHeight;
+    c.innerHTML=`<div class="num">${i+1}</div><div class="body"><div class="k">الخطوة ${i+1} من ${S.length}</div><div class="t">${s.t}</div>${lines}<div class="acts"><button class="go" id="scGo">وريني وين</button><button id="scAll">كل الخطوات</button></div></div>${fig}<button class="mini" id="scMin" aria-label="${min?'توسيع':'تصغير'}">${min?'▴':'▾'}</button>`;
+    BIDI.fix(c);if(Math.abs(c.offsetHeight-h0)>8&&this.view)requestAnimationFrame(()=>this.refit(true));
+    const small=()=>innerHeight<=500||innerWidth<=600;
+    c.querySelector('#scGo').onclick=()=>{if(small()&&!c.classList.contains('min')){c.classList.add('min');c.dataset.key='';this.drawStepCard()}if(L){if(!here)this.focus('board');if(cur>=0)setTimeout(()=>this.sim.setGuide({...this.sim.lineSpots(L[cur]),flash:true}),reduceMotion?0:420)}else this.focus(s.dev)};
     c.querySelector('#scAll').onclick=()=>this.togglePanel(true);
     c.querySelector('#scMin').onclick=()=>{c.classList.toggle('min');c.dataset.key='';this.drawStepCard();this.refit(true)}}
 };
