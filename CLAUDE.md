@@ -57,7 +57,17 @@ A static website (GitHub Pages, no server, no login) that simulates the EE depar
   4. A "ابدأ" button closes it.
 - Shown on every new visit (or once per session); an ⓘ button in the corridor HUD re-opens it.
 - The name and the LinkedIn URL come from one config object (`labs/site.js` or similar: `{author, linkedin}`) so the owner can change them without touching engine code. If `linkedin` is empty, show the name only (no link, no icon).
-- Current values: `author: 'عبدالرحمن القنيعة'`, `linkedin: 'https://www.linkedin.com/in/abdulrahman-algniah-3688673ab'`.
+- Current values: `author: 'عبدالرحمن القنيعة'`, `linkedin: 'https://www.linkedin.com/in/abdulrahman-algniah-3688673ab'`, `goatcounter: ''` (filled in when the owner creates the account).
+
+## Usage statistics (anonymous)
+- The owner wants numbers: visitors, experiments run, time spent. Use **GoatCounter** (free, no cookies, no personal data, CSV export). The script `https://gc.zgo.at/count.js` is the one allowed exception to "scripts only from cdnjs".
+- The site code (e.g. `ee-labs`) lives in `labs/site.js` as `goatcounter: ''`. Empty = analytics off (also off on localhost, in tests and in the Claude preview). Never block or slow the site if the script fails to load.
+- Count page views of the corridor, plus these events (path style, no names, no IDs):
+  - `lab/<lab>` entering a lab room;
+  - `exp/<lab>/expN/start/<manual|free>` sitting at a table and picking a mode;
+  - `exp/<lab>/expN/done` all Manual steps ticked; `exp/<lab>/expN/graded/<0-49|50-79|80-99|100>` sheet graded (score bucket);
+  - `time/<lab>/expN/<0-5|5-15|15-30|30-60|60+>min` time seated, sent once when the student stands up or leaves the page (`visibilitychange`/`pagehide`).
+- Add one short line in small text on the welcome card: «الموقع يجمع إحصائيات استخدام مجهولة فقط».
 
 ## Multi-lab building (plan for it now)
 - Later the site will hold all EE labs (~8). The student will start in a **corridor of the EE department**, walk along it, and enter a lab through its **door** (a sign with the lab code, e.g. `EE312`, above each door). Entering a door loads that lab's room with its tables.
