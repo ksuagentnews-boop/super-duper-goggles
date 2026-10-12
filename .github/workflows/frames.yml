@@ -1,0 +1,42 @@
+name: EE205 video frames
+on:
+  push:
+    branches: [tools/video-frames]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  frames:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          pip install -q -U yt-dlp
+      - name: Download and extract
+        run: |
+          mkdir -p out
+          while read name id; do
+            [ -z "$id" ] && continue
+            echo "== $name $id"
+            yt-dlp -q --no-warnings -f "bv*[height<=720]+ba/b[height<=720]/b" -o "v/$name.%(ext)s" \
+              --write-auto-subs --write-subs --sub-langs "ar.*,en.*" --convert-subs srt "https://youtu.be/$id" || echo "FAILED $name" >> out/failed.txt
+            f=$(ls v/$name.* 2>/dev/null | grep -v '\.srt$' | head -1)
+            if [ -n "$f" ]; then
+              mkdir -p out/$name
+              ffprobe -v error -show_entries format=duration -of csv=p=0 "$f" > out/$name/duration.txt
+              ffmpeg -loglevel error -i "$f" -vf "fps=1/4,scale=1024:-2" -q:v 6 "out/$name/t%04d.jpg"
+              cp v/$name*.srt out/$name/ 2>/dev/null || true
+            fi
+          done < videos.txt
+          du -sh out; ls out
+      - name: Commit frames
+        run: |
+          git config user.name "frames-bot"; git config user.email "frames-bot@users.noreply.github.com"
+          git checkout --orphan video-frames-out
+          git rm -rq --cached . ; rm -rf .github videos.txt v
+          mv out/* . ; rmdir out
+          git add -A && git commit -qm "EE205 video frames (1 frame / 4 s)"
+          git push -f origin video-frames-out
