@@ -67,7 +67,7 @@ A static website (GitHub Pages, no server, no login) that simulates the EE depar
   - `exp/<lab>/expN/start/<manual|free>` sitting at a table and picking a mode;
   - `exp/<lab>/expN/done` all Manual steps ticked; `exp/<lab>/expN/graded/<0-49|50-79|80-99|100>` sheet graded (score bucket);
   - `time/<lab>/expN/<0-5|5-15|15-30|30-60|60+>min` time seated, sent once when the student stands up or leaves the page (`visibilitychange`/`pagehide`).
-- Add one short line in small text on the welcome card: «الموقع يجمع إحصائيات استخدام مجهولة فقط».
+- No notice on the welcome card (the owner's decision): the counts are anonymous and aggregate only.
 
 ## Multi-lab building (plan for it now)
 - Later the site will hold all EE labs (~8). The student will start in a **corridor of the EE department**, walk along it, and enter a lab through its **door** (a sign with the lab code, e.g. `EE312`, above each door). Entering a door loads that lab's room with its tables.
