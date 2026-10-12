@@ -47,6 +47,8 @@ export function bench(page) {
     node: async i => { const L = await H.L(); return { x: L.BX + 44 + (i % L.COLS) * L.P, y: L.BY + 44 + Math.floor(i / L.COLS) * L.P }; },
     bag: async t => { if (!(await page.evaluate(() => BENCH.drawer))) { await page.evaluate(() => BENCH.setDrawer(true)); await page.waitForTimeout(100); }
       const b = await page.$(`#bag .bag-item[data-t="${t}"]`); await b.evaluate(e => e.scrollIntoView({ block: 'nearest' })); await page.waitForTimeout(30); const r = await b.boundingBox(); if (H.touch) await page.touchscreen.tap(r.x + r.width / 2, r.y + r.height / 2); else await page.mouse.click(r.x + r.width / 2, r.y + r.height / 2); await page.waitForTimeout(40); },
+    /* drop a diode from the parts box straight onto a multimeter's HI / COM jacks */
+    jack: async (t, key = 'dmm') => { await H.bag(t); const c = await page.evaluate(k => { const L = BENCH.sim.RT.layout, i = BENCH.sim.RT.inst[k]; const P = L.POS[k], r = i.jackSlot; return { x: P.x + r.x + r.w / 2, y: P.y + r.y + r.h / 2 }; }, key); await H.tap(c.x, c.y); },
     place: async (t, a, b) => { await H.bag(t); const A = await H.node(a), B = await H.node(b); await H.tap((A.x + B.x) / 2, (A.y + B.y) / 2); },
     drag: async (from, to) => { const [x0, y0] = await H.toClient(from.x, from.y); const [x1, y1] = await H.toClient(to.x, to.y); await page.mouse.move(x0, y0); await page.mouse.down(); await page.mouse.move(x1, y1, { steps: 6 }); await page.mouse.up(); await page.waitForTimeout(40); },
     lead: async (k, node) => { const p = await page.evaluate(k => { const s = document.getElementById('bench'); const e = s.querySelector(`[data-k="lead:${k}"]`); return { x: +e.getAttribute('cx'), y: +e.getAttribute('cy') }; }, k);

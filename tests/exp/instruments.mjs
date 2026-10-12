@@ -50,6 +50,12 @@ export async function run(page, vp, ok) {
   await page.click('#dClose'); ok(await page.$eval('#drawer', e => e.offsetWidth < 50), 'the arrow folds the parts box');
   await page.click('#dClose'); ok(await page.$eval('#drawer', e => e.offsetWidth > 60), 'and opens it again');
   await page.waitForTimeout(300);
+  // a diode lifted off the board and dropped on the DMM jacks plugs straight in (Exp 1 Part A method)
+  await H.place('D4001', 25, 26);
+  const jp = await page.evaluate(() => { const L = BENCH.sim.RT.layout, i = BENCH.sim.RT.inst.dmm, P = L.POS.dmm, r = i.jackSlot; return { x: P.x + r.x + r.w / 2, y: P.y + r.y + r.h / 2 }; });
+  const A = await H.node(25), B = await H.node(26); await H.drag({ x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 }, jp);
+  ok(await page.evaluate(() => BENCH.sim.RT.S.dmm.jd && BENCH.sim.RT.S.dmm.jd.type === 'D4001' && !BENCH.sim.RT.S.parts.some(p => p.a === 25 || p.b === 25)), 'a diode dragged off the board onto the DMM jacks plugs straight in');
+  await H.key('m:JDOUT');
   // wire colours: bucket → swatch → tap the wire; instrument leads keep red (+/signal) and black (−/ground)
   await H.wire(32, 33); const wid = await page.evaluate(() => BENCH.sim.RT.S.wires.at(-1).id);
   ok(await page.evaluate(id => !BENCH.sim.RT.S.wcol[id], wid), 'a new wire on the board is uncoloured');

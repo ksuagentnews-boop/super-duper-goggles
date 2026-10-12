@@ -1,6 +1,7 @@
 /* EE312 · Experiment 1 · Exploring and Testing Junction Diodes (manual v8.8 pp. 8–13).
    Procedure A: MT3805 diode test on the 1N4001, Zener 1N4733A, green LED and Ge diode (Table 1.1).
    Procedure B: Fig. 1.3 with one EL302RD unit (VDD), RS = 100 Ω, the 1N4001 and RL = 100 Ω (Table 1.2).
+   Part A as in the lab: the diode's legs go straight into the DMM's HI / COM jacks (tap to flip).
    Assumptions: "Fig. 1.5a" in step 5 is Fig. 1.3a with the rectifier reversed; two MT3805 meters as in Fig. 1.3 (DMM 1 on RS,
    DMM 2 on the diode); the Ge diode is a 1N34A-class point-contact part; PLQ 5 uses 2 × 1.5 V cells. */
 EXP_DEFS['ee312/exp1']=(()=>{const H=ENGINE.sheet;
@@ -84,7 +85,11 @@ setup(RT){
     return null}
   function status(){const S=RT.S,M=RT.meters();const st={};
     st.dmmDiode=M.some(m=>m.D.pwr&&m.D.fn==='DIODE');st.dmmDCV=M.some(m=>m.D.pwr&&m.D.fn==='DCV');
-    M.forEach(m=>{const D=m.D,d=m.r;if(!(D.pwr&&D.fn==='DIODE'))return;const ac=acrossM(m),hi=m.hi,lo=m.lo;
+    st.jdIn=M.some(m=>m.D.jd);
+    M.forEach(m=>{const D=m.D,d=m.r;if(!(D.pwr&&D.fn==='DIODE'))return;
+      /* the lab's way: the diode's legs straight in HI / COM (anode in HI = forward) */
+      const jd=D.jd;if(jd){if(PART_OF[jd.type]){if(jd.type==='D4001'&&jd.flip&&d.ol)ST.revSi=true;if(!jd.flip&&!d.ol)ST['f_'+jd.type]=d.val}return}
+      const ac=acrossM(m),hi=m.hi,lo=m.lo;
       if(!ac&&(hi==null||lo==null||hi===lo||RT.at(hi).length+RT.at(lo).length===0)&&d.ol)ST.open=true;
       if(ac&&!ac.multi&&PART_OF[ac.type]&&D.jack==='HI'){if(ac.type==='D4001'&&!ac.fwd&&d.ol)ST.revSi=true;if(ac.fwd&&!d.ol)ST['f_'+ac.type]=d.val}});
     const B=procB();st.B=B;
@@ -124,12 +129,11 @@ setup(RT){
   return {status,
     steps:[
       {dev:'dmm',t:'Procedure A (Table 1.1): شغّل DMM 1 (POWER) وحوّله على وضع اختبار الدايود ▶|.',ok:s=>s.dmmDiode},
-      {dev:'dmm',t:'والأطراف مفتوحة (مو موصولة على شي)، شوف قراءة الـ open circuit وسجّلها في Table 1.1.',ok:s=>ST.open},
-      {dev:'board',t:'ركّب الـ 1N4001 ووصّل الـ DMM عليه عكسي (HI على الكاثود، عند الحلقة الرمادية): القراءة تبقى نفس قراءة الـ open circuit.',
-        lines:[{t:'1N4001: anode → node 0, cathode → node 1',note:'الكاثود = الحلقة الرمادية',part:['D4001',0,1],pol:true},{t:'DMM 1 HI → node 1',note:'على الكاثود',lead:'mh',at:1},{t:'DMM 1 COM → node 0',note:'على الأنود',lead:'ml',at:0}],ok:s=>ST.revSi},
-      {dev:'board',t:'اعكس الأطراف (HI على الأنود): الـ DMM يعطيك الـ forward voltage drop. سجّله في Table 1.1.',
-        lines:[{t:'DMM 1 HI → node 0',note:'على الأنود',lead:'mh',at:0},{t:'DMM 1 COM → node 1',note:'على الكاثود',lead:'ml',at:1}],ok:s=>ST.f_D4001!=null},
-      {dev:'board',t:'كرّر في نفس المكان (الأنود على node 0 والحلقة على node 1) مع: الزينر 1N4733A، والـ LED (الرجل الطويلة = الأنود)، والـ Ge diode، وسجّل الـ forward drop لكل واحد.',ok:s=>ST.f_Z4733!=null&&ST.f_LED!=null&&ST.f_GE!=null},
+      {dev:'dmm',t:'والمداخل فاضية (ما فيه شي في HI و COM)، شوف قراءة الـ open circuit وسجّلها في Table 1.1.',ok:s=>ST.open},
+      {dev:'dmm',t:'اسحب الـ 1N4001 من الشنطة وحطه على مداخل DMM 1 (HI و COM) مثل المعمل، واضغط على الدايود عشان تقلبه لين يصير الكاثود (الحلقة الرمادية) في HI: القراءة نفس قراءة الـ open circuit (reverse biased). سجّلها.',ok:s=>ST.revSi},
+      {dev:'dmm',t:'اقلبه (اضغط عليه): الأنود في HI والكاثود في COM. الـ DMM يعطيك الـ forward voltage drop. سجّله في Table 1.1.',ok:s=>ST.f_D4001!=null},
+      {dev:'dmm',t:'اضغط "شيل" وكرّر بنفس الطريقة (الأنود في HI) مع: الزينر 1N4733A، والـ LED (الرجل الطويلة في HI، ويضوي خفيف)، والـ Ge diode، وسجّل الـ forward drop لكل واحد.',ok:s=>ST.f_Z4733!=null&&ST.f_LED!=null&&ST.f_GE!=null},
+      {dev:'dmm',t:'شيل الدايود من مداخل DMM 1 (زر "شيل") عشان ترجع تستخدم أطرافه.',ok:s=>!s.jdIn},
       {dev:'board',fig:'labs/ee312/fig/fig1-3.png',figCap:'Fig. 1.3',t:'Procedure B: ركّب Fig. 1.3a (open circuit مكان الدايود). شيل الدايود من Procedure A أول.',
         lines:[{t:'R<sub>S</sub> = 100 Ω: node 14 ↔ node 15',part:['R100',14,15]},{t:'DC + (L +) → node 14',note:'الوحدة اليسار',lead:'Lp',at:14},{t:'DC − (L −) → node 22',lead:'Lm',at:22},
           {t:'DMM 2 HI → node 15',note:'طرف R<sub>S</sub> الفاضي: V<sub>OC</sub>',lead:'m2h',at:15},{t:'DMM 2 COM → node 22',lead:'m2l',at:22}],ok:s=>s.figA},
