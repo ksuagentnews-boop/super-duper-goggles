@@ -2,51 +2,50 @@ name: EE205 video frames
 on:
   push:
     branches: [tools/video-frames]
-  workflow_dispatch:
 permissions:
   contents: write
 jobs:
   frames:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - name: Tools
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
-          pip install -q -U yt-dlp
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg jq
+          pip install -q -U yt-dlp bgutil-ytdlp-pot-provider
+          docker run -d --name pot -p 4416:4416 --init brainicism/bgutil-ytdlp-pot-provider
+          sleep 8
       - name: Download and extract
         run: |
           mkdir -p out v
+          try_ytdlp() { # $1 name $2 id $3 extractor args
+            yt-dlp $3 --no-progress -f "bv*[height<=720]+ba/b[height<=720]/b/18" -o "v/$1.%(ext)s" \
+              --write-auto-subs --write-subs --sub-langs "ar.*,en.*" --convert-subs srt "https://youtu.be/$2" >> out/log.txt 2>&1; }
+          try_piped() { # $1 name $2 id
+            for api in https://pipedapi.kavin.rocks https://pipedapi.adminforge.de https://api.piped.private.coffee https://pipedapi.r4fo.com https://piped-api.lunar.icu; do
+              u=$(curl -sS --max-time 30 "$api/streams/$2" | jq -r '[.videoStreams[]? | select(.videoOnly==false)] | sort_by(.height) | last | .url // empty' 2>>out/log.txt)
+              echo "piped $api -> ${u:0:60}" >> out/log.txt
+              if [ -n "$u" ] && curl -sSfL --max-time 600 -o "v/$1.mp4" "$u" && ffprobe -v error "v/$1.mp4"; then echo "ok piped $api" >> out/log.txt; return 0; fi
+              rm -f "v/$1.mp4"
+            done; return 1; }
           while read name id; do
             [ -z "$id" ] && continue
-            echo "== $name $id"
+            echo "== $name $id" >> out/log.txt
             ok=""
-            for client in "default" "tv" "web_safari" "mweb" "ios" "android_vr"; do
-              if [ "$client" = default ]; then ea=""; else ea="--extractor-args youtube:player_client=$client"; fi
-              if yt-dlp $ea --no-progress -f "bv*[height<=720]+ba/b[height<=720]/b/18" -o "v/$name.%(ext)s" \
-                   --write-auto-subs --write-subs --sub-langs "ar.*,en.*" --convert-subs srt "https://youtu.be/$id" > log.txt 2>&1; then ok=1; echo "ok via $client"; break; fi
-              echo "-- $client failed: $(grep -m1 ERROR log.txt)"
+            for ea in "" "--extractor-args youtube:player_client=web_embedded" "--extractor-args youtube:player_client=tv" "--extractor-args youtube:player_client=mweb"; do
+              if try_ytdlp "$name" "$id" "$ea"; then ok=1; echo "ok ytdlp [$ea]" >> out/log.txt; break; fi
             done
-            if [ -z "$ok" ]; then
-              for inst in https://inv.nadeko.net https://invidious.nerdvpn.de https://yewtu.be https://invidious.private.coffee; do
-                if curl -sSfL --max-time 300 -o "v/$name.mp4" "$inst/latest_version?id=$id&itag=18&local=true"; then
-                  if [ -s "v/$name.mp4" ] && ffprobe -v error "v/$name.mp4"; then ok=1; echo "ok via $inst"; break; fi
-                fi
-                rm -f "v/$name.mp4"
-              done
-            fi
-            [ -z "$ok" ] && echo "FAILED $name" >> out/failed.txt
-            f=$(ls v/$name.* 2>/dev/null | grep -v '\.srt$' | head -1)
-            if [ -n "$f" ]; then
-              mkdir -p out/$name
-              ffprobe -v error -show_entries format=duration -of csv=p=0 "$f" > out/$name/duration.txt
-              ffmpeg -loglevel error -i "$f" -vf "fps=1/4,scale=1024:-2" -q:v 6 "out/$name/t%04d.jpg"
-              cp v/$name*.srt out/$name/ 2>/dev/null || true
-            fi
+            [ -z "$ok" ] && try_piped "$name" "$id" && ok=1
+            if [ -z "$ok" ]; then echo "FAILED $name" >> out/failed.txt; continue; fi
+            f=$(ls v/$name.* | grep -v '\.srt$' | head -1)
+            mkdir -p out/$name
+            ffprobe -v error -show_entries format=duration -of csv=p=0 "$f" > out/$name/duration.txt
+            ffmpeg -loglevel error -i "$f" -vf "fps=1/4,scale=1024:-2" -q:v 6 "out/$name/t%04d.jpg"
+            cp v/$name*.srt out/$name/ 2>/dev/null || true
           done < videos.txt
-          du -sh out; ls out
       - name: Commit frames
+        if: always()
         run: |
           git config user.name "frames-bot"; git config user.email "frames-bot@users.noreply.github.com"
           git checkout --orphan video-frames-out
