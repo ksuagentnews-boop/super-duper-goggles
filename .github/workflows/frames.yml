@@ -10,17 +10,17 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - name: Thumbnails and storyboards
+      - name: Storyboards
         run: |
           mkdir -p out
-          python3 sb.py || true
+          python3 sb2.py || true
           du -sh out; cat out/log.txt | head -80
       - name: Commit
         if: always()
         run: |
           git config user.name "frames-bot"; git config user.email "frames-bot@users.noreply.github.com"
           git checkout --orphan video-frames-out
-          git rm -rq --cached . ; rm -rf .github videos.txt videos.all sb.py
+          git rm -rq --cached . ; rm -rf .github videos.txt videos.all sb.py sb2.py
           mv out/* . ; rmdir out
           git add -A && git commit -qm "EE205 thumbnails + storyboards"
           git push -f origin video-frames-out
