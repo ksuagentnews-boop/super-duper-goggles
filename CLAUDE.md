@@ -53,11 +53,11 @@ A static website (GitHub Pages, no server, no login) that simulates the EE depar
 - When the site opens, a calm welcome card is shown over the corridor, centred, in this order (top to bottom):
   1. «أهلاً بك في محاكي معامل الهندسة الكهربائية» — the title, the largest text on the card.
   2. «سائلاً المولى لنا ولكم التوفيق والسداد» — smaller, softer text under it.
-  3. A thin divider line, then at the bottom, small and light (muted grey, low emphasis — a discreet credit, never the biggest thing on the card): «تم التصميم من قبل Abdulrahman Algniah» with a small LinkedIn icon/link (opens in a new tab).
+  3. A thin divider line, then at the bottom, small and light (muted grey, low emphasis — a discreet credit, never the biggest thing on the card): «تم التصميم من قبل عبدالرحمن القنيعة» with a small LinkedIn icon/link (opens in a new tab).
   4. A "ابدأ" button closes it.
 - Shown on every new visit (or once per session); an ⓘ button in the corridor HUD re-opens it.
 - The name and the LinkedIn URL come from one config object (`labs/site.js` or similar: `{author, linkedin}`) so the owner can change them without touching engine code. If `linkedin` is empty, show the name only (no link, no icon).
-- Current values: `author: 'Abdulrahman Algniah'`, `linkedin: 'https://www.linkedin.com/in/abdulrahman-algniah-3688673ab'`.
+- Current values: `author: 'عبدالرحمن القنيعة'`, `linkedin: 'https://www.linkedin.com/in/abdulrahman-algniah-3688673ab'`.
 
 ## Multi-lab building (plan for it now)
 - Later the site will hold all EE labs (~8). The student will start in a **corridor of the EE department**, walk along it, and enter a lab through its **door** (a sign with the lab code, e.g. `EE312`, above each door). Entering a door loads that lab's room with its tables.
@@ -65,7 +65,7 @@ A static website (GitHub Pages, no server, no login) that simulates the EE depar
   - a **lab registry** (`labs/index.js`): code, name, room layout (rows × tables), list of experiments;
   - the hall renders any lab room from its registry entry; the corridor renders one door per registered lab;
   - instruments are shared across labs (one scope/generator/DMM/supply implementation reused everywhere).
-- For now there is only `EE312`: the site can open straight into its room, but the corridor/door scene and the registry must already exist so adding a lab = adding a folder `labs/<code>/` + one registry entry.
+- Only `EE312` is built so far; the site opens in the corridor (below) and adding a lab = adding a folder `labs/<code>/` + its registry entry.
 
 ### The department corridor, ordered by study level (approved by the user)
 - The site link opens in the **corridor** (not inside a lab). The student stands at its entrance looking down it.
@@ -113,7 +113,7 @@ A static website (GitHub Pages, no server, no login) that simulates the EE depar
 - Oscilloscope: **GW Instek GDS-1104B**, 4 channels (CH3 is needed in Exp 5). `scope-GW-Instek-GDS-1104B.png`, `scope-front-panel-labels.png`.
 - Function generator: **PeakTech 4124** (two outputs CH1/CH2, F1–F5 keys, keypad, rotary knob — Exp 3 uses the knob to raise amplitude gradually). `function-generator-PeakTech-4124.png`.
 - DC power supply: **TTi EL302RD dual power supply** — left and right units, each with VOLTS/AMPS displays, COARSE/FINE VOLTAGE and CURRENT knobs, CC lamp, − / + terminals and its own dc ON/OFF switch; one ~POWER ac switch. Both units are needed for bipolar ±15 V (Exp 5) and for two independent supplies (Exp 7, 9). The current single-unit supply in `index.html` must be replaced. `dc-supply-TTi-EL302RD.jpg`.
-- Digital multimeter: **MCP MT3805** bench DMM — keys ·))) , diode, Hz, capacitance, Ω, ACV, DCV, ACI, DCI, RANGE ±/AUTO, HOLD, REL; jacks HI (V·Ω), LO/COM, A; open-circuit/diode readings like the real one (e.g. OL). `dmm-MCP-MT3805.jpg`, `dmm-MCP-MT3805-measure-VAB.jpg`.
+- Digital multimeter: **MCP MT3805** bench DMM (two per table — see "Two bench multimeters") — keys ·))) , diode, Hz, capacitance, Ω, ACV, DCV, ACI, DCI, RANGE ±/AUTO, HOLD, REL; jacks HI (V·Ω), LO/COM, A; open-circuit/diode readings like the real one (e.g. OL). `dmm-MCP-MT3805.jpg`, `dmm-MCP-MT3805-measure-VAB.jpg`.
 - Center-tapped transformer (A, B = center tap, C) for Exp 4.
 - Two resistance decade boxes for Exp 9 Procedure B.
 - Plug-in panel (nine-hole nodes + bridging plugs) and coaxial cables (BNC to banana / alligator / mini-grabber). `plug-in-panel.png`, `coaxial-cables.png`.
