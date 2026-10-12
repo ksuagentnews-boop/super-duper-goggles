@@ -4,7 +4,7 @@ export async function run(page, vp, ok) {
   await sit(page, 'ee312/exp10', 'manual');
   const H = bench(page); H.touch = vp === 'phone';
   const done = async n => (await H.steps()).done >= n;
-  const rd = () => page.evaluate(() => BENCH.sim.RT.dmm().val);
+  const rd = (k = 0) => page.evaluate(k => BENCH.sim.RT.meters()[k].r.val, k);
   const cap = id => page.evaluate(id => document.querySelector(`[data-cap="${id}"]`).click(), id);
   // ---- A1: each resistor alone on nodes 0–1
   await H.focus('dmm'); await H.key('m:PWR'); await H.key('m:OHM'); await H.focus('board'); await H.lead('mh', 0); await H.lead('ml', 1);
@@ -16,14 +16,17 @@ export async function run(page, vp, ok) {
   await H.place('R5k6', 16, 23); await H.place('R47k', 17, 24); await H.place('BR', 23, 24); await H.place('R27k', 17, 18); await H.place('R4k7', 14, 15); await H.wire(18, 14);
   await H.lead('Lp', 23); await H.lead('Lm', 14);
   await H.focus('psu'); await H.key('p:PWR'); await H.key('p:LVC+', 7); await H.key('p:LON'); ok(await done(2), 'A2 Fig. 10.1, VCC 12 V');
-  await H.focus('dmm'); await H.key('m:DCV'); await H.focus('board');
+  await H.focus('dmm'); await H.key('m:DCV'); await H.focus('dmm2'); await H.key('m2:PWR'); await H.key('m2:DCV'); await H.focus('board');
   const V = {};
-  for (const [k, h, l] of [['be', 17, 15], ['bc', 17, 16], ['ce', 16, 15], ['r1', 24, 17], ['r2', 17, 18], ['rc', 23, 16], ['re', 15, 14]]) { await H.lead('mh', h); await H.lead('ml', l); V[k] = await rd(); }
+  /* two meters share the seven readings: DMM 1 and DMM 2 alternate */
+  for (const [i, [k, h, l]] of [['be', 17, 15], ['bc', 17, 16], ['ce', 16, 15], ['r1', 24, 17], ['r2', 17, 18], ['rc', 23, 16], ['re', 15, 14]].entries()) { const p = i % 2 ? 'm2' : 'm'; await H.lead(p + 'h', h); await H.lead(p + 'l', l); V[k] = await rd(i % 2); }
+  await H.lead('m2h', null); await H.lead('m2l', null);
   ok(await done(3), 'A3 dc voltages: ' + Object.entries(V).map(([k, v]) => k + ' ' + v.toFixed(3)).join(' '));
   // ---- B
   await H.place('C470', 15, 22); await H.place('BR', 21, 22); await H.place('BR', 14, 21);
   await H.wire(17, 11); await H.place('C2u2', 11, 12); await H.wire(16, 3); await H.place('C2u2', 3, 4);
-  await H.lead('gr', 12); await H.lead('gb', 14); ok(await done(4), 'B1 Fig. 10.2');
+  await H.lead('gr', 12); await H.lead('gb', 14);
+  ok(await done(4), 'B1 Fig. 10.2');
   await H.lead('c1r', 12); await H.lead('c2r', 4); await H.lead('c1b', 14); await H.lead('c2b', 14);
   await H.focus('sc'); await H.key('s:PWR'); await H.key('s:Default'); await H.key('s:Autoset'); await H.key('s:CH2'); ok(await done(5), 'B2 scope');
   await H.focus('gen'); await H.key('g:PWR'); await H.key('g:Sine'); await H.gen('F1', '1', 'F2'); await H.gen('F2', '20', 'F1'); await H.gen('F3', '0', 'F2'); await H.key('g:CH1'); ok(await done(6), 'B3 20 mVpp 1 kHz');

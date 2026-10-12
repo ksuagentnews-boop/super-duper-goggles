@@ -45,7 +45,8 @@ instruments:[
   {type:'gen',prev:{wave:'Square',freq:0.2,amp:5,off:2.5}},
   {type:'psu',prev:d=>{d.u[0].v=5;d.u[0].ilim=0.1;d.u[1].v=1.2;d.u[1].ilim=0.5}},
   {type:'scope',probes:2,prev:sc=>{sc.ch[0].vd=0.5;sc.ch[1].on=true;sc.ch[1].vd=0.2;sc.ch[1].cpl='AC';sc.td=0.5}},
-  {type:'dmm',prev:d=>{d.fn='DCV'}}],
+  {type:'dmm',n:1,prev:d=>{d.fn='DCV'}},
+  {type:'dmm',n:2,prev:d=>{d.fn='ACV'}}],
 parts:{BD137:{t:'BJT',pkg:'TO126',mark:'BD137',lab:'BD137',pins:[{n:'E',dx:0,dy:0,h:1,role:'e'},{n:'C',dx:1,dy:0,h:1,role:'c'},{n:'B',dx:2,dy:0,h:1,role:'b'}],
     stamp:(els,R,inner,p)=>{els.push({t:'BJT',c:R.c,b:R.b,e:R.e,m:SOLVER.MODELS.bd137,pid:p.id})}},
   R47k:{t:'R',r:47e3,lab:'47kΩ'},R27k:{t:'R',r:27e3,lab:'27kΩ'},R5k6:{t:'R',r:5600,lab:'5.6kΩ'},R4k7:{t:'R',r:4700,lab:'4.7kΩ'},
@@ -54,7 +55,7 @@ tray:[['BD137','BD137'],['R47k','47 kΩ'],['R27k','27 kΩ'],['R5k6','5.6 kΩ'],[
 cycles:6,
 decorate(RT){const TB=RT.TB;if(!TB||!TB.capMin)return;let boom=false;
   /* a terminal tied to nothing else has no defined potential: such a capacitor never charges */
-  const leadOn=net=>['Lp','Lm','Rp','Rm','gr','c1r','c2r','mh','ml'].some(k=>RT.leadNet(k)===net);const tied=net=>net===-1||RT.at(net).length>1||leadOn(net);
+  const leadOn=net=>['Lp','Lm','Rp','Rm','gr','c1r','c2r','mh','ml','m2h','m2l'].some(k=>RT.leadNet(k)===net);const tied=net=>net===-1||RT.at(net).length>1||leadOn(net);
   RT.S.parts.forEach(p=>{if(RT.PARTS[p.type].t==='C'&&!p.dead&&TB.capMin[p.id]!=null&&TB.capMin[p.id]<-1&&RT.partNets(p).every(tied)){p.dead=true;boom=true}});
   if(boom){BENCH.say('💥 مكثف كيميائي انفجر لأنه معكوس! طفّ المصدر وبدّله بالاتجاه الصحيح (+ جهة الجهد الأعلى).');RT.dirty=true;RT.recompute()}},
 setup(RT){
@@ -70,13 +71,17 @@ setup(RT){
       return c}
     return null}
   const ST={r:{},v:{}};
-  function status(){const S=RT.S,D=S.dmm,g=S.gen,sc=S.sc,r=RT.dmm()||{};const c=circuit();const st={kind:c&&c.kind,c,on:!!(c&&c.on)};
-    const ok=D.pwr&&D.jack==='HI'&&r.val!=null&&!r.ol;const hi=RT.leadNet('mh'),lo=RT.leadNet('ml');const across=(a,b)=>a!=null&&b!=null&&((hi===a&&lo===b)||(hi===b&&lo===a));
+  /* two meters: the dc voltages of Fig. 10.3 are read with either meter */
+  function status(){const S=RT.S,g=S.gen,sc=S.sc;const c=circuit();const st={kind:c&&c.kind,c,on:!!(c&&c.on)};
+    RT.meters().forEach(m=>{const D=m.D,r=m.r,hi=m.hi,lo=m.lo;
+    const ok=D.pwr&&D.jack==='HI'&&r.val!=null&&!r.ol;const across=(a,b)=>a!=null&&b!=null&&((hi===a&&lo===b)||(hi===b&&lo===a));
     /* resistor measured alone (nothing else on its two nodes) */
     if(ok&&D.fn==='OHM'&&hi!=null&&lo!=null&&hi!==lo){const b=RT.between(hi,lo);if(b.length===1&&RS.includes(b[0].p.type)&&RT.at(hi).length===1&&RT.at(lo).length===1)ST.r[b[0].p.type]=r.val}
     if(ok&&D.fn==='DCV'&&c&&c.kind==='DC'&&c.on){const n=c.n,v=A(r.val);
-      if(across(n.b,n.e))ST.v.be=v;if(hi===n.b&&lo===n.c)ST.v.bc=r.val;if(hi===n.c&&lo===n.b)ST.v.bc=-r.val;if(across(n.c,n.e))ST.v.ce=v;
-      if(across(c.P,n.b))ST.v.r1=v;if(across(n.b,c.N))ST.v.r2=v;if(across(c.P,n.c))ST.v.rc=v;if(across(n.e,c.N))ST.v.re=v}
+      /* the other meter may be connected or moved meanwhile (its 10 MΩ loads the divider a little): keep the range seen */
+      const put=(k,x)=>{const o=ST.v[k];ST.v[k]=o?{lo:Math.min(o.lo,x),hi:Math.max(o.hi,x)}:{lo:x,hi:x}};
+      if(across(n.b,n.e))put('be',v);if(hi===n.b&&lo===n.c)put('bc',r.val);if(hi===n.c&&lo===n.b)put('bc',-r.val);if(across(n.c,n.e))put('ce',v);
+      if(across(c.P,n.b))put('r1',v);if(across(n.b,c.N))put('r2',v);if(across(c.P,n.c))put('rc',v);if(across(n.e,c.N))put('re',v)}});
     st.rAll=RS.every(t=>ST.r[t]!=null);st.vAll=['be','bc','ce','r1','r2','rc','re'].every(k=>ST.v[k]!=null);
     if(sc.msg==='Default Setup')ST.def=true;if((sc.msg==='Autoset'||sc.msg==='No signal')&&ST.def)ST.auto=true;
     st.sig=g.pwr&&g.out&&g.wave==='Sine'&&A(g.freq-1000)<0.01&&A(g.off)<5e-4;st.amp=g.amp;
@@ -93,7 +98,8 @@ setup(RT){
     if(!c.probes)pr.push('CH1 على v<sub>i</sub> و CH2 على v<sub>o</sub>');if(!c.chs||!c.fit||!c.probe1)pr.push('الموجتين لازم تبان واضحة على الشاشة');return [!pr.length,pr.join('، ')]};
   $('submit').addEventListener('click',()=>{const g=G.grader(),v=G.v;const tl=(e,f=0.003)=>Math.max(0.002,A(e)*f);
     const rk={t_rc:'R5k6',t_re:'R4k7',t_r1:'R47k',t_r2:'R27k'};g.add(Object.entries(rk).every(([id,t])=>ST.r[t]!=null&&G.near(v(id),ST.r[t]/1e3,tl(ST.r[t]/1e3,0.002))),'Table 10.1 resistors (DMM)',Object.entries(rk).map(([id,t])=>`${t}: ${ST.r[t]!=null?(ST.r[t]/1e3).toFixed(3)+' kΩ':'ما انقاس'}`).join('، '));
-    const vk=['be','bc','ce','r1','r2','rc','re'];g.add(vk.every(k=>ST.v[k]!=null&&G.near(v('v_'+k),ST.v[k],tl(ST.v[k]))),'Fig. 10.3 dc voltages',vk.map(k=>`V${k.toUpperCase()} ≈ ${ST.v[k]!=null?ST.v[k].toFixed(3):'?'}`).join('، '));
+    const vk=['be','bc','ce','r1','r2','rc','re'];const inR=(x,e)=>e!=null&&x>=e.lo-tl(e.lo)&&x<=e.hi+tl(e.hi),mid=e=>(e.lo+e.hi)/2;
+    g.add(vk.every(k=>inR(v('v_'+k),ST.v[k])),'Fig. 10.3 dc voltages',vk.map(k=>`V${k.toUpperCase()} ≈ ${ST.v[k]!=null?mid(ST.v[k]).toFixed(3):'?'}`).join('، '));
     const ic=v('v_rc')/v('t_rc'),ie=v('v_re')/v('t_re'),i1=v('v_r1')/v('t_r1'),i2=v('v_r2')/v('t_r2'),ib=v('t_i1')-v('t_i2');
     g.add(G.near(v('t_ic'),ic,tl(ic))&&G.near(v('t_ie'),ie,tl(ie))&&G.near(v('t_i1'),i1,tl(i1))&&G.near(v('t_i2'),i2,tl(i2)),'Table 10.1 IC, IE, IR1, IR2','Ohm’s law with your measured R and V');
     g.add(G.near(v('t_ib'),ib,Math.max(0.0002,A(ib)*0.01)),'Table 10.1 IB','= IR1 − IR2 (KCL)');
@@ -111,11 +117,19 @@ setup(RT){
     g.show($('result'))});
   return {status,
     steps:[
-      {dev:'dmm',t:'Procedure A: الـ DMM على Ω: قِس كل مقاومة (5.6k، 4.7k، 47k، 27k) وهي لحالها على اللوحة، وسجّلها في Table 10.1.',ok:s=>s.rAll},
-      {dev:'board',t:'ركّب Fig. 10.1: R<sub>1</sub> = 47 kΩ من V<sub>CC</sub> للـ base، R<sub>2</sub> = 27 kΩ من الـ base للأرضي، R<sub>C</sub> = 5.6 kΩ من V<sub>CC</sub> للـ collector، R<sub>E</sub> = 4.7 kΩ من الـ emitter للأرضي. المصدر 12.00 V وشغّله.',ok:s=>s.kind==='DC'&&s.on},
-      {dev:'dmm',t:'الـ DMM على DCV: قِس V<sub>BE</sub> و V<sub>BC</sub> (الأحمر على B) و V<sub>CE</sub> و V<sub>R1</sub> و V<sub>R2</sub> و V<sub>RC</sub> و V<sub>RE</sub> وسجّلها على Fig. 10.3.',ok:s=>s.vAll},
-      {dev:'board',t:'Procedure B: ركّب Fig. 10.2: C<sub>1</sub> = 2.2 µF من GEN OUT للـ base، C<sub>2</sub> = 2.2 µF من الـ collector لـ v<sub>o</sub>، C<sub>E</sub> = 470 µF على R<sub>E</sub> (+ جهة الـ emitter). GEN ⏚ على الأرضي.',ok:s=>s.kind==='AC'&&s.on},
-      {dev:'scope',t:'شغّل الإسكوب، Default وبعدها Autoset. CH1 على v<sub>i</sub> و CH2 على v<sub>o</sub> (الأسود على الأرضي)، وشغّل CH2.',ok:s=>ST.auto&&s.probes&&s.chs},
+      {dev:'dmm',lines:[{t:'DMM 1 HI → node 0',lead:'mh',at:0},{t:'DMM 1 COM → node 1',note:'كل مقاومة لحالها بين node 0 و node 1',lead:'ml',at:1}],t:'Procedure A: DMM 1 على Ω: قِس كل مقاومة (5.6k، 4.7k، 47k، 27k) وهي لحالها على اللوحة، وسجّلها في Table 10.1.',ok:s=>s.rAll},
+      {dev:'board',fig:'labs/ee312/fig/fig10-1.png',figCap:'Fig. 10.1',
+        lines:[{t:'BD137: E → node 15, C → node 16, B → node 17',note:'الوجه المكتوب عليه للأمام',ic:'BD137',pins:{E:15,C:16,B:17}},{t:'R<sub>C</sub> = 5.6 kΩ: node 16 ↔ node 23',part:['R5k6',16,23]},
+          {t:'R<sub>1</sub> = 47 kΩ: node 17 ↔ node 24',part:['R47k',17,24]},{t:'bridging plug: node 23 ↔ node 24',note:'V<sub>CC</sub>',wire:[23,24]},{t:'R<sub>2</sub> = 27 kΩ: node 17 ↔ node 18',part:['R27k',17,18]},
+          {t:'R<sub>E</sub> = 4.7 kΩ: node 15 ↔ node 14',part:['R4k7',15,14]},{t:'wire: node 18 ↔ node 14',note:'الأرضي',wire:[18,14]},{t:'DC + (L +) → node 23',note:'V<sub>CC</sub> = 12 V',lead:'Lp',at:23},{t:'DC − (L −) → node 14',lead:'Lm',at:14}],
+        t:'ركّب Fig. 10.1: R<sub>1</sub> = 47 kΩ من V<sub>CC</sub> للـ base، R<sub>2</sub> = 27 kΩ من الـ base للأرضي، R<sub>C</sub> = 5.6 kΩ من V<sub>CC</sub> للـ collector، R<sub>E</sub> = 4.7 kΩ من الـ emitter للأرضي. المصدر 12.00 V وشغّله.',ok:s=>s.kind==='DC'&&s.on},
+      {dev:'dmm',t:'الملتيميترين على DCV (اقسم القياسات بينهم): قِس V<sub>BE</sub> و V<sub>BC</sub> (الأحمر على B) و V<sub>CE</sub> و V<sub>R1</sub> و V<sub>R2</sub> و V<sub>RC</sub> و V<sub>RE</sub> وسجّلها على Fig. 10.3.',ok:s=>s.vAll},
+      {dev:'board',fig:'labs/ee312/fig/fig10-2.png',figCap:'Fig. 10.2',
+        lines:[{t:'C<sub>E</sub> = 470 µF: + → node 15, − → node 22',note:'على R<sub>E</sub>',part:['C470',15,22],pol:true},{t:'bridging plug: node 21 ↔ node 22',wire:[21,22]},{t:'bridging plug: node 14 ↔ node 21',note:'الأرضي',wire:[14,21]},
+          {t:'wire: node 17 ↔ node 11',note:'من B',wire:[17,11]},{t:'C<sub>1</sub> = 2.2 µF: + → node 11, − → node 12',part:['C2u2',11,12],pol:true},{t:'wire: node 16 ↔ node 3',note:'من C',wire:[16,3]},
+          {t:'C<sub>2</sub> = 2.2 µF: + → node 3, − → node 4',note:'v<sub>o</sub> على node 4',part:['C2u2',3,4],pol:true},{t:'GEN OUT → node 12',note:'v<sub>i</sub>',lead:'gr',at:12},{t:'GEN ⏚ → node 14',lead:'gb',at:14}],
+        t:'Procedure B: ركّب Fig. 10.2: C<sub>1</sub> = 2.2 µF من GEN OUT للـ base، C<sub>2</sub> = 2.2 µF من الـ collector لـ v<sub>o</sub>، C<sub>E</sub> = 470 µF على R<sub>E</sub> (+ جهة الـ emitter). GEN ⏚ على الأرضي.',ok:s=>s.kind==='AC'&&s.on},
+      {dev:'scope',fig:'labs/ee312/fig/fig10-2.png',figCap:'Fig. 10.2',lines:[{t:'CH1 → node 12',note:'v<sub>i</sub>',lead:'c1r',at:12},{t:'CH1 ⏚ → node 14',lead:'c1b',at:14},{t:'CH2 → node 4',note:'v<sub>o</sub>',lead:'c2r',at:4},{t:'CH2 ⏚ → node 14',lead:'c2b',at:14}],t:'شغّل الإسكوب، Default وبعدها Autoset. CH1 على v<sub>i</sub> و CH2 على v<sub>o</sub> (الأسود على الأرضي)، وشغّل CH2.',ok:s=>ST.auto&&s.probes&&s.chs},
       {dev:'gen',t:'الجنريتر: Sine، 1 kHz، 20 mVpp، Offset 0، وشغّل CH1.',ok:s=>s.kind==='AC'&&s.sig&&A(s.amp-0.02)<5e-4},
       {dev:'scope',t:'أضف Pk-Pk لـ CH1 و CH2 (Measure ← Add Measurement).',ok:s=>s.meas},
       {dev:'scope',t:'اضبط الـ SCALE والـ time/div، وصوّر v<sub>i</sub>(t) و v<sub>o</sub>(t) في Fig. 10.4. كم فرق الطور؟ احسب A<sub>v</sub> وسجّله.',ok:s=>!!CAPS.f104},

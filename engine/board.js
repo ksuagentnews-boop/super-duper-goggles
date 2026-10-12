@@ -28,7 +28,7 @@ const FV={left:{x:-1,y:0},right:{x:1,y:0},up:{x:0,y:-1},down:{x:0,y:1}};
 const FACE={};INST.forEach(i=>{const fs=(i.leads||[]).map(l=>fromOf(l.k));if(!fs.length){FACE[i.key]='down';return}
   const cx=fs.reduce((t,f)=>t+f.x,0)/fs.length,cy=fs.reduce((t,f)=>t+f.y,0)/fs.length,[w,h]=i.size;
   const d={left:cx,right:w-cx,up:cy,down:h-cy};FACE[i.key]=Object.keys(d).reduce((a,b)=>d[b]<d[a]?b:a)});
-const RACK=64,RG=40,CG=70;          // rack row above the panel · gap between instruments · gap between a side column and the panel
+const RACK=64,RG=50,CG=70;          // rack row above the panel · gap between instruments · gap between a side column and the panel
 let BX=0,BY=0,parkY=-RACK;
 /* rack: every parked plug sits in one row above the panel, in the order of the terminals it comes from (so parked cables never cross) */
 function parkFor(list){const want=list.map(w=>({k:w.k,x:w.x})).sort((a,b)=>a.x-b.x);
@@ -43,14 +43,15 @@ const DEF={};{
   col(L,i=>BX-CG-i.size[0]);col(R,()=>BX+BW+CG);
   const row=ord=>{const W=ord.reduce((t,i)=>t+i.size[0],0)+Math.max(0,ord.length-1)*RG;let x=BX+BW/2-W/2;const yb=parkY-22-34;
     ord.forEach(i=>{DEF[i.key]={x:Math.round(x),y:yb-i.size[1]};x+=i.size[0]+RG})};
-  /* order of the top row: the one with the shortest cables to the rack */
+  /* order of the top row: no parked cable crossing another cable or an instrument, then the shortest cables */
   const perms=a=>a.length<2?[a]:a.flatMap((x,i)=>perms([...a.slice(0,i),...a.slice(i+1)]).map(p=>[x,...p]));
   let best=null;for(const ord of perms(T)){row(ord);const term=k=>{const f=fromOf(k),p=DEF[LEADDEF[k].inst.key];return {x:f.x+p.x,y:f.y+p.y}};
     const pk=parkFor(LEADS.map(k=>({k,x:term(k).x})));const len=LEADS.reduce((t,k)=>{const a=term(k);return t+Math.hypot(a.x-pk[k].x,a.y-pk[k].y)},0);
-    if(!best||len<best.len-1)best={len,ord}}
+    const x=crossCount(parkedCables(DEF,pk),DEF);const score=x.cc.length*1e6+x.ci.length*1e6+len;
+    if(!best||score<best.score-1)best={score,ord}}
   row(best?best.ord:T);
   /* shift so the whole desk starts at (20,20) */
-  let x0=BX-66,y0=parkY-34;INST.forEach(i=>{x0=Math.min(x0,DEF[i.key].x);y0=Math.min(y0,DEF[i.key].y-36)});
+  let x0=BX-66,y0=parkY-34;INST.forEach(i=>{x0=Math.min(x0,DEF[i.key].x);y0=Math.min(y0,DEF[i.key].y-46)});
   const dx=20-x0,dy=20-y0;BX+=dx;BY+=dy;parkY+=dy;INST.forEach(i=>{DEF[i.key].x+=dx;DEF[i.key].y+=dy})}
 /* the student's arrangement, remembered per experiment (relative to the panel) */
 const LSK='eelab:layout:'+(BENCH.exp||'');const POS={};
@@ -58,15 +59,18 @@ function loadPos(){INST.forEach(i=>POS[i.key]={...DEF[i.key]});try{const s=JSON.
 function savePos(){try{const o={};INST.forEach(i=>o[i.key]={x:Math.round(POS[i.key].x-BX),y:Math.round(POS[i.key].y-BY)});localStorage.setItem(LSK,JSON.stringify(o))}catch(_){}}
 loadPos();
 const termOf=k=>{const f=fromOf(k),p=POS[LEADDEF[k].inst.key];return {x:f.x+p.x,y:f.y+p.y}};
-const PARK={};const updPark=()=>Object.assign(PARK,parkFor(LEADS.map(k=>({k,x:termOf(k).x}))));updPark();
+/* parked plugs belong to their lead: they rest on the rack in the default arrangement and travel with the instrument
+   when it is moved, so a lead never keeps an old route across the desk */
+const DPARK=parkFor(LEADS.map(k=>{const f=fromOf(k),p=DEF[LEADDEF[k].inst.key];return {k,x:f.x+p.x}}));
+const PARK={};const updPark=()=>LEADS.forEach(k=>{const ik=LEADDEF[k].inst.key,d=DPARK[k];PARK[k]={x:d.x+POS[ik].x-DEF[ik].x,y:d.y+POS[ik].y-DEF[ik].y}});updPark();
 const nodeC=i=>({x:BX+44+(i%COLS)*P,y:BY+44+Math.floor(i/COLS)*P});
 const holeOff=h=>({x:((h%3)-1)*19,y:(Math.floor(h/3)-1)*19});
 const holeP=(i,h)=>{const c=nodeC(i),o=holeOff(h);return {x:c.x+o.x,y:c.y+o.y}};
 const EDGES=[];for(let i=0;i<NN;i++){if(i%COLS<COLS-1)EDGES.push([i,i+1]);if(i+COLS<NN)EDGES.push([i,i+COLS])}
 function dirHole(a,b){if(b===a+1)return 5;if(b===a-1)return 3;if(b===a+COLS)return 7;return 1}
 const regions={},names={};
-const updRegions=()=>INST.forEach(i=>{const p=POS[i.key];regions[i.key]=[p.x-6,p.y-34,i.size[0]+12,i.size[1]+40]});
-updRegions();INST.forEach(i=>names[i.key]=ENGINE.NAMES[i.key]);
+const updRegions=()=>INST.forEach(i=>{const p=POS[i.key];regions[i.key]=[p.x-6,p.y-44,i.size[0]+12,i.size[1]+50]});
+updRegions();INST.forEach(i=>names[i.key]=i.name||ENGINE.NAMES[i.key]);
 regions.board=[BX-66,parkY-34,BW+132,BY+BH+16-(parkY-34)];names.board=ENGINE.NAMES.board;
 RT.inst=byKey;RT.layout={BX,BY,P,COLS,ROWS,parkY,PARK,regions,POS,DEF,FACE};
 
@@ -84,7 +88,7 @@ function fpC(t,n){const ps=PARTS[t].pins;let x=0,y=0;ps.forEach(q=>{const c=node
 
 /* ---------- state ---------- */
 function fresh(){
-  const S={parts:[],wires:[],leads:{},cab:{}};
+  const S={parts:[],wires:[],leads:{},wcol:{}};
   INST.forEach(i=>S[i.key]=i.fresh());
   Object.assign(S,{sel:null,wireMode:false,wireStart:null,armed:null});
   LEADS.forEach(k=>S.leads[k]={node:null,hole:null});
@@ -180,7 +184,12 @@ Object.assign(RT,{nodeV,partNets,pinNet,partV,partI,PARTS,
   /* parts whose two ends are exactly the nets a and b; dir=+1 means p.a on a */
   between:(a,b)=>RT.S.parts.filter(p=>{if(MULTI(p.type))return false;const [x,y]=partNets(p);return PARTS[p.type].t!=='BR'&&a!=null&&b!=null&&((x===a&&y===b)||(x===b&&y===a))}).map(p=>({p,dir:partNets(p)[0]===a?1:-1})),
   at:net=>RT.S.parts.filter(p=>PARTS[p.type].t!=='BR'&&partNets(p).includes(net)),
-  dmm:()=>byKey.dmm?byKey.dmm.reading():null});
+  dmm:()=>byKey.dmm?byKey.dmm.reading():null,
+  /* every bench multimeter (DMM 1, DMM 2) with its state, reading and the nets its HI / COM leads are on */
+  meters:()=>INST.filter(i=>i.leadKeys).map(i=>({key:i.key,D:RT.S[i.key],r:i.reading(),hi:RT.leadNet(i.leadKeys[0]),lo:RT.leadNet(i.leadKeys[1])})),
+  /* the first meter reading a dc voltage across nets a and b (either way round; dir=true: HI on a): {val, m} — val as displayed */
+  meterOn:(a,b,dir,fn='DCV')=>{if(a==null||b==null)return null;for(const m of RT.meters()){const D=m.D;if(!(D.pwr&&D.fn===fn&&D.jack==='HI'&&m.r.val!=null&&!m.r.ol))continue;
+    if((m.hi===a&&m.lo===b)||(!dir&&m.hi===b&&m.lo===a))return {val:m.r.val,m}}return null}});
 
 /* ---------- part drawings (top view, real looks: cathode bands, polarity stripes, colour codes) ---------- */
 const BANDC=['#111','#7a4a1d','#d22','#f08a1c','#f3d21c','#2a9a3c','#2160c9','#7d3fb8','#8a8f93','#f7f7f7'];
@@ -229,7 +238,7 @@ function occupied(skip){const S=RT.S;const occ=new Set();S.parts.forEach(p=>{if(
 function freeHole(node,pref=[4,0,2,6,8,1,3,5,7]){const occ=occupied();for(const h of pref)if(!occ.has(node+':'+h))return h;return null}
 function partsSVG(){const S=RT.S;let s='';
   S.wires.forEach(w=>{const a=holeP(w.a,w.ha),b=holeP(w.b,w.hb);const mx=(a.x+b.x)/2,my=(a.y+b.y)/2-Math.min(40,Math.hypot(b.x-a.x,b.y-a.y)*0.25);const sel=S.sel===w.id;const d=`M${a.x} ${a.y} Q${mx} ${my} ${b.x} ${b.y}`;
-    s+=`<path d="${d}" fill="none" stroke="#5a4300" stroke-width="7" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${sel?'#fff2a8':'#e0b000'}" stroke-width="4.5" stroke-linecap="round"/><path d="${d}" fill="none" stroke="transparent" stroke-width="16" data-k="wire:${w.id}" style="cursor:pointer"/>`});
+    const wc=wireCol(w);s+=`<path d="${d}" fill="none" stroke="${sel?'#fff2a8':wc.d}" stroke-width="7" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${wc.c}" stroke-width="4.5" stroke-linecap="round"/><path d="${d}" fill="none" stroke="transparent" stroke-width="16" data-k="wire:${w.id}" style="cursor:pointer"/>`});
   S.parts.forEach(p=>{if(drag&&drag.kind==='move'&&drag.id===p.id&&drag.active)return;
     if(MULTI(p.type)){const c=nodeC(p.n);s+=`<g transform="translate(${c.x} ${c.y})" data-k="part:${p.id}" style="cursor:grab">${pkgBody(p.type,S.sel===p.id)}</g>`;return}
     const a=holeP(p.a,dirHole(p.a,p.b)),b=holeP(p.b,dirHole(p.b,p.a));const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;const ang=Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI;const L=Math.hypot(b.x-a.x,b.y-a.y);
@@ -247,9 +256,12 @@ function toolbarSVG(){const S=RT.S;let s='';
   return s}
 function leadPos(k){const l=RT.S.leads[k];if(drag&&drag.kind==='lead'&&drag.key===k&&drag.active)return {x:drag.x,y:drag.y};if(l.node!=null)return holeP(l.node,l.hole);return PARK[k]}
 /* cable colours: neutral by default; the student can colour any lead (right-click / long-press) */
-const NEUTRAL={c:'#8d969a',d:'#4f585c'};
-const SWATCH={red:{c:'#e2453b',d:'#5a1414',ar:'أحمر'},black:{c:'#30363a',d:'#000',ar:'أسود'},blue:{c:'#2f6bd9',d:'#173a7a',ar:'أزرق'},yellow:{c:'#f0c419',d:'#7a5f00',ar:'أصفر'},green:{c:'#2f9a4c',d:'#164a24',ar:'أخضر'},white:{c:'#f4f4f2',d:'#8a8f93',ar:'أبيض'}};
-const colOf=(k,def)=>{const c=RT.S.cab[k];return c==='none'?NEUTRAL:c&&SWATCH[c]?SWATCH[c]:def||NEUTRAL};
+/* colours: instrument leads keep their real colours (red = signal / +, black = ground / −); wires on the board come
+   neutral and the student paints them with the "لون السلك" toolbar (or right-click on desktop) */
+const NEUTRAL={c:'#e9e5da',d:'#8a8578'};
+const SWATCH={black:{c:'#30363a',d:'#000',ar:'أسود'},red:{c:'#e2453b',d:'#5a1414',ar:'أحمر'},blue:{c:'#2f6bd9',d:'#173a7a',ar:'أزرق'},grey:{c:'#9aa1a5',d:'#4f585c',ar:'رمادي'},yellow:{c:'#f0c419',d:'#7a5f00',ar:'أصفر'},green:{c:'#2f9a4c',d:'#164a24',ar:'أخضر'}};
+const leadCol=k=>LEADDEF[k].earth||LEADDEF[k].pol==='-'?SWATCH.black:SWATCH.red;
+const wireCol=w=>SWATCH[RT.S.wcol[w.id]]||NEUTRAL;
 const plugs=[];
 /* cables: a natural curve that leaves the terminal in the direction it faces and runs into the plug; recomputed on every
    render, so they follow an instrument that is being moved. CAB keeps the geometry (crossing checks, tests). */
@@ -263,12 +275,12 @@ const clearOf=(ik,f0)=>{const [w,h]=byKey[ik].size,F=FACE[ik];return 18+(F==='do
 const DRAW={leadPos,
   plug:(k,p,col,dark)=>{const l=RT.S.leads[k];plugs.push({k,p});return `<circle cx="${p.x}" cy="${p.y}" r="${l.node!=null?7:9}" fill="${col}" stroke="${dark}" stroke-width="2"/>`+(l.node==null?`<circle cx="${p.x}" cy="${p.y}" r="3" fill="#c8a24a"/>`:'')+`<circle cx="${p.x}" cy="${p.y}" r="16" fill="transparent" data-k="lead:${k}" style="cursor:grab"/>`},
   wire:(c,col,dark,k,w=3)=>{const d=bz(c);return `<g data-cab="${k||''}"><path d="${d}" fill="none" stroke="${dark}" stroke-width="${w+2}" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/></g>`},
-  banana:(from,k)=>{const ik=instOf(k);const a=addP(from,POS[ik]);const p=leadPos(k);const c=colOf(k);const cv=curve(a,FV[FACE[ik]],p,clearOf(ik,from));CAB.push({k,grp:k,inst:ik,c:cv});return DRAW.wire(cv,c.c,c.d,k)+DRAW.plug(k,p,c.c,c.d)},
+  banana:(from,k)=>{const ik=instOf(k);const a=addP(from,POS[ik]);const p=leadPos(k);const c=leadCol(k);const cv=curve(a,FV[FACE[ik]],p,clearOf(ik,from));CAB.push({k,grp:k,inst:ik,c:cv});return DRAW.wire(cv,c.c,c.d,k)+DRAW.plug(k,p,c.c,c.d)},
   coax:(A0,kr,kb)=>{const ik=instOf(kr);const A=addP(A0,POS[ik]);const pr=leadPos(kr),pb=leadPos(kb);const M={x:(pr.x+pb.x)/2,y:(pr.y+pb.y)/2};
     const f2=FV[FACE[ik]];const Sp={x:M.x-f2.x*34,y:M.y-f2.y*34};
     const trunk=curve(A,f2,Sp,clearOf(ik,A0));
     const lr=curve(Sp,f2,pr),lb=curve(Sp,f2,pb);CAB.push({k:kr,grp:kr,inst:ik,c:trunk},{k:kr,grp:kr,inst:ik,c:lr,leg:1},{k:kb,grp:kr,inst:ik,c:lb,leg:1});
-    const cr=colOf(kr,SWATCH.red),cb=colOf(kb,SWATCH.black);
+    const cr=leadCol(kr),cb=leadCol(kb);
     return `<g data-cab="${kr}"><path d="${bz(trunk)}" fill="none" stroke="#1e2326" stroke-width="9" stroke-linecap="round"/><path d="${bz(trunk)}" fill="none" stroke="#4a555b" stroke-width="5" stroke-linecap="round"/></g><rect x="${Sp.x-7}" y="${Sp.y-7}" width="14" height="14" rx="3" fill="#2b3236" pointer-events="none"/>`+DRAW.wire(lr,cr.c,cr.d,kr)+DRAW.wire(lb,cb.c,cb.d,kb)+DRAW.plug(kr,pr,cr.c,cr.d)+DRAW.plug(kb,pb,cb.c,cb.d)}};
 /* small readable label next to each plug, never overlapping another label or plug */
 function labelsSVG(){const boxes=[];const all=plugs.map(q=>({x:q.p.x-10,y:q.p.y-10,w:20,h:20}));let s='';
@@ -297,8 +309,9 @@ function dragSVG(){if(!drag||!drag.active)return '';let s='';
   return s}
 
 /* ---------- moving instruments: a grab handle on top of each one; dragging it moves the instrument (never its controls) ---------- */
-function handleSVG(i){const w=i.size[0],x=w/2-44;return `<g data-k="mv:${i.key}" style="cursor:grab"><rect x="${x}" y="-31" width="88" height="25" rx="12.5" fill="#fffdf7" stroke="#9aa6a9" stroke-width="1.4"/>`+
-  `<text x="${x+30}" y="-13" font-size="15" text-anchor="middle" pointer-events="none">✋</text><g fill="#7d898c" pointer-events="none">${[0,1,2].map(r=>[0,1,2].map(c=>`<circle cx="${x+50+c*7}" cy="${-24.5+r*6}" r="1.8"/>`).join('')).join('')}</g></g>`}
+function handleSVG(i){const c=i.size[0]/2,y=-21;const ar=(r)=>`<path d="M0 -13 L-5.5 -7 L-2 -7 L-2 -2 L2 -2 L2 -7 L5.5 -7 Z" transform="rotate(${r})"/>`;
+  /* four-way move badge; the transparent ring around it is a finger-sized target */
+  return `<g data-k="mv:${i.key}" style="cursor:move"><circle cx="${c}" cy="${y}" r="34" fill="transparent"/><circle cx="${c}" cy="${y}" r="19" fill="#fffdf7" stroke="#8c999c" stroke-width="1.6"/><g transform="translate(${c} ${y})" fill="#4f5b5e" pointer-events="none">${[0,90,180,270].map(ar).join('')}<rect x="-2" y="-2" width="4" height="4"/></g></g>`}
 function placeInst(k){const g=$('Ldyn').querySelector(`[data-inst="${k}"]`);if(g)g.setAttribute('transform',`translate(${POS[k].x} ${POS[k].y})`)}
 function moveInst(k,x,y){showHL(null);POS[k]={x:Math.round(x),y:Math.round(y)};placeInst(k);updRegions();render(true)}
 /* back to the default arrangement (animated unless the student asked for reduced motion) */
@@ -309,20 +322,51 @@ function resetLayout(){try{localStorage.removeItem(LSK)}catch(_){}const from={};
   requestAnimationFrame(step)}
 const isDefault=()=>INST.every(i=>Math.abs(POS[i.key].x-DEF[i.key].x)<1&&Math.abs(POS[i.key].y-DEF[i.key].y)<1);
 /* crossings of the cables as drawn now: cable over cable, cable over another instrument (used by the tests) */
-function crossings(){const smp=c=>{const out=[];for(let i=0;i<=28;i++){const t=i/28,u=1-t;out.push({x:u*u*u*c[0].x+3*u*u*t*c[1].x+3*u*t*t*c[2].x+t*t*t*c[3].x,y:u*u*u*c[0].y+3*u*u*t*c[1].y+3*u*t*t*c[2].y+t*t*t*c[3].y})}return out};
+
+/* parked cables of an arrangement (pos: key → {x,y}, park: lead → plug point), drawn like DRAW does */
+function parkedCables(pos,park){const out=[];const seen=new Set();
+  LEADS.forEach(k=>{const L=LEADDEF[k],ik=L.inst.key,inst=L.inst,f=FV[FACE[ik]],f0=fromOf(k),P0=pos[ik];
+    const clr=q=>{const [w,h]=inst.size,F=FACE[ik];return 18+(F==='down'?h-q.y:F==='up'?q.y:F==='right'?w-q.x:q.x)};
+    if(!L.coax){out.push({k,grp:k,inst:ik,c:curve({x:f0.x+P0.x,y:f0.y+P0.y},f,park[k],clr(f0))});return}
+    if(L.earth||seen.has(k))return;const kb=LEADS.find(q=>LEADDEF[q].coax&&LEADDEF[q].earth&&LEADDEF[q].inst===inst&&!seen.has(q)&&Math.abs(fromOf(q).x-f0.x)<40);if(!kb)return;seen.add(k);seen.add(kb);
+    const A0={x:(f0.x+fromOf(kb).x)/2,y:f0.y},A={x:A0.x+P0.x,y:A0.y+P0.y},M={x:(park[k].x+park[kb].x)/2,y:(park[k].y+park[kb].y)/2},Sp={x:M.x-f.x*34,y:M.y-f.y*34};
+    out.push({k,grp:k,inst:ik,c:curve(A,f,Sp,clr(A0))},{k,grp:k,inst:ik,c:curve(Sp,f,park[k])},{k:kb,grp:k,inst:ik,c:curve(Sp,f,park[kb])})});
+  return out}
+/* cable over cable / cable over another instrument, for a list of cables and an arrangement */
+function crossCount(list,pos){const smp=c=>{const out=[];for(let i=0;i<=28;i++){const t=i/28,u=1-t;out.push({x:u*u*u*c[0].x+3*u*u*t*c[1].x+3*u*t*t*c[2].x+t*t*t*c[3].x,y:u*u*u*c[0].y+3*u*u*t*c[1].y+3*u*t*t*c[2].y+t*t*t*c[3].y})}return out};
   const segX=(p1,p2,p3,p4)=>{const d=(p2.x-p1.x)*(p4.y-p3.y)-(p2.y-p1.y)*(p4.x-p3.x);if(!d)return false;const u=((p3.x-p1.x)*(p4.y-p3.y)-(p3.y-p1.y)*(p4.x-p3.x))/d,v=((p3.x-p1.x)*(p2.y-p1.y)-(p3.y-p1.y)*(p2.x-p1.x))/d;return u>0&&u<1&&v>0&&v<1};
-  const C=CAB.map(c=>({...c,pts:smp(c.c)}));const cc=[],ci=[];
+  const C=list.map(c=>({...c,pts:smp(c.c)}));const cc=[],ci=[];
   for(let a=0;a<C.length;a++)for(let b=a+1;b<C.length;b++){if(C[a].grp===C[b].grp)continue;const A=C[a].pts,B=C[b].pts;let hit=false;
     for(let i=1;i<A.length-1&&!hit;i++)for(let j=1;j<B.length-1&&!hit;j++)if(segX(A[i],A[i+1],B[j],B[j+1]))hit=true;if(hit)cc.push(C[a].k+'×'+C[b].k)}
-  C.forEach(c=>INST.forEach(i=>{if(i.key===c.inst)return;const p=POS[i.key],[w,h]=i.size;if(c.pts.some(q=>q.x>p.x+3&&q.x<p.x+w-3&&q.y>p.y+3&&q.y<p.y+h-3))ci.push(c.k+'/'+i.key)}));
+  C.forEach(c=>INST.forEach(i=>{if(i.key===c.inst||!pos[i.key])return;const p=pos[i.key],[w,h]=i.size;if(c.pts.some(q=>q.x>p.x+3&&q.x<p.x+w-3&&q.y>p.y+3&&q.y<p.y+h-3))ci.push(c.k+'/'+i.key)}));
   return {cc:[...new Set(cc)],ci:[...new Set(ci)]}}
+function crossings(){return crossCount(CAB,POS)}
+
+/* ---------- wiring guide: one connection per line of a build step ----------
+   line = {t, part:[type,a,b], pol?} | {ic:type, pins:{E:n,…}} | {lead:k, at:n} | {wire:[a,b]}; a, b, n are panel nodes.
+   lineDone checks it on the live netlist (any node of the same net counts); the current line's nodes and jacks glow. */
+function lineDone(L){const N=RT.netOf;if(RT.dirty)recompute();
+  if(L.part){const [t,a,b]=L.part;return RT.between(N(a),N(b)).some(x=>x.p.type===t&&(!L.pol||x.dir===1))}
+  if(L.ic)return RT.S.parts.some(p=>p.type===L.ic&&Object.entries(L.pins).every(([r,n])=>pinNet(p,r)===N(n)));
+  if(L.lead)return RT.leadNet(L.lead)!=null&&RT.leadNet(L.lead)===N(L.at);
+  if(L.wire){const [a,b]=L.wire;return N(a)!=null&&N(a)===N(b)}
+  return true}
+function lineSpots(L){if(L.part)return {nodes:L.part.slice(1,3),jacks:[]};if(L.ic)return {nodes:Object.values(L.pins),jacks:[]};
+  if(L.lead)return {nodes:[L.at],jacks:[L.lead]};if(L.wire)return {nodes:L.wire,jacks:[]};return {nodes:[],jacks:[]}}
+let GUIDE=null;
+function guideSVG(){if(!GUIDE)return '';let s='';const pulse=GUIDE.flash?' class="gflash"':'';
+  GUIDE.nodes.forEach(n=>{if(n==null||n<0||n>=NN)return;const c=nodeC(n);s+=`<rect${pulse} x="${c.x-34}" y="${c.y-34}" width="68" height="68" rx="11" fill="rgba(44,122,107,.14)" stroke="#2c7a6b" stroke-width="4" stroke-dasharray="9 6"/>`+T(c.x,c.y-38,'node '+n,{size:11,fill:'#1f5b50',a:'middle',w:700})});
+  GUIDE.jacks.forEach(k=>{if(!LEADDEF[k])return;const a=termOf(k);s+=`<circle${pulse} cx="${a.x}" cy="${a.y}" r="22" fill="rgba(44,122,107,.16)" stroke="#2c7a6b" stroke-width="4" stroke-dasharray="8 5"/>`;
+    const p=leadPos(k);s+=`<circle${pulse} cx="${p.x}" cy="${p.y}" r="17" fill="none" stroke="#2c7a6b" stroke-width="3"/>`});
+  return s}
+function setGuide(g){GUIDE=g;const L=$('Lguide');if(L)L.innerHTML=guideSVG()}
 
 /* ---------- render ---------- */
 let staticDone=false;
 function render(light){
   if(!staticDone){$('Lstatic').innerHTML=staticSVG();staticDone=true}
   if(!light){if(RT.dirty){recompute();INST.forEach(i=>i.postSim&&i.postSim())}if(def.decorate)def.decorate(RT);$('Ldyn').innerHTML=INST.map(i=>`<g data-inst="${i.key}" transform="translate(${POS[i.key].x} ${POS[i.key].y})">${i.svg()}${handleSVG(i)}</g>`).join('');BENCH.onRender()}
-  $('Lparts').innerHTML=partsSVG();$('Lcables').innerHTML=cablesSVG();$('Ldrag').innerHTML=toolbarSVG()+dragSVG();
+  $('Lparts').innerHTML=partsSVG();$('Lcables').innerHTML=cablesSVG();if($('Lguide'))$('Lguide').innerHTML=guideSVG();$('Ldrag').innerHTML=toolbarSVG()+dragSVG();
   if(hlEl&&!document.body.contains(hlEl))hlEl=null;
 }
 function circuitChanged(){RT.dirty=true;INST.forEach(i=>i.onCircuitChange&&i.onCircuitChange())}
@@ -339,7 +383,7 @@ svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;close
   if(BENCH.view==='ov'&&!S.armed&&!S.wireMode&&(!el||el.dataset.k.startsWith('node:'))){BENCH.ovClick(p);return}
   showHL(el,true);
   const cab=e.target.closest&&e.target.closest('[data-cab]');const lk=el&&el.dataset.k.startsWith('lead:')?el.dataset.k.slice(5):cab&&cab.dataset.cab;
-  if(lk&&e.pointerType!=='mouse'){press={k:lk,x:e.clientX,y:e.clientY,t:setTimeout(()=>{press=null;drag=null;openMenu(lk,e.clientX,e.clientY)},550)}}
+  if(BENCH.paint!==null&&el&&el.dataset.k.startsWith('wire:')){const id=+el.dataset.k.slice(5);if(BENCH.paint){S.wcol[id]=BENCH.paint;render(true)}else BENCH.say('اختر لون من الشريط أول');return}
   if(S.armed&&(!el||el.dataset.k.startsWith('node:'))){placeArmed(p);return}
   if(!el){const r=BENCH.regionAt(p);if(r&&r!==BENCH.view){BENCH.focus(r);return}if(S.sel){S.sel=null;render(true)}return}
   const k=el.dataset.k;
@@ -374,8 +418,7 @@ function endDrag(){stopRep();if(press){clearTimeout(press.t);press=null}const S=
 svg.addEventListener('pointerup',e=>{endDrag();if(e.pointerType!=='mouse')setTimeout(()=>showHL(null),220)});
 svg.addEventListener('pointercancel',()=>{stopRep();if(drag&&drag.kind==='inst'&&drag.active)savePos();drag=null;svg.classList.remove('grabbing');render(true)});
 svg.addEventListener('pointerleave',()=>{stopRep();if(!drag)showHL(null)});
-svg.addEventListener('contextmenu',e=>{e.preventDefault();const cab=e.target.closest&&e.target.closest('[data-cab]');const el=e.target.closest&&e.target.closest('[data-k^="lead:"]');
-  const k=el?el.dataset.k.slice(5):cab&&cab.dataset.cab;if(k)openMenu(k,e.clientX,e.clientY)});
+svg.addEventListener('contextmenu',e=>{e.preventDefault();const w=e.target.closest&&e.target.closest('[data-k^="wire:"]');if(w)openMenu(+w.dataset.k.slice(5),e.clientX,e.clientY)});
 const WHEEL=INST.filter(i=>i.wheel&&i.wheel.length).map(i=>`${i.prefix}:(${i.wheel.join('|')})`);
 const wheelRe=new RegExp(`^(${WHEEL.join('|')})[c+-]?$`);
 svg.addEventListener('wheel',e=>{const el=targetOf(e);if(!el)return;const k=el.dataset.k;const m=k.match(wheelRe);if(!m)return;e.preventDefault();const base=m[1];const dir=e.deltaY<0?'+':'-';
@@ -390,10 +433,10 @@ function showHL(el,touch){const L=$('Lhl2');if(!L)return;if(el===hlEl&&!touch)re
 
 /* colour menu for cables */
 function closeMenu(){const m=$('cabMenu');if(m)m.remove()}
-function openMenu(k,x,y){closeMenu();const host=$q('#bstage');const hr=host.getBoundingClientRect();const m=document.createElement('div');m.id='cabMenu';m.className='cabmenu';
-  m.innerHTML=`<b>لون السلك · <span class="m">${labelOf(k)||k}</span></b><div>`+Object.entries(SWATCH).map(([id,s])=>`<button data-c="${id}" title="${s.ar}" style="background:${s.c}"></button>`).join('')+`<button data-c="none" class="none" title="بدون لون">∅</button></div>`;
+function openMenu(id,x,y){closeMenu();const host=$q('#bstage');const hr=host.getBoundingClientRect();const m=document.createElement('div');m.id='cabMenu';m.className='cabmenu';
+  m.innerHTML=`<b>لون السلك</b><div>`+Object.entries(SWATCH).map(([c,s])=>`<button data-c="${c}" title="${s.ar}" style="background:${s.c}"></button>`).join('')+`<button data-c="" class="none" title="بدون لون">∅</button></div>`;
   host.appendChild(m);const mw=m.offsetWidth,mh=m.offsetHeight;m.style.left=clamp(x-hr.left-mw/2,8,hr.width-mw-8)+'px';m.style.top=clamp(y-hr.top-mh-14,8,hr.height-mh-8)+'px';
-  m.querySelectorAll('button').forEach(b=>b.onclick=ev=>{ev.stopPropagation();RT.S.cab[k]=b.dataset.c;closeMenu();render(true)})}
+  m.querySelectorAll('button').forEach(b=>b.onclick=ev=>{ev.stopPropagation();if(b.dataset.c)RT.S.wcol[id]=b.dataset.c;else delete RT.S.wcol[id];closeMenu();render(true)})}
 document.addEventListener('pointerdown',e=>{const m=$('cabMenu');if(m&&!m.contains(e.target)&&!svg.contains(e.target))closeMenu()},true);
 
 function placeArmed(p){const S=RT.S;if(MULTI(S.armed)){const n=nearestAnchor(S.armed,p.x,p.y,null,120);if(n!=null){S.parts.push({id:RT.uid++,type:S.armed,n});circuitChanged()}S.armed=null;BENCH.drawerSync();render();return}
@@ -412,9 +455,9 @@ BENCH.register({
   trayDown,isWire:()=>RT.S.wireMode,armed:()=>RT.S&&RT.S.armed,
   status:X.status||(()=>({})),P:PX,steps:X.steps||[],
   reset(){fresh();X.onReset&&X.onReset();render()},
-  render:()=>render(),RT,resetLayout,isDefault,crossings
+  render:()=>render(),RT,resetLayout,isDefault,crossings,lineDone,lineSpots,setGuide
 });
 RT.crossings=crossings;RT.resetLayout=resetLayout;
 fresh();render();
 };
-ENGINE.NAMES={gen:['PeakTech 4124','مولّد الإشارات'],psu:['TTi EL302RD','مصدر الجهد المستمر (وحدتين)'],sc:['GW Instek GDS-1104B','راسم الإشارة'],dmm:['MCP MT3805','الملتيميتر'],xf:['Center-tapped Transformer','المحوّل'],dbox:['Decade resistance boxes','صناديق المقاومات'],board:['Plug-in panel','لوحة التوصيل']};
+ENGINE.NAMES={dmm2:['MCP MT3805 · DMM 2','الملتيميتر الثاني'],gen:['PeakTech 4124','مولّد الإشارات'],psu:['TTi EL302RD','مصدر الجهد المستمر (وحدتين)'],sc:['GW Instek GDS-1104B','راسم الإشارة'],dmm:['MCP MT3805','الملتيميتر'],xf:['Center-tapped Transformer','المحوّل'],dbox:['Decade resistance boxes','صناديق المقاومات'],board:['Plug-in panel','لوحة التوصيل']};

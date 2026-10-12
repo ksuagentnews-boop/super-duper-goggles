@@ -71,13 +71,14 @@ const HALL=(()=>{
     boxM(2.5,0.05,1.05,lam,x,top-0.025,z);[[-1.18,-0.45],[1.18,-0.45],[-1.18,0.45],[1.18,0.45]].forEach(([dx,dz])=>boxM(0.06,top-0.05,0.06,frame,x+dx,(top-0.05)/2,z+dz));
     boxM(2.3,0.5,0.03,std('#cfd8d4'),x,0.5,z-0.48,false);
     boxM(2.5,0.12,0.04,std('#d9e1de'),x,top+0.06,z-0.53);
-    const kinds=e.bench.filter(k=>k!=='dbox'&&k!=='pc');
+    /* a second DMM stands on top of the first (two bench meters per table) */
+    const kinds=e.bench.filter((k,i)=>k!=='dbox'&&k!=='pc'&&!(k==='dmm'&&e.bench.indexOf('dmm')!==i));const dmm2=e.bench.filter(k=>k==='dmm').length>1;
     if(e.bench.includes('pc')){
       const mon=instrument('pc',0.62,0.4,0.04,x,z-0.32,top+0.12);boxM(0.06,0.12,0.06,frame,x,top+0.06,z-0.32);boxM(0.26,0.015,0.18,frame,x,top+0.008,z-0.32);
       boxM(0.48,0.02,0.16,std('#2a3034'),x-0.05,top+0.01,z+0.12);boxM(0.07,0.025,0.11,std('#2a3034'),x+0.34,top+0.012,z+0.14);
       boxM(0.2,0.42,0.42,std('#2a3034'),x+0.95,top+0.21,z-0.2)}
     else{const gap=0.06;let tot=kinds.reduce((s,k)=>s+SIZE[k][0],0)+gap*(kinds.length-1);let cx=x-tot/2;
-      kinds.forEach(k=>{const [w,h,d]=SIZE[k];instrument(k,w,h,d,cx+w/2,z-0.26,top);cx+=w+gap});
+      kinds.forEach(k=>{const [w,h,d]=SIZE[k];instrument(k,w,h,d,cx+w/2,z-0.26,top);if(k==='dmm'&&dmm2)instrument(k,w,h,d,cx+w/2,z-0.26,top+h+0.004);cx+=w+gap});
       if(e.bench.includes('dbox')){instrument('dbox',...SIZE.dbox,x-0.95,z+0.2,top);instrument('dbox',...SIZE.dbox,x-0.68,z+0.2,top)}
       const bb=new THREE.Mesh(new THREE.BoxGeometry(0.48,0.02,0.32),[std('#c3cbc8'),std('#c3cbc8'),std('#fff',{map:boardTex()}),std('#c3cbc8'),std('#c3cbc8'),std('#c3cbc8')]);bb.position.set(x+0.05,top+0.01,z+0.2);bb.receiveShadow=true;scene.add(bb)}
     // stool
@@ -142,7 +143,7 @@ const HALL=(()=>{
      come that level's doors, facing each other in pairs. After Level 8 a wide gateway signed "الاختيارية · Electives"
      opens into a square courtyard whose left, front and right walls carry the elective doors (n → split over the three
      walls, the courtyard grows with n); a "عد إلى المقدمة" stand in its middle takes the student back to the entrance. */
-  const CW=2.4,START={x:0,z:-1.0};let COURT=null;
+  const CW=2.4,START={x:0,z:-0.9};let COURT=null;
   function wallP(w,x,z,ry,wallM,dado,h=3.3){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),wallM);m.position.set(x,h/2,z);m.rotation.y=ry;m.receiveShadow=true;scene.add(m);
     const d=new THREE.Mesh(new THREE.PlaneGeometry(w,0.95),dado);d.position.set(x+Math.sin(ry)*0.005,0.475,z+Math.cos(ry)*0.005);d.rotation.y=ry;scene.add(d)}
   function floorRect(x0,x1,z0,z1,col,line,tile){const W=x1-x0,D=z1-z0;const ft=tex(512,512,(g,Wt,Ht)=>{g.fillStyle=col;g.fillRect(0,0,Wt,Ht);g.strokeStyle=line;g.lineWidth=3;for(let i=0;i<=4;i++){g.beginPath();g.moveTo(i*Wt/4,0);g.lineTo(i*Wt/4,Ht);g.stroke();g.beginPath();g.moveTo(0,i*Ht/4);g.lineTo(Wt,i*Ht/4);g.stroke()}
@@ -156,24 +157,25 @@ const HALL=(()=>{
   function buildCorridor(){
     const main=REGISTRY.levels.filter(v=>v.key!=='elective'),E=(REGISTRY.level('elective')||{labs:[]}).labs;
     /* plan along the corridor: d = distance from the entrance */
-    const plan=[];let d=4.8;
+    const plan=[];let d=7.0;
     main.forEach(v=>{plan.push({v,d});const n=v.labs.length;v.labs.forEach((Lb,i)=>plan.push({Lb,d:d+2.1+Math.floor(i/2)*3.0,side:i%2?1:-1}));d+=2.1+Math.max(1,Math.ceil(n/2))*3.0+0.3});
     const dG=d,n=E.length,b=Math.floor(n/3),rm=n%3,cnt=rm===0?[b,b,b]:rm===1?[b,b+1,b]:[b+1,b,b+1];
     const S=n?Math.max(12,Math.max(...cnt)*3.2+3.6):0,zF=-(dG+S);
     ROOM={x0:n?-S/2:-CW,x1:n?S/2:CW,z0:n?zF:-dG,z1:0,pad:[.45,.45,.45,.45],rects:[[-CW,CW,-dG-(n?1.2:0),0]].concat(n?[[-S/2,S/2,zF,-dG]]:[]),obst:[]};
-    freshScene(false,'#d7e9f1');
+    freshScene(false,'#e9eeec');
     const wallM=std('#e8ece6',{roughness:.95}),dado=std('#c9d3cf');
     floorRect(-CW,CW,-dG,0,'#d8dcd6','#c5ccc8',2.4);
     wallP(dG,-CW,-dG/2,Math.PI/2,wallM,dado);wallP(dG,CW,-dG/2,-Math.PI/2,wallM,dado);wallP(2*CW,0,0,Math.PI,wallM,dado);
     if(!n)wallP(2*CW,0,-dG,0,wallM,dado);
     const ceil=new THREE.Mesh(new THREE.PlaneGeometry(2*CW,dG),std('#f3f5f4'));ceil.rotation.x=Math.PI/2;ceil.position.set(0,3.3,-dG/2);scene.add(ceil);
+    for(let z=-6;z>-dG;z-=9){const pl=new THREE.PointLight(0xfff6e8,0.25,11,2);pl.position.set(0,3.0,z);scene.add(pl)}
     for(let z=-2;z>-dG;z-=3.4){const l=new THREE.Mesh(new THREE.PlaneGeometry(1.2,0.45),new THREE.MeshBasicMaterial({color:0xffffff}));l.rotation.x=Math.PI/2;l.position.set(0,3.29,z);scene.add(l)}
     /* department banner near the entrance */
     const ban=tex(1400,330,(g,Wt,Ht)=>{g.fillStyle='#fbfcfc';g.fillRect(0,0,Wt,Ht);g.fillStyle='#2c7a6b';g.fillRect(0,0,Wt,22);g.textAlign='center';g.direction='rtl';g.fillStyle='#1e2a28';g.font=`700 88px ${AR}`;g.fillText('قسم الهندسة الكهربائية',Wt/2,140);
       g.direction='ltr';g.font=`500 46px ${MO}`;g.fillStyle='#2c7a6b';g.fillText('Electrical Engineering Department',Wt/2,218);g.font=`500 34px ${MO}`;g.fillStyle='#5d6b67';g.fillText('College of Engineering · King Saud University',Wt/2,290)});
-    const bm=new THREE.Mesh(new THREE.PlaneGeometry(2.6,0.61),new THREE.MeshBasicMaterial({map:ban}));bm.position.set(0,2.96,-3.4);scene.add(bm);
+    const bm=new THREE.Mesh(new THREE.PlaneGeometry(2.6,0.61),new THREE.MeshBasicMaterial({map:ban}));bm.position.set(0,2.92,-4.0);scene.add(bm);
     /* level signs and their doors */
-    plan.forEach(it=>{if(it.v){hangSign(0,-it.d,2.6,0.62,2.52,it.v.ar,it.v.en);return}
+    let li=0;plan.forEach(it=>{if(it.v){/* alternate sides: seen from the entrance the level signs never stack */hangSign((li++%2?1:-1)*1.18,-it.d,2.0,0.5,2.52,it.v.ar,it.v.en);return}
       const Lb=it.Lb,x=it.side*(CW-0.035),z=-it.d;
       door(x,z,it.side>0?-Math.PI/2:Math.PI/2,Lb.code,Lb.title,Lb.ar,()=>show('room',Lb.id),{x:it.side*1.2,z},{closed:!Lb.built,lab:Lb.id})});
     COURT=null;
@@ -183,6 +185,9 @@ const HALL=(()=>{
       const cw=std('#ece7dc',{roughness:.95}),cd=std('#cfc8b9');const side=S/2-CW;
       wallP(side,-(CW+side/2),-dG,Math.PI,cw,cd,4);wallP(side,CW+side/2,-dG,Math.PI,cw,cd,4);
       wallP(S,-S/2,cz,Math.PI/2,cw,cd,4);wallP(S,S/2,cz,-Math.PI/2,cw,cd,4);wallP(S,0,zF,0,cw,cd,4);
+      const cc=new THREE.Mesh(new THREE.PlaneGeometry(S,S),std('#f3f5f4'));cc.rotation.x=Math.PI/2;cc.position.set(0,4,cz);scene.add(cc);
+      const panelM=new THREE.MeshBasicMaterial({color:0xffffff});for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const l=new THREE.Mesh(new THREE.PlaneGeometry(1.4,0.6),panelM);l.rotation.x=Math.PI/2;l.position.set(i*S/3.4,3.99,cz+j*S/3.4);scene.add(l)}
+      const pl=new THREE.PointLight(0xfff6e8,0.3,S*1.3,2);pl.position.set(0,3.6,cz);scene.add(pl);
       const fr=std('#cbd5d1');boxM(0.5,4,0.6,fr,-CW-0.25,2,-dG,false);boxM(0.5,4,0.6,fr,CW+0.25,2,-dG,false);boxM(2*CW+1,0.5,0.6,fr,0,3.55,-dG,false);
       hangSign(0,-dG+0.4,3.6,0.86,2.72,'الاختيارية','Electives · Elective Labs');
       /* elective doors: left wall (from the gateway inwards), front wall (left to right), right wall (front to back) */
@@ -273,7 +278,7 @@ const HALL=(()=>{
   let toastT;function toast(m){prompt.textContent=m;prompt.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{prompt.hidden=true;toastT=null},1600)}
   /* switch scene: 'room' of a lab, or the 'corridor' (fromLab = the lab whose door we came out of) */
   function show(kind,labId,fromLab,initial){
-    if(kind==='room')buildRoom(REGISTRY.lab(labId));else buildCorridor();
+    if(kind==='room'){buildRoom(REGISTRY.lab(labId));STATS.lab(labId)}else buildCorridor();
     path=[];anim=null;mode='walk';seatB=null;P.y=EYE;P.pitch=-0.06;P.yaw=0;
     if(kind==='room'){if(initial){P.x=0;P.z=ROOM.z1-1.9}else{const d=doors[0];P.x=d.front.x;P.z=d.front.z-0.3}}
     else{/* back out of a lab: in front of its own door, looking down the corridor (or at the courtyard's middle) */
@@ -339,7 +344,8 @@ const HALL=(()=>{
 
   /* --- loop --- */
   function resize(){if(!R)return;const w=innerWidth,h=innerHeight;R.setSize(w,h,false);cam.aspect=w/h;cam.fov=w/h<0.8?80:62;cam.updateProjectionMatrix()}
-  function frame(now){if(!running)return;requestAnimationFrame(frame);const dt=Math.min(0.05,(now-(last||now))/1000);last=now;
+  let looping=false;
+  function frame(now){if(!running){looping=false;return}requestAnimationFrame(frame);const dt=Math.min(0.05,(now-(last||now))/1000);last=now;
     if(anim)anim(now);
     else if(mode==='walk'){
       let f=0,s=0,turn=0;if(keys.KeyW||keys.ArrowUp)f+=1;if(keys.KeyS||keys.ArrowDown)f-=1;if(keys.KeyD)s+=1;if(keys.KeyA)s-=1;if(keys.ArrowLeft||keys.KeyQ)turn+=1;if(keys.ArrowRight)turn-=1;
@@ -353,7 +359,8 @@ const HALL=(()=>{
       const B=ND?null:nearest();if(ND){}else if(B&&!toastT){prompt.hidden=false;prompt.textContent=B.built?(coarse?`اضغط على الكرسي عشان تجلس · تجربة ${B.num}`:`اضغط E أو على الكرسي عشان تجلس · تجربة ${B.num}`):`تجربة ${B.num} · قريباً`}else if(!toastT)prompt.hidden=true}
     const t=now/1000;benches.forEach(b=>{const on=b===hoverB||b===nearest();b.ring.material.opacity+=(((on?0.85:b.built?0.35:0.12)+Math.sin(t*3)*0.1)-b.ring.material.opacity)*0.15});
     cam.position.set(P.x,P.y,P.z);cam.rotation.set(P.pitch,P.yaw,0);if(locked()&&mode==='walk'&&(now|0)%4===0)lockHover();R.render(scene,cam)}
-  function loop0(){last=0;requestAnimationFrame(frame)}
+  /* one render loop at a time, never two */
+  function loop0(){last=0;if(looping)return;looping=true;requestAnimationFrame(frame)}
 
   async function init(){
     $q('#quickBtn').onclick=()=>QUICK.open($q('#quickBtn'));
@@ -369,5 +376,5 @@ const HALL=(()=>{
     ok=true;bindInput();resize();addEventListener('resize',()=>{if(!$q('#hall').hidden)resize()});$q('#hallLoading').hidden=true;loop0();
   }
   function fail(){$q('#hallLoading').hidden=true;$q('#fallback').hidden=false;$q('#hallHint').hidden=true;$q('#quickBtn').hidden=true}
-  return {init,goTo,goLab,resume,standUp:()=>{if(ok)standUp();else{$q('#hall').hidden=false;$q('#seatModal').hidden=true}},debug:{P,lockClick,locked,benches:()=>benches,doors:()=>doors,cur:()=>({...CUR}),show,planTo,blocked,goDoor,court:()=>COURT,START}};
+  return {init,goTo,goLab,resume,pause:()=>{running=false},standUp:()=>{if(ok)standUp();else{$q('#hall').hidden=false;$q('#seatModal').hidden=true}},debug:{P,lockClick,locked,benches:()=>benches,doors:()=>doors,cur:()=>({...CUR}),show,planTo,blocked,goDoor,court:()=>COURT,START}};
 })();

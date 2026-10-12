@@ -4,7 +4,7 @@ export async function run(page, vp, ok) {
   await sit(page, 'ee312/exp9', 'manual');
   const H = bench(page); H.touch = vp === 'phone';
   const done = async n => (await H.steps()).done >= n;
-  const rd = () => page.evaluate(() => BENCH.sim.RT.dmm().val);
+  const rd = (k = 0) => page.evaluate(k => BENCH.sim.RT.meters()[k].r.val, k);
   const U = u => page.evaluate(u => BENCH.sim.RT.S.psu.u[u].v, u);
   /* unit voltage in mV through COARSE (0.1 V) and FINE (1 mV) presses */
   const setmV = async (side, mv) => { const u = side === 'L' ? 0 : 1; let v = Math.round((await U(u)) * 1000); const dc = Math.trunc((mv - v) / 100); if (dc) await H.key(`p:${side}VC${dc > 0 ? '+' : '-'}`, Math.abs(dc));
@@ -20,11 +20,12 @@ export async function run(page, vp, ok) {
   await H.place('R2k7', 16, 23); await H.place('R27k', 17, 24); await H.lead('Lp', 23); await H.lead('Lm', 15); await H.lead('Rp', 24); await H.lead('Rm', 15);
   ok(await done(1), 'A1 Fig. 9.2a');
   await H.focus('psu'); await H.key('p:PWR'); await setmV('L', 5000); await setmV('R', 0); await H.key('p:LON'); await H.key('p:RON'); ok(await done(2), 'A2 VCC 5 V, VI 0 V');
-  await H.focus('dmm'); await H.key('m:PWR'); await H.key('m:DCV');
+  await H.focus('board'); await H.lead('mh', 16); await H.lead('ml', 15); await H.lead('m2h', 17); await H.lead('m2l', 15);
+  await H.focus('dmm'); await H.key('m:PWR'); await H.key('m:DCV'); await H.focus('dmm2'); await H.key('m2:PWR'); await H.key('m2:DCV');
   const tab = [];
-  for (const [j, t] of VO.entries()) { await H.focus('board'); await H.lead('mh', 16); await H.lead('ml', 15); await H.focus('psu'); const vo = await seek(t);
-    await H.focus('board'); await H.lead('mh', 17); const vbe = await rd(); await H.lead('mh', 24); const vi = await rd(); tab.push([vbe, vi]);
-    if (Math.abs(vo - t) > 0.008) console.log('   miss', t, vo); }
+  for (const [j, t] of VO.entries()) { await H.focus('board'); await H.lead('m2h', 17); await H.focus('psu'); const vo = await seek(t);
+    const vbe = await rd(1); await H.focus('board'); await H.lead('m2h', 24); const vi = await rd(1); tab.push([vbe, vi]);
+    if (Math.abs(vo - t) > 0.008) console.log('   miss', t, vo);  }
   ok(await done(6), 'A3–6 Table 9.2: ' + tab.map(([b, i]) => b.toFixed(3) + '/' + i.toFixed(3)).join(' '));
   // ---- B
   const fill = F => page.evaluate(F => { for (const [k, v] of Object.entries(F)) { const e = document.getElementById(k); e.value = v; e.dispatchEvent(new Event('change', { bubbles: true })); } }, F);

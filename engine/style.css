@@ -280,11 +280,77 @@ button.t.on{background:var(--accent);border-color:var(--accent);color:#fff}
   #benchView:not(.no-bag) #stepCard{left:calc(50% + 52px);width:min(620px,calc(100% - 120px))}}
 
 /* movable instruments: grab handle cursor, reset-to-default button */
-#bench [data-k^="mv:"]{cursor:grab}
-#bench.grabbing,#bench.grabbing *{cursor:grabbing !important}
-.zback.lay{position:absolute;top:12px;right:12px;z-index:6;font-size:12.5px;padding:6px 11px}
-.zback.lay.dim{opacity:.55}
-#benchView.pc-mode .zback.lay{display:none}
-@media (max-width:900px),(max-height:500px){.zback.lay{top:6px;right:6px;font-size:11.5px;padding:5px 9px}}
+#bench [data-k^="mv:"]{cursor:move}
+#bench.grabbing,#bench.grabbing *{cursor:move !important}
+/* bench tools (top right): default layout, wire paint bucket */
+.btools{position:absolute;top:12px;right:12px;z-index:6;display:flex;flex-direction:column;align-items:flex-end;gap:6px;direction:rtl}
+.btools .zback{font-size:12.5px;padding:6px 11px}
+#bLayout.dim{opacity:.55}
+#benchView.pc-mode .btools{display:none}#benchView.no-wires .paint{display:none}
+.paint{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+#pBucket[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.paint .sw{display:flex;gap:6px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 4px 14px rgba(30,42,40,.12)}
+.paint .sw[hidden]{display:none}
+.paint .sw button{width:26px;height:26px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #aab4b6;cursor:pointer;padding:0}
+.paint .sw button.on{box-shadow:0 0 0 3px var(--accent)}
+.paint .sw button[data-c=black]{background:#30363a}.paint .sw button[data-c=red]{background:#e2453b}.paint .sw button[data-c=blue]{background:#2f6bd9}
+.paint .sw button[data-c=grey]{background:#9aa1a5}.paint .sw button[data-c=yellow]{background:#f0c419}.paint .sw button[data-c=green]{background:#2f9a4c}
+.paint .sw .px{background:#f2f4f3;font-size:12px;line-height:1;color:var(--ink)}
+#bench.painting [data-k^="wire:"]{cursor:crosshair !important}
+@media (max-width:900px),(max-height:500px){.btools{top:6px;right:6px;gap:4px}.btools .zback{font-size:11.5px;padding:5px 9px}.paint .sw button{width:24px;height:24px}}
 .quick .qi.off[data-lab]{cursor:pointer}.quick .qi.off[data-lab]:hover{border-color:var(--line)}
 .quick .qt b.ar{font:600 14px var(--f-ui);direction:rtl}
+
+/* welcome card */
+.hud-btns{display:flex;gap:8px;pointer-events:none}.hud-btn.info{padding:8px 11px;font-size:15px;line-height:1}
+#welcome{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;background:rgba(30,42,40,.30);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);direction:rtl;animation:fadeIn .35s ease}
+#welcome[hidden]{display:none}
+.wl-card{background:#fff;border-radius:22px;padding:30px 28px 24px;max-width:520px;width:100%;text-align:center;box-shadow:0 24px 60px rgba(20,30,28,.25)}
+.wl-card h1{margin:0 0 10px;font-size:26px;line-height:1.45;color:var(--ink);text-wrap:balance}
+.wl-dua{margin:0 0 22px;font-size:15.5px;color:var(--muted)}
+.wl-go{border:0;background:var(--accent);color:#fff;font:600 16px var(--f-ui);border-radius:12px;padding:10px 38px;cursor:pointer}
+.wl-go:hover{filter:brightness(1.06)}
+.wl-credit{margin-top:20px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:#9aa5a2;display:flex;gap:6px;justify-content:center;align-items:center}
+.wl-credit a{color:inherit;text-decoration:none;display:inline-flex;gap:5px;align-items:center}.wl-credit svg{width:13px;height:13px;fill:#9aa5a2}
+@media (max-height:500px){.wl-card{padding:18px 18px 16px}.wl-card h1{font-size:20px;margin-bottom:6px}.wl-dua{margin-bottom:14px;font-size:14px}}
+
+/* figure viewer (full screen, pinch-zoom) */
+#figView{position:fixed;inset:0;z-index:60;background:rgba(18,24,23,.92);display:flex;flex-direction:column}
+#figView[hidden]{display:none}
+.fv-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;color:#e8eeec;direction:rtl}
+.fv-cap{font:500 13px var(--f-mono);direction:ltr;opacity:.85}
+.fv-x{border:0;background:#fff;color:var(--ink);border-radius:10px;width:38px;height:38px;font-size:18px;cursor:pointer}
+.fv-stage{flex:1;min-height:0;overflow:hidden;touch-action:none;display:grid;place-items:center;cursor:grab}
+.fv-in{transform-origin:center center;will-change:transform;max-width:100%;max-height:100%;display:grid;place-items:center}
+.fv-in img,.fv-in svg{display:block;max-width:calc(100vw - 24px);max-height:calc(100vh - 110px);width:auto;height:auto;background:#fff;border-radius:8px;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.fv-in svg{width:min(calc(100vw - 24px),calc((100vh - 110px)*1.2))}
+.fv-hint{color:#b9c6c2;font-size:12px;text-align:center;padding:6px 10px 12px;direction:rtl}
+img.figimg,.slot svg,.figzoom{cursor:zoom-in}
+
+#Lguide .gflash{animation:gflash 1.1s ease 3}
+@keyframes gflash{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* build-step lines and figure in the step card */
+#stepCard .wl{list-style:none;margin:6px 0 2px;padding:0;display:flex;flex-direction:column;gap:3px}
+#stepCard .wl li{display:flex;gap:7px;align-items:baseline;padding:3px 7px;border-radius:8px;font-size:13.5px;line-height:1.6}
+#stepCard .wl li .n{flex:none;color:var(--muted);font-weight:600}
+#stepCard .wl li .lt{flex:1;min-width:0}
+#stepCard .wl li.cur{background:var(--accent-soft);font-weight:600}#stepCard .wl li.cur .n{color:var(--accent-ink)}
+#stepCard .wl li.ok{color:var(--muted)}#stepCard .wl li.ok .lt{text-decoration:line-through;text-decoration-color:rgba(0,0,0,.25)}
+#stepCard .wl li .tk{flex:none;color:var(--ok);font-weight:700}
+#stepCard .sfig{flex:none;position:relative;align-self:flex-start;width:132px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;cursor:zoom-in}
+#stepCard .sfig img{display:block;width:100%;height:auto}
+#stepCard .sfig span{position:absolute;bottom:3px;left:4px;font-size:12px;background:rgba(255,255,255,.85);border-radius:6px;padding:0 3px}
+#stepCard.has-lines{width:min(760px,calc(100% - 24px))}
+#stepCard.min .wl li:not(.cur){display:none}#stepCard.min .sfig{width:56px}
+#stepCard.min.has-lines .t{display:none}
+#stepCard.min:not(.has-lines) .t{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:900px),(max-height:500px){#stepCard .sfig{width:92px}#stepCard .wl li{font-size:12.5px;line-height:1.5;padding:2px 6px}}
+
+#benchView:not(.no-bag) #stepCard.has-lines{width:min(760px,calc(100% - 170px))}
+bdi{unicode-bidi:isolate}
+#stepCard .wl li .nt{color:var(--muted);font-weight:500;font-size:.92em}
+#stepCard .wl{max-height:186px;overflow-y:auto;overscroll-behavior:contain}
+@media (max-width:900px),(max-height:500px){#stepCard .wl{max-height:128px}}
+@media (max-width:600px){.ovhint{left:12px;transform:none;max-width:calc(100% - 190px);white-space:normal;text-align:right;line-height:1.4}}
+@media (max-width:600px){#benchView #stepCard,#benchView #stepCard.has-lines{left:50% !important;width:calc(100% - 16px) !important}#stepCard.min .sfig{display:none}}

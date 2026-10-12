@@ -9,6 +9,8 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
 export const VIEWPORTS = {
   desktop: { viewport: { width: 1400, height: 900 } },
   phone: { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
+  portrait: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
+  ipad: { viewport: { width: 1180, height: 820 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
 };
 
 export async function openPage(browser, vp, errors, name) {
@@ -26,6 +28,7 @@ export async function openPage(browser, vp, errors, name) {
   });
   await page.goto('http://app.local/');
   await page.waitForFunction(() => document.querySelector('#hallLoading').hidden, null, { timeout: 20000 });
+  if (await page.$eval('#welcome', e => !e.hidden)) await page.click('#wlStart');
   return { ctx, page };
 }
 
@@ -46,7 +49,8 @@ export function bench(page) {
       const b = await page.$(`#bag .bag-item[data-t="${t}"]`); await b.evaluate(e => e.scrollIntoView({ block: 'nearest' })); await page.waitForTimeout(30); const r = await b.boundingBox(); if (H.touch) await page.touchscreen.tap(r.x + r.width / 2, r.y + r.height / 2); else await page.mouse.click(r.x + r.width / 2, r.y + r.height / 2); await page.waitForTimeout(40); },
     place: async (t, a, b) => { await H.bag(t); const A = await H.node(a), B = await H.node(b); await H.tap((A.x + B.x) / 2, (A.y + B.y) / 2); },
     drag: async (from, to) => { const [x0, y0] = await H.toClient(from.x, from.y); const [x1, y1] = await H.toClient(to.x, to.y); await page.mouse.move(x0, y0); await page.mouse.down(); await page.mouse.move(x1, y1, { steps: 6 }); await page.mouse.up(); await page.waitForTimeout(40); },
-    lead: async (k, node) => { const p = await page.evaluate(k => { const s = document.getElementById('bench'); const e = s.querySelector(`[data-k="lead:${k}"]`); return { x: +e.getAttribute('cx'), y: +e.getAttribute('cy') }; }, k); await H.drag(p, await H.node(node)); },
+    lead: async (k, node) => { const p = await page.evaluate(k => { const s = document.getElementById('bench'); const e = s.querySelector(`[data-k="lead:${k}"]`); return { x: +e.getAttribute('cx'), y: +e.getAttribute('cy') }; }, k);
+      const to = node == null ? await page.evaluate(k => { const L = BENCH.sim.RT.layout; return { x: L.BX - 40, y: L.parkY - 30 }; }, k) : await H.node(node); await H.drag(p, to); },
     leadAt: k => page.evaluate(k => BENCH.sim.RT.S.leads[k].node, k),
     select: async (a, b) => { const sel = await page.evaluate(([a, b]) => { const S = BENCH.sim.RT.S; const p = S.parts.find(q => (q.a === a && q.b === b) || (q.a === b && q.b === a)); return p && S.sel === p.id; }, [a, b]);
       if (sel) return; const A = await H.node(a), B = await H.node(b); await H.tap((A.x + B.x) / 2, (A.y + B.y) / 2); },

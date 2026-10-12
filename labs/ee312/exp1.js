@@ -1,8 +1,8 @@
 /* EE312 · Experiment 1 · Exploring and Testing Junction Diodes (manual v8.8 pp. 8–13).
    Procedure A: MT3805 diode test on the 1N4001, Zener 1N4733A, green LED and Ge diode (Table 1.1).
    Procedure B: Fig. 1.3 with one EL302RD unit (VDD), RS = 100 Ω, the 1N4001 and RL = 100 Ω (Table 1.2).
-   Assumptions: "Fig. 1.5a" in step 5 is Fig. 1.3a with the rectifier reversed; one MT3805 whose leads move
-   between RS and the diode; the Ge diode is a 1N34A-class point-contact part; PLQ 5 uses 2 × 1.5 V cells. */
+   Assumptions: "Fig. 1.5a" in step 5 is Fig. 1.3a with the rectifier reversed; two MT3805 meters as in Fig. 1.3 (DMM 1 on RS,
+   DMM 2 on the diode); the Ge diode is a 1N34A-class point-contact part; PLQ 5 uses 2 × 1.5 V cells. */
 EXP_DEFS['ee312/exp1']=(()=>{const H=ENGINE.sheet;
 const t11=`<table class="tbl"><caption>Table 1.1 Procedure A · Testing Junction Diodes</caption>
 <tr><td class="l" colspan="2">DMM Test-Position Reading in Case of an Open Circuit:</td><td>${H.sel('a_open',[['ovl','OVL.D'],['0','0.000 V'],['2.8','2.800 V']])}</td></tr>
@@ -58,7 +58,8 @@ ${t11}${t12}${plq}
 params:()=>({}),
 instruments:[
   {type:'psu',prev:d=>{d.u[0].v=12;d.u[0].ilim=0.5;d.u[1].v=3.3;d.u[1].ilim=0.25}},
-  {type:'dmm',prev:d=>{d.fn='OHM'}}],
+  {type:'dmm',n:1,prev:d=>{d.fn='OHM'}},
+  {type:'dmm',n:2,prev:d=>{d.fn='ACV'}}],
 parts:{R100:{t:'R',r:100,lab:'100Ω'},D4001:{t:'D',lab:'1N4001'},Z4733:{t:'Z',lab:'1N4733A'},LED:{t:'LED',lab:'LED'},GE:{t:'GE',lab:'Ge'},BR:{t:'BR',lab:''}},
 tray:[['R100','100 Ω'],['D4001','1N4001'],['Z4733','1N4733A'],['LED','LED (green)'],['GE','Ge diode'],['BR','Bridging plug'],['W','Wire']],
 setup(RT){
@@ -72,31 +73,31 @@ setup(RT){
   const vddFor=vrs=>{let lo=0,hi=10;for(let k=0;k<60;k++){const m=(lo+hi)/2;fig13(m).vrs<vrs?lo=m:hi=m}return lo};
   const REF={voc:5*1e7/(1e7+100),vd1:fig13(vddFor(0.1)).vd,vd10:fig13(vddFor(1)).vd,vd20:fig13(vddFor(2)).vd};REF.vdl=fig13(vddFor(2),100).vd;
   let ST={};
-  const dmm=()=>RT.dmm()||{};
-  const dn=()=>({hi:RT.leadNet('mh'),lo:RT.leadNet('ml')});
-  /* the part the DMM leads sit across, with polarity (fwd = HI on the anode) */
-  function across(){const {hi,lo}=dn();const b=RT.between(hi,lo);return b.length===1?{type:b[0].p.type,fwd:b[0].dir===1,p:b[0].p}:b.length?{multi:true}:null}
+  /* two bench meters (Fig. 1.3 draws both): any meter may do Procedure A; in Procedure B the steps put DMM 1 on R_S
+     (V_RS) and DMM 2 on the diode (V_OC, V_rev, V_D) — the checks accept whichever meter sits on the right nodes */
+  function acrossM(m){const b=RT.between(m.hi,m.lo);return b.length===1?{type:b[0].p.type,fwd:b[0].dir===1,p:b[0].p}:b.length?{multi:true}:null}
   /* Procedure B topology on whichever supply unit is wired */
   function procB(){const S=RT.S;for(const u of [0,1]){const pk=u?'Rp':'Lp',mk=u?'Rm':'Lm';const P=RT.leadNet(pk),N=RT.leadNet(mk);if(P==null||N==null||P===N)continue;
       const rs=RT.at(P).filter(p=>p.type==='R100').map(p=>{const [a,b]=RT.partNets(p);return {p,X:a===P?b:a}}).find(r=>r.X!==N);if(!rs)continue;
       const X=rs.X,others=RT.at(X).filter(p=>p!==rs.p);const d=RT.between(X,N).filter(x=>x.p.type==='D4001');const rl=RT.between(X,N).filter(x=>x.p.type==='R100');
       const U=S.psu.u[u];return {u,U,P,N,X,rs:rs.p,open:others.length===0,diode:d.length===1&&others.length===d.length+rl.length?d[0]:null,rl:rl.length?rl[0].p:null,on:S.psu.pwr&&U.on}}
     return null}
-  function status(){const S=RT.S,d=dmm(),D=S.dmm;const st={};const ac=across();const {hi,lo}=dn();
-    st.dmmDiode=D.pwr&&D.fn==='DIODE';st.dmmDCV=D.pwr&&D.fn==='DCV';
-    const reading=d.ol?'OVL.D':d.val;
-    if(st.dmmDiode&&!ac&&(hi==null||lo==null||hi===lo||RT.at(hi).length+RT.at(lo).length===0)&&d.ol)ST.open=true;
-    if(st.dmmDiode&&ac&&!ac.multi&&PART_OF[ac.type]&&D.jack==='HI'){if(ac.type==='D4001'&&!ac.fwd&&d.ol)ST.revSi=true;if(ac.fwd&&!d.ol)ST['f_'+ac.type]=d.val}
+  function status(){const S=RT.S,M=RT.meters();const st={};
+    st.dmmDiode=M.some(m=>m.D.pwr&&m.D.fn==='DIODE');st.dmmDCV=M.some(m=>m.D.pwr&&m.D.fn==='DCV');
+    M.forEach(m=>{const D=m.D,d=m.r;if(!(D.pwr&&D.fn==='DIODE'))return;const ac=acrossM(m),hi=m.hi,lo=m.lo;
+      if(!ac&&(hi==null||lo==null||hi===lo||RT.at(hi).length+RT.at(lo).length===0)&&d.ol)ST.open=true;
+      if(ac&&!ac.multi&&PART_OF[ac.type]&&D.jack==='HI'){if(ac.type==='D4001'&&!ac.fwd&&d.ol)ST.revSi=true;if(ac.fwd&&!d.ol)ST['f_'+ac.type]=d.val}});
     const B=procB();st.B=B;
-    if(B){const vrs=RT.partV(B.rs);st.vrs=vrs;const meter=(a,b)=>(hi===a&&lo===b);
-      st.figA=B.open&&meter(B.X,B.N);st.unitOK=B.on&&Math.abs(B.U.v-5)<0.006&&B.U.ilim<=0.0501;
-      if(st.figA&&st.unitOK&&st.dmmDCV&&d.val>4.9){ST.voc=d.val}
-      if(B.diode&&B.diode.dir===-1&&meter(B.X,B.N)&&st.unitOK&&st.dmmDCV&&d.val>4.9){ST.vrev=d.val}
+    if(B){const vrs=RT.partV(B.rs);st.vrs=vrs;const on=(a,b)=>M.some(m=>m.hi===a&&m.lo===b);const rd=(a,b)=>{const q=RT.meterOn(a,b,true);return q?q.val:null};
+      st.figA=B.open&&on(B.X,B.N);st.unitOK=B.on&&Math.abs(B.U.v-5)<0.006&&B.U.ilim<=0.0501;
+      const vx=rd(B.X,B.N),vr=rd(B.P,B.X);st.vxDCV=vx!=null;
+      if(st.figA&&st.unitOK&&vx!=null&&vx>4.9){ST.voc=vx}
+      if(B.diode&&B.diode.dir===-1&&st.unitOK&&vx!=null&&vx>4.9){ST.vrev=vx}
       st.fwd=B.diode&&B.diode.dir===1;
       [[0.1,'1'],[1,'10'],[2,'20']].forEach(([t,k])=>{const ok=st.fwd&&!B.rl&&B.on&&Math.abs(vrs-t)<=0.006;
-        if(ok&&st.dmmDCV&&meter(B.P,B.X)&&Math.abs(d.val-t)<=0.006)ST['rs'+k]=true;
-        if(ok&&ST['rs'+k]&&st.dmmDCV&&meter(B.X,B.N))ST['vd'+k]=d.val});
-      if(st.fwd&&B.rl&&B.on&&ST.vd20!=null&&st.dmmDCV&&meter(B.X,B.N)&&Math.abs(B.U.v-ST.vdd20)<0.02)ST.vdl=d.val;
+        if(ok&&vr!=null&&Math.abs(vr-t)<=0.006)ST['rs'+k]=true;
+        if(ok&&ST['rs'+k]&&vx!=null)ST['vd'+k]=vx});
+      if(st.fwd&&B.rl&&B.on&&ST.vd20!=null&&vx!=null&&Math.abs(B.U.v-ST.vdd20)<0.02)ST.vdl=vx;
       if(ST.vd20!=null&&!B.rl&&st.fwd&&Math.abs(vrs-2)<=0.006)ST.vdd20=B.U.v}
     if(ST.vdl!=null&&(!S.psu.pwr||(B&&!B.U.on)))ST.off=true;
     st.ST=ST;return st}
@@ -122,21 +123,29 @@ setup(RT){
     g.show($('result'))});
   return {status,
     steps:[
-      {dev:'dmm',t:'Procedure A: شغّل الـ MT3805 (POWER) وحوّله على وضع اختبار الدايود ▶|.',ok:s=>s.dmmDiode},
+      {dev:'dmm',t:'Procedure A (Table 1.1): شغّل DMM 1 (POWER) وحوّله على وضع اختبار الدايود ▶|.',ok:s=>s.dmmDiode},
       {dev:'dmm',t:'والأطراف مفتوحة (مو موصولة على شي)، شوف قراءة الـ open circuit وسجّلها في Table 1.1.',ok:s=>ST.open},
-      {dev:'board',t:'حط الـ 1N4001 بين nodeين، ووصّل HI و COM على طرفيه بحيث القراءة تبقى نفس قراءة الـ open circuit (يعني HI على الكاثود، عند الحلقة الرمادية).',ok:s=>ST.revSi},
-      {dev:'board',t:'اعكس التوصيل (HI على الأنود): الـ DMM يعطيك الـ forward voltage drop. سجّله في Table 1.1.',ok:s=>ST.f_D4001!=null},
-      {dev:'board',t:'كرّر مع باقي الدايودات: الزينر 1N4733A، والـ LED، والـ Ge diode، وسجّل الـ forward drop لكل واحد.',ok:s=>ST.f_Z4733!=null&&ST.f_LED!=null&&ST.f_GE!=null},
-      {dev:'board',t:'Procedure B: ركّب Fig. 1.3a: + الوحدة ← RS = 100 Ω ← node فاضية (open circuit)، و − الوحدة. الـ DMM: HI على طرف RS الفاضي و COM على − الوحدة.',ok:s=>s.figA},
-      {dev:'dmm',t:'حوّل الـ DMM على DCV.',ok:s=>s.figA&&s.dmmDCV},
+      {dev:'board',t:'ركّب الـ 1N4001 ووصّل الـ DMM عليه عكسي (HI على الكاثود، عند الحلقة الرمادية): القراءة تبقى نفس قراءة الـ open circuit.',
+        lines:[{t:'1N4001: anode → node 0, cathode → node 1',note:'الكاثود = الحلقة الرمادية',part:['D4001',0,1],pol:true},{t:'DMM 1 HI → node 1',note:'على الكاثود',lead:'mh',at:1},{t:'DMM 1 COM → node 0',note:'على الأنود',lead:'ml',at:0}],ok:s=>ST.revSi},
+      {dev:'board',t:'اعكس الأطراف (HI على الأنود): الـ DMM يعطيك الـ forward voltage drop. سجّله في Table 1.1.',
+        lines:[{t:'DMM 1 HI → node 0',note:'على الأنود',lead:'mh',at:0},{t:'DMM 1 COM → node 1',note:'على الكاثود',lead:'ml',at:1}],ok:s=>ST.f_D4001!=null},
+      {dev:'board',t:'كرّر في نفس المكان (الأنود على node 0 والحلقة على node 1) مع: الزينر 1N4733A، والـ LED (الرجل الطويلة = الأنود)، والـ Ge diode، وسجّل الـ forward drop لكل واحد.',ok:s=>ST.f_Z4733!=null&&ST.f_LED!=null&&ST.f_GE!=null},
+      {dev:'board',fig:'labs/ee312/fig/fig1-3.png',figCap:'Fig. 1.3',t:'Procedure B: ركّب Fig. 1.3a (open circuit مكان الدايود). شيل الدايود من Procedure A أول.',
+        lines:[{t:'R<sub>S</sub> = 100 Ω: node 14 ↔ node 15',part:['R100',14,15]},{t:'DC + (L +) → node 14',note:'الوحدة اليسار',lead:'Lp',at:14},{t:'DC − (L −) → node 22',lead:'Lm',at:22},
+          {t:'DMM 2 HI → node 15',note:'طرف R<sub>S</sub> الفاضي: V<sub>OC</sub>',lead:'m2h',at:15},{t:'DMM 2 COM → node 22',lead:'m2l',at:22}],ok:s=>s.figA},
+      {dev:'dmm2',t:'شغّل DMM 2 وحوّله على DCV.',ok:s=>s.figA&&s.vxDCV},
       {dev:'psu',t:'شغّل ∼POWER. ومفتاح الـ dc على OFF (PRESET): اضبط CURRENT على 0.05 A، و COARSE و FINE على 5 V، وبعدين حوّل الـ dc على ON.',ok:s=>s.figA&&s.unitOK},
-      {dev:'dmm',t:'سجّل V<sub>OC</sub> اللي يقراه الـ DMM في Table 1.2.',ok:s=>ST.voc!=null},
-      {dev:'board',t:'حط الـ 1N4001 معكوس مكان الـ open circuit (الكاثود جهة RS)، والـ DMM على الدايود، وسجّل V<sub>rev</sub>.',ok:s=>ST.vrev!=null},
-      {dev:'psu',t:'طفّ مفتاح الـ dc، واقلب الدايود (Fig. 1.3b: الأنود جهة RS).',ok:s=>s.B&&s.fwd&&!s.B.on},
-      {dev:'psu',t:'شغّل الـ dc، وحط الـ DMM على RS، ونزّل/ارفع V<sub>DD</sub> بالـ COARSE و FINE لين V<sub>RS</sub> = 0.1 V (I<sub>D</sub> = 1 mA). بعدها انقل الأطراف على الدايود وسجّل V<sub>D</sub>.',ok:s=>ST.vd1!=null},
-      {dev:'psu',t:'ارفع V<sub>DD</sub> لين V<sub>RS</sub> = 1 V (10 mA)، وسجّل V<sub>D</sub>.',ok:s=>ST.vd10!=null},
-      {dev:'psu',t:'ارفع V<sub>DD</sub> لين V<sub>RS</sub> = 2 V (20 mA)، وسجّل V<sub>D</sub>.',ok:s=>ST.vd20!=null},
-      {dev:'board',t:'بدون ما تغيّر V<sub>DD</sub>: حط R<sub>L</sub> = 100 Ω بالتوازي مع الدايود، وسجّل V<sub>D</sub>′.',ok:s=>ST.vdl!=null},
+      {dev:'dmm2',t:'سجّل V<sub>OC</sub> اللي يقراه DMM 2 في Table 1.2.',ok:s=>ST.voc!=null},
+      {dev:'board',fig:'labs/ee312/fig/fig1-3.png',figCap:'Fig. 1.3',t:'حط الـ 1N4001 معكوس مكان الـ open circuit، وسجّل V<sub>rev</sub> من DMM 2.',
+        lines:[{t:'1N4001: cathode → node 15, anode → node 22',note:'معكوس: الحلقة جهة R<sub>S</sub>',part:['D4001',22,15],pol:true}],ok:s=>ST.vrev!=null},
+      {dev:'psu',fig:'labs/ee312/fig/fig1-3.png',figCap:'Fig. 1.3b',t:'طفّ مفتاح الـ dc، واقلب الدايود (Fig. 1.3b).',
+        lines:[{t:'1N4001: anode → node 15, cathode → node 22',note:'الحلقة على node 22',part:['D4001',15,22],pol:true}],ok:s=>s.B&&s.fwd&&!s.B.on},
+      {dev:'board',fig:'labs/ee312/fig/fig1-3.png',figCap:'Fig. 1.3b',t:'شغّل الـ dc، ووصّل DMM 1 على R<sub>S</sub> (على DCV). اضبط V<sub>DD</sub> بالـ COARSE و FINE لين DMM 1 يقرا V<sub>RS</sub> = 0.1 V (I<sub>D</sub> = 1 mA)، وسجّل V<sub>D</sub> من DMM 2.',
+        lines:[{t:'DMM 1 HI → node 14',note:'V<sub>RS</sub>',lead:'mh',at:14},{t:'DMM 1 COM → node 15',lead:'ml',at:15}],ok:s=>ST.vd1!=null},
+      {dev:'psu',t:'ارفع V<sub>DD</sub> لين DMM 1 يقرا V<sub>RS</sub> = 1 V (10 mA)، وسجّل V<sub>D</sub> من DMM 2.',ok:s=>ST.vd10!=null},
+      {dev:'psu',t:'ارفع V<sub>DD</sub> لين DMM 1 يقرا V<sub>RS</sub> = 2 V (20 mA)، وسجّل V<sub>D</sub> من DMM 2.',ok:s=>ST.vd20!=null},
+      {dev:'board',fig:'labs/ee312/fig/fig1-3.png',figCap:'Fig. 1.3b',t:'بدون ما تغيّر V<sub>DD</sub>: حط R<sub>L</sub> = 100 Ω بالتوازي مع الدايود، وسجّل V<sub>D</sub>′ من DMM 2.',
+        lines:[{t:'bridging plug: node 15 ↔ node 16',wire:[15,16]},{t:'bridging plug: node 22 ↔ node 23',wire:[22,23]},{t:'R<sub>L</sub> = 100 Ω: node 16 ↔ node 23',note:'بالتوازي مع الدايود',part:['R100',16,23]}],ok:s=>ST.vdl!=null},
       {dev:'psu',t:'طفّ الـ dc supply (وفصّل القطع ورتّب طاولتك).',ok:s=>ST.off}
     ],
     onReset(){ST={};$('result').innerHTML=''}};

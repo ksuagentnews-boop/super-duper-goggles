@@ -16,7 +16,7 @@
   <div class="loading" id="hallLoading">جاري تجهيز القاعة…</div>
   <div class="hud-top">
     <div class="brand"><b>محاكي معامل قسم الكهرباء</b><span>EE312 · Basic Electronics Lab</span></div>
-    <button class="hud-btn" id="quickBtn" aria-expanded="false" aria-haspopup="true">⚡ الوصول السريع</button>
+    <div class="hud-btns"><button class="hud-btn" id="quickBtn" aria-expanded="false" aria-haspopup="true">⚡ الوصول السريع</button><button class="hud-btn info" id="infoBtn" aria-label="عن المحاكي">ⓘ</button></div>
   </div>
   <div class="tip" id="tip" hidden></div>
   <div id="crosshair" hidden></div>
@@ -46,6 +46,16 @@
 </div>
 <div id="fade"></div>
 
+<!-- welcome card (every new visit; ⓘ reopens it) -->
+<div id="welcome" hidden>
+  <div class="wl-card" role="dialog" aria-modal="true" aria-labelledby="wlTitle">
+    <h1 id="wlTitle">أهلاً بك في محاكي معامل الهندسة الكهربائية</h1>
+    <p class="wl-dua">سائلاً المولى لنا ولكم التوفيق والسداد</p>
+    <button class="wl-go" id="wlStart">ابدأ</button>
+    <div class="wl-credit" id="wlCredit" hidden></div>
+  </div>
+</div>
+
 <!-- ================= BENCH ================= -->
 <div id="benchView" hidden data-mode="manual">
   <div class="btop">
@@ -65,7 +75,11 @@
     <div id="bstage">
       <div id="svgHost"></div>
       <div class="ovhint" id="ovHint">اضغط على أي جهاز عشان تقرّب عليه</div>
-      <button class="zback lay" id="bLayout" title="رجّع الأجهزة لأماكنها الأصلية">⤾ ترتيب افتراضي</button>
+      <div class="btools">
+        <button class="zback" id="bLayout" title="رجّع الأجهزة لأماكنها الأصلية">⤾ ترتيب افتراضي</button>
+        <div class="paint" id="paint"><button class="zback" id="pBucket" aria-pressed="false" title="لوّن أسلاك اللوحة">🪣 لون السلك</button>
+          <div class="sw" id="pSw" hidden><button data-c="black" title="أسود"></button><button data-c="red" title="أحمر"></button><button data-c="blue" title="أزرق"></button><button data-c="grey" title="رمادي"></button><button data-c="yellow" title="أصفر"></button><button data-c="green" title="أخضر"></button><button data-c="x" class="px" title="خروج">✕</button></div></div>
+      </div>
       <div class="zoomui" id="zoomUI" hidden>
         <button class="zback" id="zBack">✕ رجوع <kbd>ESC</kbd></button>
         <div class="zchip"><b id="zEn"></b><span id="zAr"></span></div>
@@ -93,12 +107,13 @@
   </defs>
   <rect x="-3000" y="-3000" width="8400" height="6900" fill="url(#deskG)"/>
   <rect x="-3000" y="-3000" width="8400" height="6900" fill="url(#deskP)" opacity=".55"/>
-  <g id="Lstatic"></g><g id="Ldyn"></g><g id="Lparts"></g><g id="Lcables"></g><g id="Ldrag"></g><g id="Lhl" pointer-events="none"></g><g id="Lhl2" pointer-events="none"></g>
+  <g id="Lstatic"></g><g id="Ldyn"></g><g id="Lparts"></g><g id="Lcables"></g><g id="Ldrag"></g><g id="Lguide" pointer-events="none"></g><g id="Lhl" pointer-events="none"></g><g id="Lhl2" pointer-events="none"></g>
 </svg>
 </template>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="engine/util.js"></script>
+<script src="engine/bidi.js"></script>
 <script src="engine/solver.js"></script>
 <script src="engine/scope.js"></script>
 <script src="engine/gen.js"></script>
@@ -112,8 +127,12 @@
 <script src="engine/bench.js"></script>
 <script src="engine/quick.js"></script>
 <script src="engine/hall.js"></script>
+<script src="labs/site.js"></script>
+<script src="engine/stats.js"></script>
 <script src="labs/index.js"></script>
 <script src="engine/registry.js"></script>
-<script>BENCH.init();HALL.init();</script>
+<script src="engine/fig.js"></script>
+<script src="engine/welcome.js"></script>
+<script>BENCH.init();HALL.init();WELCOME.init();['#stepCard','#paperHost','#toast','#prompt','#tip','#seatModal','#hallHint','#zoomUI','#dHint'].forEach(s=>BIDI.watch($q(s)));</script>
 </body>
 </html>
