@@ -28,7 +28,7 @@ const BENCH={
     else{const closed=force!==undefined?!force:!v.classList.contains('panel-closed');v.classList.toggle('panel-closed',closed);requestAnimationFrame(()=>this.refit(false))}},
   /* exp = registry id, e.g. 'ee312/exp3'; the experiment file is loaded on first use */
   enter(exp,mode,force){
-    const E=this.el;E.view.hidden=false;
+    const E=this.el;E.view.hidden=false;HALL.pause();
     if(!force&&this.built===exp+'|'+mode){this.refit(false);return}
     if(!EXP_DEFS[exp]){REGISTRY.load(exp).then(()=>this.enter(exp,mode,true)).catch(()=>{this.say('تعذّر تحميل التجربة');this.leave()});return}
     this.exp=exp;this.mode=mode;this.built=exp+'|'+mode;this.view='ov';this.done=[];this.sim=null;
@@ -83,7 +83,7 @@ const BENCH={
   ui(){const E=this.el,ov=this.view==='ov';if(this.sim&&this.sim.pc){E.zoomUI.hidden=true;E.ovHint.hidden=true;E.bagBtn.hidden=true;this.drawStepCard();return}E.zoomUI.hidden=ov;E.ovHint.hidden=!ov;E.bagBtn.hidden=true;
     if(!ov){const n=this.sim.names[this.view];E.zEn.textContent=n[0];E.zAr.textContent=n[1]}
     if(ov)this.hl.innerHTML='';else this.hl.innerHTML='';
-    E.ovHint.textContent=innerWidth<600&&innerHeight>innerWidth?'اقلب الجوال بالعرض، واضغط على أي جهاز':matchMedia('(pointer:coarse)').matches?'الأزرار شغّالة من هنا · ✋ تحرّك الجهاز · جسمه يقرّب':'الأزرار والأسلاك شغّالة من هنا · اسحب ✋ عشان تحرّك الجهاز · اضغط على جسمه عشان تقرّب';
+    E.ovHint.textContent=innerWidth<600&&innerHeight>innerWidth?'اقلب الجوال بالعرض، واضغط على أي جهاز':matchMedia('(pointer:coarse)').matches?'الأزرار شغّالة من هنا · ✥ تحرّك الجهاز · جسمه يقرّب':'الأزرار والأسلاك شغّالة من هنا · اسحب ✥ عشان تحرّك الجهاز · اضغط على جسمه عشان تقرّب';
     this.drawStepCard()},
   regionAt(p){const R=this.sim.regions;for(const k of Object.keys(R).reverse()){const r=R[k];if(p.x>=r[0]&&p.x<=r[0]+r[2]&&p.y>=r[1]&&p.y<=r[1]+r[3])return k}return null},
   ovClick(p){const k=this.regionAt(p);if(k){this._hk=null;this.focus(k)}},

@@ -28,7 +28,7 @@ const FV={left:{x:-1,y:0},right:{x:1,y:0},up:{x:0,y:-1},down:{x:0,y:1}};
 const FACE={};INST.forEach(i=>{const fs=(i.leads||[]).map(l=>fromOf(l.k));if(!fs.length){FACE[i.key]='down';return}
   const cx=fs.reduce((t,f)=>t+f.x,0)/fs.length,cy=fs.reduce((t,f)=>t+f.y,0)/fs.length,[w,h]=i.size;
   const d={left:cx,right:w-cx,up:cy,down:h-cy};FACE[i.key]=Object.keys(d).reduce((a,b)=>d[b]<d[a]?b:a)});
-const RACK=64,RG=40,CG=70;          // rack row above the panel · gap between instruments · gap between a side column and the panel
+const RACK=64,RG=50,CG=70;          // rack row above the panel · gap between instruments · gap between a side column and the panel
 let BX=0,BY=0,parkY=-RACK;
 /* rack: every parked plug sits in one row above the panel, in the order of the terminals it comes from (so parked cables never cross) */
 function parkFor(list){const want=list.map(w=>({k:w.k,x:w.x})).sort((a,b)=>a.x-b.x);
@@ -50,7 +50,7 @@ const DEF={};{
     if(!best||len<best.len-1)best={len,ord}}
   row(best?best.ord:T);
   /* shift so the whole desk starts at (20,20) */
-  let x0=BX-66,y0=parkY-34;INST.forEach(i=>{x0=Math.min(x0,DEF[i.key].x);y0=Math.min(y0,DEF[i.key].y-36)});
+  let x0=BX-66,y0=parkY-34;INST.forEach(i=>{x0=Math.min(x0,DEF[i.key].x);y0=Math.min(y0,DEF[i.key].y-46)});
   const dx=20-x0,dy=20-y0;BX+=dx;BY+=dy;parkY+=dy;INST.forEach(i=>{DEF[i.key].x+=dx;DEF[i.key].y+=dy})}
 /* the student's arrangement, remembered per experiment (relative to the panel) */
 const LSK='eelab:layout:'+(BENCH.exp||'');const POS={};
@@ -58,14 +58,17 @@ function loadPos(){INST.forEach(i=>POS[i.key]={...DEF[i.key]});try{const s=JSON.
 function savePos(){try{const o={};INST.forEach(i=>o[i.key]={x:Math.round(POS[i.key].x-BX),y:Math.round(POS[i.key].y-BY)});localStorage.setItem(LSK,JSON.stringify(o))}catch(_){}}
 loadPos();
 const termOf=k=>{const f=fromOf(k),p=POS[LEADDEF[k].inst.key];return {x:f.x+p.x,y:f.y+p.y}};
-const PARK={};const updPark=()=>Object.assign(PARK,parkFor(LEADS.map(k=>({k,x:termOf(k).x}))));updPark();
+/* parked plugs belong to their lead: they rest on the rack in the default arrangement and travel with the instrument
+   when it is moved, so a lead never keeps an old route across the desk */
+const DPARK=parkFor(LEADS.map(k=>{const f=fromOf(k),p=DEF[LEADDEF[k].inst.key];return {k,x:f.x+p.x}}));
+const PARK={};const updPark=()=>LEADS.forEach(k=>{const ik=LEADDEF[k].inst.key,d=DPARK[k];PARK[k]={x:d.x+POS[ik].x-DEF[ik].x,y:d.y+POS[ik].y-DEF[ik].y}});updPark();
 const nodeC=i=>({x:BX+44+(i%COLS)*P,y:BY+44+Math.floor(i/COLS)*P});
 const holeOff=h=>({x:((h%3)-1)*19,y:(Math.floor(h/3)-1)*19});
 const holeP=(i,h)=>{const c=nodeC(i),o=holeOff(h);return {x:c.x+o.x,y:c.y+o.y}};
 const EDGES=[];for(let i=0;i<NN;i++){if(i%COLS<COLS-1)EDGES.push([i,i+1]);if(i+COLS<NN)EDGES.push([i,i+COLS])}
 function dirHole(a,b){if(b===a+1)return 5;if(b===a-1)return 3;if(b===a+COLS)return 7;return 1}
 const regions={},names={};
-const updRegions=()=>INST.forEach(i=>{const p=POS[i.key];regions[i.key]=[p.x-6,p.y-34,i.size[0]+12,i.size[1]+40]});
+const updRegions=()=>INST.forEach(i=>{const p=POS[i.key];regions[i.key]=[p.x-6,p.y-44,i.size[0]+12,i.size[1]+50]});
 updRegions();INST.forEach(i=>names[i.key]=ENGINE.NAMES[i.key]);
 regions.board=[BX-66,parkY-34,BW+132,BY+BH+16-(parkY-34)];names.board=ENGINE.NAMES.board;
 RT.inst=byKey;RT.layout={BX,BY,P,COLS,ROWS,parkY,PARK,regions,POS,DEF,FACE};
@@ -297,8 +300,9 @@ function dragSVG(){if(!drag||!drag.active)return '';let s='';
   return s}
 
 /* ---------- moving instruments: a grab handle on top of each one; dragging it moves the instrument (never its controls) ---------- */
-function handleSVG(i){const w=i.size[0],x=w/2-44;return `<g data-k="mv:${i.key}" style="cursor:grab"><rect x="${x}" y="-31" width="88" height="25" rx="12.5" fill="#fffdf7" stroke="#9aa6a9" stroke-width="1.4"/>`+
-  `<text x="${x+30}" y="-13" font-size="15" text-anchor="middle" pointer-events="none">✋</text><g fill="#7d898c" pointer-events="none">${[0,1,2].map(r=>[0,1,2].map(c=>`<circle cx="${x+50+c*7}" cy="${-24.5+r*6}" r="1.8"/>`).join('')).join('')}</g></g>`}
+function handleSVG(i){const c=i.size[0]/2,y=-21;const ar=(r)=>`<path d="M0 -13 L-5.5 -7 L-2 -7 L-2 -2 L2 -2 L2 -7 L5.5 -7 Z" transform="rotate(${r})"/>`;
+  /* four-way move badge; the transparent ring around it is a finger-sized target */
+  return `<g data-k="mv:${i.key}" style="cursor:move"><circle cx="${c}" cy="${y}" r="34" fill="transparent"/><circle cx="${c}" cy="${y}" r="19" fill="#fffdf7" stroke="#8c999c" stroke-width="1.6"/><g transform="translate(${c} ${y})" fill="#4f5b5e" pointer-events="none">${[0,90,180,270].map(ar).join('')}<rect x="-2" y="-2" width="4" height="4"/></g></g>`}
 function placeInst(k){const g=$('Ldyn').querySelector(`[data-inst="${k}"]`);if(g)g.setAttribute('transform',`translate(${POS[k].x} ${POS[k].y})`)}
 function moveInst(k,x,y){showHL(null);POS[k]={x:Math.round(x),y:Math.round(y)};placeInst(k);updRegions();render(true)}
 /* back to the default arrangement (animated unless the student asked for reduced motion) */

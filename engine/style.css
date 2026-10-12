@@ -280,8 +280,8 @@ button.t.on{background:var(--accent);border-color:var(--accent);color:#fff}
   #benchView:not(.no-bag) #stepCard{left:calc(50% + 52px);width:min(620px,calc(100% - 120px))}}
 
 /* movable instruments: grab handle cursor, reset-to-default button */
-#bench [data-k^="mv:"]{cursor:grab}
-#bench.grabbing,#bench.grabbing *{cursor:grabbing !important}
+#bench [data-k^="mv:"]{cursor:move}
+#bench.grabbing,#bench.grabbing *{cursor:move !important}
 .zback.lay{position:absolute;top:12px;right:12px;z-index:6;font-size:12.5px;padding:6px 11px}
 .zback.lay.dim{opacity:.55}
 #benchView.pc-mode .zback.lay{display:none}

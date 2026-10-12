@@ -339,7 +339,8 @@ const HALL=(()=>{
 
   /* --- loop --- */
   function resize(){if(!R)return;const w=innerWidth,h=innerHeight;R.setSize(w,h,false);cam.aspect=w/h;cam.fov=w/h<0.8?80:62;cam.updateProjectionMatrix()}
-  function frame(now){if(!running)return;requestAnimationFrame(frame);const dt=Math.min(0.05,(now-(last||now))/1000);last=now;
+  let looping=false;
+  function frame(now){if(!running){looping=false;return}requestAnimationFrame(frame);const dt=Math.min(0.05,(now-(last||now))/1000);last=now;
     if(anim)anim(now);
     else if(mode==='walk'){
       let f=0,s=0,turn=0;if(keys.KeyW||keys.ArrowUp)f+=1;if(keys.KeyS||keys.ArrowDown)f-=1;if(keys.KeyD)s+=1;if(keys.KeyA)s-=1;if(keys.ArrowLeft||keys.KeyQ)turn+=1;if(keys.ArrowRight)turn-=1;
@@ -353,7 +354,8 @@ const HALL=(()=>{
       const B=ND?null:nearest();if(ND){}else if(B&&!toastT){prompt.hidden=false;prompt.textContent=B.built?(coarse?`اضغط على الكرسي عشان تجلس · تجربة ${B.num}`:`اضغط E أو على الكرسي عشان تجلس · تجربة ${B.num}`):`تجربة ${B.num} · قريباً`}else if(!toastT)prompt.hidden=true}
     const t=now/1000;benches.forEach(b=>{const on=b===hoverB||b===nearest();b.ring.material.opacity+=(((on?0.85:b.built?0.35:0.12)+Math.sin(t*3)*0.1)-b.ring.material.opacity)*0.15});
     cam.position.set(P.x,P.y,P.z);cam.rotation.set(P.pitch,P.yaw,0);if(locked()&&mode==='walk'&&(now|0)%4===0)lockHover();R.render(scene,cam)}
-  function loop0(){last=0;requestAnimationFrame(frame)}
+  /* one render loop at a time, never two */
+  function loop0(){last=0;if(looping)return;looping=true;requestAnimationFrame(frame)}
 
   async function init(){
     $q('#quickBtn').onclick=()=>QUICK.open($q('#quickBtn'));
@@ -369,5 +371,5 @@ const HALL=(()=>{
     ok=true;bindInput();resize();addEventListener('resize',()=>{if(!$q('#hall').hidden)resize()});$q('#hallLoading').hidden=true;loop0();
   }
   function fail(){$q('#hallLoading').hidden=true;$q('#fallback').hidden=false;$q('#hallHint').hidden=true;$q('#quickBtn').hidden=true}
-  return {init,goTo,goLab,resume,standUp:()=>{if(ok)standUp();else{$q('#hall').hidden=false;$q('#seatModal').hidden=true}},debug:{P,lockClick,locked,benches:()=>benches,doors:()=>doors,cur:()=>({...CUR}),show,planTo,blocked,goDoor,court:()=>COURT,START}};
+  return {init,goTo,goLab,resume,pause:()=>{running=false},standUp:()=>{if(ok)standUp();else{$q('#hall').hidden=false;$q('#seatModal').hidden=true}},debug:{P,lockClick,locked,benches:()=>benches,doors:()=>doors,cur:()=>({...CUR}),show,planTo,blocked,goDoor,court:()=>COURT,START}};
 })();
