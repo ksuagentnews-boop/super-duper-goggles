@@ -1,5 +1,6 @@
 import { sit, bench } from '../lib.mjs';
 export async function run(page, vp, ok) {
+  ok(await page.evaluate(() => (document.querySelector('meta[name="robots"]') || {}).content === 'noindex,nofollow'), 'robots meta: noindex,nofollow (department-only sharing)');
   console.log(`[${vp}] hall + quick access`);
   // welcome card: title, du'a line, ابدأ; no credit while SITE.author is empty; ⓘ reopens it
   await page.click('#infoBtn');

@@ -45,11 +45,14 @@ Updated after every finished item (commit + push each time).
   - Test `tests/exp/procs.mjs`.
   - Not needed for EE312, and not built yet: a different instrument list per procedure (EE205).
 
+- **6 · Kept out of search engines**
+  - `<meta name="robots" content="noindex,nofollow">` in `index.html` (checked by the hall test).
+  - `robots.txt` with `Disallow: /`. On a GitHub Pages *project* site, robots.txt only counts at the domain root, so the meta tag is the part that matters there.
+
 ## In progress
-- 6 · noindex meta + robots.txt.
+- 7 · Pre-launch validation → `docs/ee312/VALIDATION.md`.
 
 ## Next
 - 5 · Procedure picker in Manual mode; sheet and grading cover only the selected procedures.
-- 6 · noindex meta + robots.txt.
 - 7 · Pre-launch validation → `docs/ee312/VALIDATION.md`.
 - 8 · Parts box renamed «العلبة» with a small SVG box icon.
