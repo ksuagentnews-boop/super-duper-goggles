@@ -1,0 +1,60 @@
+import { sit, bench } from '../lib.mjs';
+/* EE205 Exp 2: full Manual run (Procedures I–III) on the Hameg / Metrix / Fluke and full-marks grading */
+export async function run(page, vp, ok) {
+  await sit(page, 'ee205/exp2', 'manual');
+  const H = bench(page); H.touch = vp !== 'desktop';
+  const st = () => page.evaluate(() => BENCH.sim.status().ST);
+  const done = async n => (await H.steps()).done >= n;
+  const sc = () => page.evaluate(() => BENCH.sim.RT.S.sc);
+  // ---- Procedure I ----
+  await H.focus('sc'); await H.key('s:PWR'); await H.key('s:FOC-', 3); ok(await done(1), 'I.1 scope on, focus turned');
+  await H.focus('board'); await H.lead('c1r', 2); await H.lead('c1b', 9); await H.lead('Lp', 2); await H.lead('Lm', 9); ok(await done(2), 'I Fig. 1 built');
+  await H.focus('sc'); await H.key('s:GD1'); ok(await done(3), 'I zero line (GD)');
+  await H.key('s:GD1'); await H.key('s:AC1'); ok(await done(4), `I CH I on DC: ${JSON.stringify((await sc()).ch[0])}`);
+  await H.focus('psu'); await H.key('p:PWR'); await H.key('p:LVC-', 2); await H.key('p:LON'); ok(await done(5), 'I 1 V read');
+  await H.key('p:LVC+'); await H.key('p:LVC+', 3); await H.focus('sc'); await H.key('s:V1-', 2); await H.focus('psu'); await H.key('p:LVC+', 5);
+  await H.focus('sc'); await H.key('s:V1-'); ok(await done(6), `I 2, 5, 10 V read ${JSON.stringify(await st())}`);
+  await H.focus('psu'); await H.key('p:LON'); ok(await done(7), 'I supply off');
+  await H.focus('board'); await H.lead('gr', 4); await H.lead('gb', 11); await H.lead('c2r', 4); await H.lead('c2b', 11); ok(await done(8), 'I Fig. 2 built');
+  await H.focus('gen'); await H.key('g:PWR'); await H.key('g:Sine'); await H.mtx('f', 1000); await H.mtx('a', 4); await H.key('g:OUT'); ok(await done(9), 'I generator 1 kHz 4 Vpp');
+  await H.focus('sc'); await H.key('s:CH12'); await H.key('s:AC2'); await H.key('s:V2+', 2); await H.key('s:TD+', 2);
+  ok(await done(10), `I sine on CH II: ${JSON.stringify((await sc()).ch[1])}`);
+  await page.screenshot({ path: `/tmp/ee205-exp2-sine-${vp}.png` });
+  await H.focus('hm1'); await H.key('h1:SW-', 3); await H.lead('h1v', 4); await H.lead('h1c', 11); ok(await done(11), 'I DMM Vrms');
+  await H.focus('psu'); await H.key('p:LON'); await H.focus('sc'); await H.key('s:DUAL'); ok(await done(12), 'I DUAL');
+  await H.key('s:DUAL'); await H.key('s:ADD'); ok(await done(13), 'I ADD');
+  // ---- Procedure II ----
+  await H.key('s:ADD');
+  await H.focus('psu'); await H.key('p:LON'); await H.lead('Lp', null); await H.lead('Lm', null); await H.lead('c1r', null); await H.lead('c1b', null);
+  await H.focus('sc'); await H.key('s:V2-', 3);
+  await H.focus('gen'); await H.mtx('a', 10); await H.mtx('f', 100); ok(await done(14), `II 10 Vpp on the scope ${JSON.stringify((await sc()).ch[1])}`);
+  for (const [i, f] of [100, 1000, 2000, 3000, 4000, 5000].entries()) { await H.mtx('f', f); ok(await done(15 + i), `II DMM at ${f} Hz`); }
+  // ---- Procedure III ----
+  await H.focus('gen'); await H.key('g:OUT');
+  for (const k of ['gr', 'gb', 'c2r', 'c2b', 'h1v', 'h1c']) await H.lead(k, null);
+  await H.focus('hm1'); await H.key('h1:SW+', 3);
+  await H.focus('board'); await H.place('L175', 15, 16); await H.lead('h1v', 15); await H.lead('h1c', 16); ok(await done(21), `III RL ${(await st()).rl}`);
+  await H.place('R100', 16, 23); await H.place('BR', 8, 15); await H.lead('gr', 8); await H.lead('gb', 23); ok(await done(22), 'III Fig. 3 built');
+  await H.focus('gen'); await H.mtx('f', 1000); await H.mtx('a', 20); await H.key('g:OUT'); ok(await done(23), 'III e(t) = 10 sin');
+  await H.focus('hm1'); await H.key('h1:SW-', 3);
+  for (const [a, b] of [[15, 23], [15, 16], [16, 23]]) { await H.lead('h1v', a); await H.lead('h1c', b); }
+  ok(await done(24), `III E, VL, VR: ${JSON.stringify(await st())}`);
+  await H.lead('h1v', null); await H.lead('h1c', null);
+  await H.lead('c1r', 16); await H.lead('c1b', 23); await H.lead('c2r', 15); await H.lead('c2b', 23);
+  await H.focus('sc'); await H.key('s:DUAL'); ok(await done(25), 'III dual trace VR and E'); await page.screenshot({ path: `/tmp/ee205-exp2-dual-${vp}.png` });
+  await H.key('s:XY'); ok(await done(26), 'III XY Lissajous'); await page.screenshot({ path: `/tmp/ee205-exp2-xy-${vp}.png` });
+  for (const k of ['c1r', 'c1b', 'c2r', 'c2b']) await H.lead(k, null);
+  await H.focus('hm1'); await H.key('h1:SW+', 6); await H.focus('board'); await H.del(8, 15); await H.lead('h1ma', 8); await H.lead('h1c', 15);
+  ok(await done(27), `III I = ${JSON.stringify(await st())}`);
+  await H.focus('gen'); await H.key('g:OUT'); ok(await done(28), 'all steps done');
+  // ---- sheet ----
+  const S = await st();
+  const F = await page.evaluate(S => { const f = {}, r = (x, d) => (+x).toFixed(d);
+    [1, 2, 5, 10].forEach(v => f['dc' + v] = v); f.vm = 2; f.tp = 1; f.fq = 1000; f.vr = r(2 / Math.SQRT2, 3); f.vd = r(S.vrd, 3); f.q8 = 'a'; f.vr8 = r(Math.hypot(10, +f.vr), 3);
+    [100, 1000, 2000, 3000, 4000, 5000].forEach(q => { f['r' + q] = 3.535; f['d' + q] = r(S['d' + q], 3); f['e' + q] = ((+f['d' + q] - 3.535) / 3.535 * 100).toFixed(2); });
+    f.rl = r(S.rl, 1); f.e3 = r(S.e3, 3); f.vl3 = r(S.vl3, 3); f.vr3 = r(S.vr3, 3); f.th = r(Math.atan2(2 * Math.PI * 17.5, 117.6) * 180 / Math.PI, 1); f.lead = 'e'; f.i3 = r(S.i3 * 1e3, 2);
+    f.zm = r(+f.e3 / +f.i3 * 1e3, 1); f.zc = r(Math.hypot(100 + +f.rl, 2 * Math.PI * 17.5), 1); f.p3 = r(Math.pow(+f.i3 / 1e3, 2) * (100 + +f.rl) * 1e3, 2); f.pf = r((100 + +f.rl) / +f.zc, 3); return f; }, S);
+  await page.evaluate(F => { for (const [k, v] of Object.entries(F)) { const e = document.getElementById(k); e.value = v; e.dispatchEvent(new Event('input')); } document.getElementById('submit').click(); }, F);
+  const res = await page.evaluate(() => document.querySelector('#result .result b').textContent + ' | ' + [...document.querySelectorAll('#result .bad')].map(e => e.textContent).join(' ; '));
+  const m = res.match(/(\d+) \/ (\d+)/); ok(m && m[1] === m[2], 'sheet full marks: ' + res);
+}

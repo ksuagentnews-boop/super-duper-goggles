@@ -12,3 +12,11 @@ Small gaps resolved while building (the manual always wins; videos only for look
 - Procedure IV's "simulated" values: the bench has no PSpice; the sheet asks for the calculated values.
 - Procedure III with one ammeter (the GoldStar, as in the lab video): each branch is joined to the bus by a bridging plug, and the ammeter takes the plug's place for each current in turn.
 - Procedure IV: ID ≈ 44 mA is above the GoldStar's 40 mA range, so the step uses its 400 mA position.
+
+## Exp 2
+- Procedure I's sine (steps 4–7) has no values in the manual: 1 kHz, 4 Vpp is used.
+- e(t) = 10 sin(2π·10³t) is set as 20 Vpp on the generator (its open-circuit EMF); E under load is what the DMM measures.
+- Fig. 3's caption says "procedure II": it is the circuit of Procedure III (PLAN decision).
+- The current of Procedure III is measured by putting the Fluke (A~, 300 mA jack) in place of a bridging plug between the generator and the coil.
+- The decade box of the equipment list stands on the table; no step of the procedures uses it.
+- On the HM 203-7, DUAL and ADD pressed together give CHOP; the ADD step asks to release DUAL first.

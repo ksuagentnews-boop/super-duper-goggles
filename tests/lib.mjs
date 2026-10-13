@@ -83,6 +83,15 @@ export function bench(page) {
         const e = document.querySelector(`#bench [data-k="wire:${w.id}"]`); const pt = e.getPointAtLength(e.getTotalLength() / 2); return { x: pt.x, y: pt.y }; }, [a, b]);
       if (!p) throw new Error('no wire'); await H.tap(p.x, p.y); await H.key('tb:del'); },
     gen: async (fk, digits, uk) => { await H.key('g:' + fk); for (const d of digits) await H.key('g:' + d); await H.key('g:' + uk); },
+    /* Metrix MTX 3240: set FREQ / AMPL / OFFSET (p = 'f' | 'a' | 'o') to a value with the knob, digit by digit */
+    mtx: async (p, target) => { await H.key('g:' + { f: 'FREQ', a: 'AMPL', o: 'OFFSET' }[p]);
+      for (let i = 0; i < 400; i++) { const g = await page.evaluate(() => { const g = BENCH.sim.RT.S.gen; return { v: { f: g.freq, a: g.amp, o: g.off }, dig: g.dig }; });
+        const cur = g.v[p], diff = target - cur; if (Math.abs(diff) < 1e-9 * Math.max(1, Math.abs(target))) return;
+        const lim = { f: [-1, 6], a: [-3, 1], o: [-3, 0] }[p]; let d = Math.max(lim[0], Math.min(lim[1], Math.floor(Math.log10(Math.abs(diff)) + 1e-9)));
+        if (p === 'f' && cur + Math.sign(diff) * Math.pow(10, d) < 0.1) d--;
+        if (g.dig[p] !== d) { await H.key(g.dig[p] < d ? 'g:CL' : 'g:CR'); continue; }
+        await H.key(diff > 0 ? 'g:KN+' : 'g:KN-'); }
+      throw new Error('mtx could not reach ' + p + '=' + target); },
     steps: () => page.evaluate(() => ({ done: BENCH.done.filter(Boolean).length, total: BENCH.sim.steps.length, cur: BENCH.cur() })),
     S: f => page.evaluate(f),
   };

@@ -160,6 +160,7 @@ Updated after every finished item (commit + push each time).
 - Engine: phasor ac steady state, transient sub-steps, coils and film caps, registry + 2 × 4 room.
 - Instruments: Hameg HM 203-7, Metrix MTX 3240, Thandar TS3022S, handheld DMMs (Fluke 77 / GoldStar / BK 2704B), YEW 2786.
 - Exp 1 built (Procedures I–IV, 30 steps, sheet graded); test `tests/exp/ee205-exp1.mjs` desktop + phone.
+- Exp 2 built (Procedures I–III, 28 steps); test `tests/exp/ee205-exp2.mjs` desktop + phone.
 
 ## In progress
 - Batch 4: 10, 6, 1, 7, 8, 2 (4 in a parallel worktree).
