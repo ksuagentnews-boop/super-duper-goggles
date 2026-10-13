@@ -135,8 +135,17 @@ Updated after every finished item (commit + push each time).
   - It is not shown on touch devices (phones, iPad). There it sat over «بدّل للمانيوال» / «من جديد».
   - Test (instruments): desktop hint over no top-bar button; no hint on the phone.
 
+- **P5 · «العلبة» on touch**
+  - A slim scrollbar strip on the box's inner edge, always there on touch when the parts overflow. Space is reserved for it, so it covers no part.
+  - Touching the strip thickens it (4 → 10 px, 16 px touch width). Dragging the thumb scrolls smoothly, and a tap on the track jumps there.
+  - A vertical swipe on a part or on the gaps scrolls the box, with momentum.
+  - A part comes out only after a sideways move or a 0.3 s hold. A swipe that scrolls and then leaves the box sideways also takes the part. A tap arms the part (tap again to disarm), as before.
+  - Desktop is unchanged: mouse wheel, and a press drags at once.
+  - Also: the ✥ handle shrinks on instruments drawn small (portrait), never under 24 px, and stays 36 px in phone landscape. A view change closes the knob ◀ ▶ buttons.
+  - Tests (gestures, every touch viewport): strip, swipe on a part / on the gaps, track tap, thumb drag, sideways lift, hold lift, tap arm / disarm. Checked at 844×390, 932×430, 390×844 and iPad.
+
 ## In progress
-- P5 · «العلبة» touch scrolling: scrollbar strip, swipes on the gaps, parts drag after hold / sideways move.
+- Batch 3 regressions, then push.
 
 ## Next
 - Owner: open the site with `?debug=1` on the iPhone (Claude app + Safari) and send one screenshot of the Exp 9 overview and one of a device zoom, so the real numbers can be compared.

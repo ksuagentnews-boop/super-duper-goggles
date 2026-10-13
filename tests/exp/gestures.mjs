@@ -9,7 +9,7 @@ export async function run(page, vp, ok) {
   const mid = await page.evaluate(() => { const e = document.getElementById('bstage').getBoundingClientRect(); return { x: e.x + e.width * 0.55, y: e.y + e.height * 0.45 }; });
   const empty = () => page.evaluate(() => { const s = document.getElementById('bstage').getBoundingClientRect();
     for (let y = s.top + 30; y < s.bottom - 30; y += 13) for (let x = s.left + 30; x < s.right - 30; x += 13) { const e = document.elementFromPoint(x, y);
-      if (e && e.closest('#bench') && !e.closest('[data-k]')) { const q = BENCH.toSvg(x, y); if (!BENCH.regionAt(q)) return { x, y }; } } return null; });
+      if (e && e.closest('#bench') && !e.closest('[data-k]')) { const q = BENCH.toSvg(x, y), r = BENCH.regionAt(q); if (!r || (BENCH.view !== 'ov' && BENCH.view !== 'board' && r !== BENCH.view)) return { x, y }; } } return null; });
   const cdp = touch ? await page.context().newCDPSession(page) : null;
   const pinch = async (c, from, to) => { const tp = d => [{ x: c.x - d, y: c.y, id: 0 }, { x: c.x + d, y: c.y, id: 1 }];
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: tp(from) });
@@ -36,6 +36,8 @@ export async function run(page, vp, ok) {
   await zoomIn(2); await page.click('#bFit'); await page.waitForTimeout(700); const s6 = await st(); ok(!s6.user && Math.abs(s6.w - s6.fw) < 1, '«عرض كامل» refits');
   // knobs: on touch a drag turns them, a tap shows big − / + buttons with the value; on desktop the wheel turns them
   { await page.evaluate(() => { BENCH.fitAll(); const S = BENCH.sim.RT.S; S.psu.pwr = true; S.psu.u[0].v = 5; BENCH.sim.render(); }); await page.waitForTimeout(300);
+    /* a knob drawn tiny (portrait overview of a crowded table) is reached through the supply's device zoom, as a student would */
+    await page.evaluate(() => { const c = document.querySelector('#bench circle[data-knob="p:LVC"][stroke]').getBoundingClientRect(); if (c.width < 16) BENCH.focus('psu'); }); await page.waitForTimeout(500);
     const k = await page.evaluate(() => { const c = document.querySelector('#bench circle[data-knob="p:LVC"][stroke]').getBoundingClientRect(); return { x: c.x + c.width / 2, y: c.y + c.height / 2 }; });
     const v = () => page.evaluate(() => BENCH.sim.RT.S.psu.u[0].v);
     if (touch) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: k.x, y: k.y, id: 0 }] });
@@ -48,6 +50,7 @@ export async function run(page, vp, ok) {
       ok(Math.abs(await v() - 5.6) < 1e-9 && /5\.60 V/.test(await page.evaluate(() => document.querySelector('#kpad .kv').textContent)), '+ turns it one detent and the value follows');
       const e3 = await empty(); if (e3) { await page.touchscreen.tap(e3.x, e3.y); await page.waitForTimeout(150); } ok(await page.evaluate(() => document.getElementById('kpad').hidden), 'a tap elsewhere hides the buttons'); }
     else { await page.mouse.move(k.x, k.y); await page.mouse.wheel(0, -100); await page.waitForTimeout(80); ok(Math.abs(await v() - 5.1) < 1e-9, 'desktop: the wheel over the knob body turns it'); } }
+  await page.evaluate(() => { if (BENCH.view !== 'ov') BENCH.back(); BENCH.fitAll(); }); await page.waitForTimeout(400);
   // board zoom: a tap on the panel's frame (not a hole) zooms onto the board; the parts box stays; pinch goes closer there too
   { const R = await page.evaluate(() => BENCH.sim.boardRect); const c = await page.evaluate(([x, y]) => { const s = document.getElementById('bench'); const p = s.createSVGPoint(); p.x = x; p.y = y; const q = p.matrixTransform(s.getScreenCTM()); return [q.x, q.y]; }, [R[0] + 6, R[1] + R[3] / 2]);
     if (touch) await page.touchscreen.tap(c[0], c[1]); else await page.mouse.click(c[0], c[1]); await page.waitForTimeout(700);
@@ -71,6 +74,42 @@ export async function run(page, vp, ok) {
     ok(await page.evaluate(() => BENCH.sim.RT.S.sc.side === 'add' && /Add Measurement/.test(document.querySelector('#tmenu .tm-t').textContent)), 'picking «Add Measurement» in the list works like the soft key'); }
   await page.keyboard.press('Escape'); await page.waitForTimeout(700); const d2 = await st(); ok(d2.view === 'ov' && !d2.user && Math.abs(d2.w - d2.fw) < 1, '✕ / ESC back to the fitted overview');
   // ?debug=1: the real viewport numbers on screen (and nothing without it)
+  if (touch) { // «العلبة» on touch: strip, swipes scroll, parts lift only after a hold or a sideways move
+    await page.evaluate(() => { BENCH.back(); BENCH.fitAll(); BENCH.setDrawer(true); }); await page.waitForTimeout(400);
+    const T = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map(([x, y]) => ({ x, y, id: 0 })) });
+    const swipe = async (a, b, n = 8, wait = 0) => { await T('touchStart', [a]); if (wait) await page.waitForTimeout(wait); for (let i = 1; i <= n; i++) { await T('touchMove', [[a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n]]); await page.waitForTimeout(16); } await T('touchEnd', []); await page.waitForTimeout(120); };
+    const bs = () => page.evaluate(() => { const b = document.getElementById('bag'); return { st: b.scrollTop, max: b.scrollHeight - b.clientHeight, armed: BENCH.sim.armed(), parts: BENCH.sim.RT.S.parts.length }; });
+    const over = await page.evaluate(() => { const b = document.getElementById('bag'); b.scrollTop = 0; BENCH.bagSync(); return b.scrollHeight > b.clientHeight + 4; });
+    if (over) {
+      const bar = await page.evaluate(() => { const r = document.getElementById('bagBar').getBoundingClientRect(), d = document.getElementById('drawer').getBoundingClientRect(), c = getComputedStyle(document.getElementById('bagBar'));
+        const hit = [...document.querySelectorAll('#bag .bag-item')].some(e => { const q = e.getBoundingClientRect(); return q.right > r.left + 1 && q.left < r.right - 1 && q.bottom > r.top && q.top < r.bottom; });
+        return { shown: c.display !== 'none' && r.height > 40, inside: r.right <= d.right + 1 && r.left >= d.left, hit, w: r.width, r: [r.x, r.y, r.width, r.height] }; });
+      ok(bar.shown && bar.inside && !bar.hit, `a slim scrollbar strip on the inner edge of «العلبة» (${Math.round(bar.w)} px touch width), covering no part`);
+      const it = await page.$eval('#bag .bag-item', e => { const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
+      let b0 = await bs(); await swipe(it, [it[0], it[1] - 90]); let b1 = await bs();
+      ok(b1.st >= Math.min(30, b1.max - 1) && !b1.armed && b1.parts === b0.parts, `a vertical swipe on a part scrolls «العلبة» (${Math.round(b1.st)} px) and lifts nothing`);
+      const gap = await page.evaluate(() => { const a = [...document.querySelectorAll('#bag .bag-item')].map(e => e.getBoundingClientRect()).filter(r => r.top > document.getElementById('bag').getBoundingClientRect().top);
+        return [a[0].x + a[0].width / 2, (a[0].bottom + a[1].top) / 2]; });
+      await swipe(gap, [gap[0], gap[1] + 70]); const b2 = await bs(); ok(b2.st < b1.st - Math.min(20, b1.st - 1), 'a swipe on the gaps scrolls too');
+      await T('touchStart', [[bar.r[0] + bar.r[2] / 2, bar.r[1] + bar.r[3] - 4]]); await T('touchEnd', []); await page.waitForTimeout(600);
+      const b3 = await bs(); ok(b3.st > b3.max - 3, 'a tap on the strip\'s track near the bottom jumps there');
+      const thumb = await page.$eval('#bagBar i', e => { const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
+      await swipe(thumb, [thumb[0], thumb[1] - bar.r[3]], 10); const b4 = await bs(); ok(b4.st < 3, 'dragging the thumb scrolls back to the top');
+      await page.evaluate(() => { document.getElementById('bag').scrollTop = 0; }); }
+    const nodeC = (a, b) => page.evaluate(([a, b]) => { const L = BENCH.sim.RT.layout, s = document.getElementById('bench'), m = s.getScreenCTM(); const c = i => ({ x: L.BX + 44 + (i % L.COLS) * L.P, y: L.BY + 44 + Math.floor(i / L.COLS) * L.P });
+      const A = c(a), B = c(b); return [((A.x + B.x) / 2) * m.a + m.e, ((A.y + B.y) / 2) * m.d + m.f]; }, [a, b]);
+    const item = t => page.$eval(`#bag .bag-item[data-t="${t}"]`, e => { e.scrollIntoView({ block: 'nearest' }); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
+    const ts = await page.evaluate(() => [...document.querySelectorAll('#bag .bag-item')].map(e => e.dataset.t).filter(t => t !== 'W'));
+    const out = async (a, b) => { await T('touchStart', [a]); for (let i = 1; i <= 4; i++) { await T('touchMove', [[a[0] + 10 * i, a[1]]]); await page.waitForTimeout(16); }
+      for (let i = 1; i <= 10; i++) { await T('touchMove', [[a[0] + 40 + (b[0] - a[0] - 40) * i / 10, a[1] + (b[1] - a[1]) * i / 10]]); await page.waitForTimeout(16); } await T('touchEnd', []); await page.waitForTimeout(120); };
+    let p0 = (await bs()).parts; await out(await item(ts[1]), await nodeC(0, 1));
+    ok((await bs()).parts === p0 + 1, 'a sideways move lifts the part out of «العلبة» and drops it on the board');
+    p0 = (await bs()).parts; await swipe(await item(ts[2]), await nodeC(3, 4), 14, 420);
+    ok((await bs()).parts === p0 + 1, 'a short hold lifts it too (then it can go any way)');
+    const i3 = await item(ts[1]); await page.touchscreen.tap(i3[0], i3[1]); await page.waitForTimeout(80); const a1 = (await bs()).armed;
+    await page.touchscreen.tap(i3[0], i3[1]); await page.waitForTimeout(80); const a2 = (await bs()).armed;
+    ok(a1 === ts[1] && !a2, 'a tap arms the part, a second tap disarms it');
+    await page.evaluate(() => BENCH.sim.reset()); }
   ok(await page.evaluate(() => !document.getElementById('dbgOverlay')), 'no debug overlay without ?debug=1');
   await page.goto('http://app.local/?debug=1'); await page.waitForFunction(() => document.querySelector('#hallLoading').hidden, null, { timeout: 20000 }); await page.evaluate(() => WELCOME.close());
   await sit(page, 'ee312/exp9', 'free'); await page.waitForTimeout(600);

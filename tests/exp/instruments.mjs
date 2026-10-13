@@ -14,7 +14,7 @@ export async function run(page, vp, ok) {
     const r = await page.evaluate(() => { const h = document.getElementById('ovHint'); if (h.hidden) return { shown: false };
       const a = h.getBoundingClientRect(); const hit = [...document.querySelectorAll('#benchView .btop > :not(#ovHint)')].filter(e => { const b = e.getBoundingClientRect(); return b.width && a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1; }).map(e => e.id || e.className);
       return { shown: true, hit }; });
-    if (vp === 'phone') ok(!r.shown, 'touch: no hint bubble (nothing over the top-bar buttons)');
+    if (vp !== 'desktop') ok(!r.shown, 'touch: no hint bubble (nothing over the top-bar buttons)');
     else ok(r.shown && !r.hit.length, 'the hint sits in the top bar\'s free space, over no button' + (r.hit && r.hit.length ? ': ' + r.hit.join(', ') : '')); }
   ok(await page.evaluate(() => { const c = BENCH.sim.RT.crossings(); return !c.cc.length && !c.ci.length; }), 'default layout: no cable crosses another cable or an instrument');
   ok(await page.evaluate(() => { const S = BENCH.sim.RT.S; return Object.values(S.jack).every(v => !v) && Object.values(S.leads).every(l => l.bn == null && l.node == null); }), 'every lead starts unplugged in the «Coaxial cables & wires» tray');

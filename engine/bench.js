@@ -25,7 +25,7 @@ const BENCH={
     /* iPhone: size the bench to the visual viewport and re-fit on resize / rotation / toolbar changes */
     const vv=window.visualViewport;const sync=()=>{if(vv){const st=E.view.style;st.top=vv.offsetTop+'px';st.left=vv.offsetLeft+'px';st.width=vv.width+'px';st.height=vv.height+'px'}if(!E.view.hidden)requestAnimationFrame(()=>this.refit(false))};
     addEventListener('resize',sync);addEventListener('orientationchange',()=>setTimeout(sync,250));if(vv){vv.addEventListener('resize',sync);vv.addEventListener('scroll',sync)}this._vvSync=sync;sync();
-    this.panelDefault();this.gestures();
+    this.panelDefault();this.gestures();this.bagTouch();
     /* the stage can change size without a window resize (iOS toolbars, the host app's bars, the sheet panel): refit then too */
     if(window.ResizeObserver){const ro=new ResizeObserver(()=>{if(E.view.hidden)return;const {W,H}=this.stageSize();E.view.classList.toggle('tall',H>W*1.1);if(this._to&&!this.user){const t=this.fit(this.curRect());if(t)this._to=t}else this.refit(false)});[E.stage,E.drawer,E.card].forEach(x=>x&&ro.observe(x))}
   },
@@ -62,8 +62,35 @@ const BENCH={
   register(sim){this.sim=sim;this.procInit();this.calcOv();
     const bag=this.el.bag;bag.innerHTML='';
     sim.tray.forEach(({t,l})=>{const b=document.createElement('button');b.className='bag-item';b.dataset.t=t;b.innerHTML=sim.icon(t)+`<small>${l}</small>`;
-      b.addEventListener('pointerdown',e=>{e.preventDefault();sim.trayDown(t,e)});b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sim.trayDown(t,{clientX:0,clientY:0,pointerId:0});}});bag.appendChild(b)});
+      b.addEventListener('pointerdown',e=>{e.preventDefault();if(e.pointerType==='mouse')sim.trayDown(t,e)});b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sim.trayDown(t,{clientX:0,clientY:0,pointerId:0});}});bag.appendChild(b)});
   },
+  /* «العلبة» on touch: a swipe up/down scrolls it (with momentum), a sideways move or a short hold lifts the part out,
+     a tap arms it; a slim scrollbar strip on its inner edge thickens when touched, its thumb drags and its track jumps */
+  bagTouch(){const bag=this.el.bag,bar=$q('#bagBar'),th=bar.firstElementChild;let g=null,fl=0;
+    const sync=()=>{const ch=bag.clientHeight,sh=bag.scrollHeight;bar.style.top=bag.offsetTop+'px';bar.style.height=ch+'px';bar.classList.toggle('none',sh<=ch+1);
+      const h=Math.max(36,ch*ch/Math.max(sh,1)),y=(sh>ch?bag.scrollTop/(sh-ch):0)*(ch-h);th.style.height=h+'px';th.style.transform=`translateY(${y}px)`;return {ch,sh,h}};
+    this.bagSync=sync;bag.addEventListener('scroll',sync,{passive:true});if(window.ResizeObserver)new ResizeObserver(sync).observe(bag);
+    const fling=v=>{cancelAnimationFrame(fl);let last=performance.now();const step=now=>{const dt=now-last;last=now;bag.scrollTop-=v*dt;v*=Math.pow(0.994,dt);if(Math.abs(v)>0.02)fl=requestAnimationFrame(step)};fl=requestAnimationFrame(step)};
+    const lift=e=>{const it=g.item;clearTimeout(g.t);g=null;it.classList.remove('hold');this.sim&&this.sim.trayDown(it.dataset.t,e)};
+    bag.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'||!this.sim)return;e.preventDefault();cancelAnimationFrame(fl);
+      const item=e.target.closest('.bag-item');g={x:e.clientX,y:e.clientY,st:bag.scrollTop,item,mode:null,id:e.pointerId,v:0,ly:e.clientY,lt:performance.now()};
+      try{bag.setPointerCapture(e.pointerId)}catch(_){}
+      if(item){g.t=setTimeout(()=>{if(g&&!g.mode&&g.item){g.item.classList.add('hold');try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}lift(g.ev||e)}},300)}});
+    bag.addEventListener('pointermove',e=>{if(!g||e.pointerId!==g.id)return;g.ev=e;const dx=e.clientX-g.x,dy=e.clientY-g.y;
+      if(!g.mode&&Math.hypot(dx,dy)>8){if(g.item&&Math.abs(dx)>Math.abs(dy)){lift(e);return}g.mode='scroll';clearTimeout(g.t);bar.classList.add('on')}
+      if(g.mode==='scroll'&&g.item&&e.clientX>this.el.drawer.getBoundingClientRect().right+12){bag.scrollTop=g.st;bar.classList.remove('on');lift(e);return}/* scrolled, then pulled out sideways: it was a part being taken out */
+      if(g.mode==='scroll'){bag.scrollTop=g.st-dy;const now=performance.now(),dt=Math.max(1,now-g.lt);g.v=0.7*g.v+0.3*((e.clientY-g.ly)/dt);g.ly=e.clientY;g.lt=now}});
+    const up=e=>{if(!g||e.pointerId!==g.id)return;clearTimeout(g.t);const G=g;g=null;bar.classList.remove('on');
+      if(G.mode==='scroll'){if(performance.now()-G.lt<80&&Math.abs(G.v)>0.15)fling(G.v)}else if(G.item&&e.type==='pointerup'&&this.sim)this.sim.trayTap(G.item.dataset.t)};
+    bag.addEventListener('pointerup',up);bag.addEventListener('pointercancel',up);
+    /* the strip: drag the thumb, tap the track to jump there */
+    let b=null;bar.addEventListener('click',e=>e.stopPropagation());/* a tap target in its own right: touch adjustment must not hand the tap to a part beside it */
+    bar.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();cancelAnimationFrame(fl);const {ch,sh,h}=sync();if(sh<=ch)return;bar.classList.add('on');
+      const r=bar.getBoundingClientRect(),tr=th.getBoundingClientRect();try{bar.setPointerCapture(e.pointerId)}catch(_){}
+      if(e.clientY<tr.top||e.clientY>tr.bottom){const f=Math.min(1,Math.max(0,(e.clientY-r.top-h/2)/(ch-h)));bag.scrollTo({top:f*(sh-ch),behavior:'smooth'});b={y:e.clientY,st:f*(sh-ch),k:(sh-ch)/(ch-h)}}
+      else b={y:e.clientY,st:bag.scrollTop,k:(sh-ch)/(ch-h)}});
+    bar.addEventListener('pointermove',e=>{if(!b)return;if(Math.abs(e.clientY-b.y)>3)bag.scrollTop=b.st+(e.clientY-b.y)*b.k});
+    const bu=()=>{b=null;bar.classList.remove('on')};bar.addEventListener('pointerup',bu);bar.addEventListener('pointercancel',bu)},
   setPaint(c){this.paint=c;const on=c!==null;$q('#pSw').hidden=!on;$q('#pBucket').setAttribute('aria-pressed',on);
     $q('#pSw').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.c===c));if(this.svg)this.svg.classList.toggle('painting',on);
     if(on&&!c)this.say('اختر لون، وبعدها اضغط على السلك اللي تبي تلوّنه')},
@@ -93,7 +120,7 @@ const BENCH={
     return {top,bottom,left,right:T.right}},
   /* free area of the overview in px (used by the layout search before anything is drawn) */
   availArea(){const {W,H}=this.stageSize();const small=innerHeight<=500||innerWidth<=600;const bag=!this.el.view.classList.contains('no-bag');
-    const left=bag?(this.drawer?(small?104:136):42):0;const card=this.mode==='manual'?(small?64:150):0;const tall=H>W*1.1,tr=tall?0:(small?70:96),tt=tall?52:0;return {W:Math.max(200,W-left-16-tr),H:Math.max(150,H-16-card-tt)}},
+    const left=bag?(this.drawer?(small?104:136)+(matchMedia('(pointer:coarse)').matches?12:0):42):0;const card=this.mode==='manual'?(small?64:150):0;const tall=H>W*1.1,tr=tall?0:(small?70:96),tt=tall?52:0;return {W:Math.max(200,W-left-16-tr),H:Math.max(150,H-16-card-tt)}},
   fit(r){const {W,H}=this.stageSize();if(!W||!H)return null;const {top,bottom,left,right}=this.pads();const m=Math.min(12,W*0.015);
     /* ≈4 % margin around what is on the desk */
     const mg=this.el.view.classList.contains('devzoom')?0:0.02,mx=r[2]*mg,my=r[3]*mg;r=[r[0]-mx,r[1]-my,r[2]+2*mx,r[3]+2*my];
@@ -145,6 +172,7 @@ const BENCH={
     if(!ov||seen||this._hintShown||matchMedia('(pointer:coarse)').matches){h.hidden=true;return}h.hidden=false;h.classList.remove('fade');if(h.clientWidth<160){h.hidden=true;return}this._hintShown=true;h.classList.remove('fade');try{sessionStorage.setItem('eelab:hint','1')}catch(_){}
     clearTimeout(this._hintT);this._hintT=setTimeout(()=>{h.classList.add('fade');setTimeout(()=>{h.hidden=true},700)},4200)},
   ui(){const E=this.el,ov=this.view==='ov';if(this.sim&&this.sim.pc){E.zoomUI.hidden=true;E.ovHint.hidden=true;E.bagBtn.hidden=true;this.drawStepCard();return}E.zoomUI.hidden=ov;E.bagBtn.hidden=true;
+    if(this._lastView!==this.view){this._lastView=this.view;this.sim.RT&&this.sim.RT.closePad&&this.sim.RT.closePad()}/* a view change closes the knob buttons */
     E.ovHint.textContent=innerWidth<600&&innerHeight>innerWidth?'اقلب الجوال بالعرض، واضغط على أي جهاز':matchMedia('(pointer:coarse)').matches?'الأزرار شغّالة من هنا · ✥ تحرّك الجهاز · جسمه يقرّب':'الأزرار والأسلاك شغّالة من هنا · اسحب ✥ عشان تحرّك الجهاز · اضغط على جسمه عشان تقرّب';
     this.hintOnce(ov);
     if(!ov){const n=this.sim.names[this.view];E.zEn.textContent=n[0];E.zAr.textContent=n[1]}

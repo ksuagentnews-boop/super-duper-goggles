@@ -405,8 +405,11 @@ function dragSVG(){if(!drag||!drag.active)return '';let s='';
 const HPX=matchMedia('(pointer:coarse)').matches?18:14;
 function hScale(){const v=BENCH.vb,w=svg.getBoundingClientRect().width;return v&&w?v.w/w:1}
 function handleSVG(i){const ar=r=>`<path d="M0 -13 L-5.5 -7 L-2 -7 L-2 -2 L2 -2 L2 -7 L5.5 -7 Z" transform="rotate(${r})"/>`,k=HPX/18;
-  return `<g class="mvh" data-k="mv:${i.key}" style="cursor:move" transform="translate(0 0) scale(${hScale()})"><circle r="${HPX+10}" fill="transparent"/><circle r="${HPX}" fill="#1f5b50" stroke="#fff" stroke-width="2.5"/><g transform="scale(${k})" fill="#fff" pointer-events="none">${[0,90,180,270].map(ar).join('')}<rect x="-2" y="-2" width="4" height="4"/></g></g>`}
-function updHandles(){const s=hScale();svg.querySelectorAll('.mvh').forEach(g=>g.setAttribute('transform',`translate(0 0) scale(${s})`))}
+  return `<g class="mvh" data-k="mv:${i.key}" style="cursor:move" transform="${hT(i.key)}"><circle r="${HPX+5}" fill="transparent"/><circle r="${HPX}" fill="#1f5b50" stroke="#fff" stroke-width="2.5"/><g transform="scale(${k})" fill="#fff" pointer-events="none">${[0,90,180,270].map(ar).join('')}<rect x="-2" y="-2" width="4" height="4"/></g></g>`}
+/* constant size on screen, centred mostly above the top-left corner so it covers as little of the panel as possible
+   (radius HPX px, or less on an instrument drawn small — never under 12 px — so it does not swamp it) */
+function hT(k){const s0=hScale(),i=byKey[k],m=i?Math.min(i.size[0],i.size[1])/s0:1e9,r=Math.max(12,Math.min(HPX,0.45*m)),s=s0*r/HPX;return `translate(${-0.25*HPX*s} ${-0.7*HPX*s}) scale(${s})`}
+function updHandles(){svg.querySelectorAll('.mvh').forEach(g=>g.setAttribute('transform',hT(g.dataset.k.slice(3))))}
 function placeInst(k){const g=svg.querySelector(`.Linst [data-inst="${k}"]`);if(g)g.setAttribute('transform',`translate(${POS[k].x} ${POS[k].y})`)}
 function moveInst(k,x,y){showHL(null);POS[k]={x:Math.round(x),y:Math.round(y)};placeInst(k);updRegions();render(true)}
 /* back to the default arrangement (animated unless the student asked for reduced motion) */
@@ -502,7 +505,7 @@ function knobPad(){const el=document.getElementById('kpad');if(!el)return;const 
   el.querySelector('.kv span').textContent=info;
   const w=el.offsetWidth||170,h=el.offsetHeight||52;let x=r.left+r.width/2-st.left-w/2,y=r.top-st.top-h-8;if(y<4)y=r.bottom-st.top+8;
   el.style.left=clamp(x,4,st.width-w-4)+'px';el.style.top=clamp(y,4,st.height-h-4)+'px';el.hidden=false}
-RT.knobPad=()=>knobPad();RT.camera=()=>{updHandles();knobPad()};
+RT.knobPad=()=>knobPad();RT.closePad=()=>{if(KPAD){KPAD=null;knobPad()}};RT.camera=()=>{updHandles();knobPad()};
 function targetOf(e){let t=e.target;if(t&&t.closest&&t.closest('[data-cab]')){const under=document.elementsFromPoint(e.clientX,e.clientY).find(el=>svg.contains(el)&&!el.closest('[data-cab]'));if(under)t=under}const el=t&&t.closest?t.closest('[data-k]'):null;return el||(e.type==='pointerdown'?nearControl(e):null)}
 let rep=null;const stopRep=()=>{clearTimeout(rep);clearInterval(rep);rep=null};
 let press=null;
@@ -621,7 +624,7 @@ BENCH.register({
   bodyRect:k=>{const i=byKey[k],P=POS[k];return i?[P.x,P.y,i.size[0],i.size[1]]:null},
   tray:def.tray.map(([t,l])=>({t,l})),
   icon:t=>t==='W'?'<svg viewBox="-34 -18 68 36"><path d="M-24 8 q24 -26 48 0" fill="none" stroke="#e0b000" stroke-width="5" stroke-linecap="round"/></svg>':`<svg viewBox="-36 -18 72 36">${partBody(t,40,false)}</svg>`,
-  trayDown,isWire:()=>RT.S.wireMode,armed:()=>RT.S&&RT.S.armed,
+  trayDown,trayTap:t=>{const S=RT.S;if(t==='W')return trayDown(t);S.wireMode=false;S.armed=S.armed===t?null:t;BENCH.drawerSync();render(true)},isWire:()=>RT.S.wireMode,armed:()=>RT.S&&RT.S.armed,
   status:X.status||(()=>({})),P:PX,rawSteps:X.steps||[],steps:jackLines((X.steps||[]).map(s=>({...s,lines:s.lines&&s.lines.slice()}))),prep:jackLines,
   reset(){fresh();X.onReset&&X.onReset();render()},
   render:()=>render(),RT,resetLayout,isDefault,crossings,lineDone,lineSpots,setGuide
