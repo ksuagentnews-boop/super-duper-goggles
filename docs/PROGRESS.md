@@ -147,8 +147,11 @@ Updated after every finished item (commit + push each time).
 - **Batch 3 checks:** full desktop + phone regressions pass. The touch checks also run at 932×430, 390×844 and iPad.
 - **Knobs on touch, owner's correction re-checked:** a new gestures test turns the scope's VARIABLE knob by finger in the scope zoom: a 44 px drag moves the list 3 items, a tap shows ◀ ▶ (44 px) with the item name, and ◀ steps back. It also turns it pinch-zoomed closer. Checked on phone, portrait and iPad.
 
+## Batch 4 (owner's test, 13 Oct)
+- **9 · One coax kind:** a single generic `coax` lead (BNC → red + black clip) fits every BNC (scope CH1–4, generator OUT); a tap lights all free BNCs.
+
 ## In progress
-- Nothing.
+- Batch 4: 5, 10, 6, 1, 7, 8, 2 (4 in a parallel worktree).
 
 ## Next
 - Owner: open the site with `?debug=1` on the iPhone (Claude app + Safari) and send one screenshot of the Exp 9 overview and one of a device zoom, so the real numbers can be compared.

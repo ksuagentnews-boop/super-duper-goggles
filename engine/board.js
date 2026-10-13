@@ -32,15 +32,15 @@ const GROUPS=[...new Set(LEADS.map(grpOf))];const GMEM={};GROUPS.forEach(g=>GMEM
 const valOf=v=>typeof v==='function'?v():v;
 const trayName=g=>valOf(LEADDEF[g].tray)||labelOf(g),jackName=g=>valOf(LEADDEF[g].jn)||labelOf(g);
 const jackRel=g=>LEADDEF[g].jat||fromOf(g);
-/* the leads themselves are generic, like on the real bench: coax probes (BNC → red + black clip), generator coax leads and
-   red / black banana leads, named by type. Any lead fits any free jack of its kind; the jack decides what it is (its label
+/* the leads themselves are generic, like on the real bench: one kind of coax cable (BNC → red + black clip) that fits any
+   BNC — scope CH1–CH4 or generator OUT — and red / black banana leads, named by type. Any lead fits any free jack of its kind; the jack decides what it is (its label
    CH1, DC +, HI … shows once it is plugged). One lead per jack of the table. */
-const JKIND=g=>{const d=LEADDEF[g];return d.coax?(d.inst.key==='sc'?'probe':'gen'):'banana'};
-const KORD={probe:0,gen:1,banana:2};
+const JKIND=g=>LEADDEF[g].coax?'coax':'banana';
+const KORD={coax:0,banana:1};
 const PL=GROUPS.map(g=>({kind:JKIND(g),col:JKIND(g)==='banana'?(LEADDEF[g].pol==='-'?'black':'red'):null,n:GMEM[g].length}))
   .sort((a,b)=>KORD[a.kind]-KORD[b.kind]||(a.col==='black')-(b.col==='black')).map((q,i)=>({...q,id:i}));
-const PNAME=q=>q.kind==='probe'?'coax probe':q.kind==='gen'?'GEN coax':q.col+' lead';
-const KNAME=g=>{const k=JKIND(g);return k==='probe'?'coax probe':k==='gen'?'GEN coax':(LEADDEF[g].pol==='-'?'black':'red')+' lead'};
+const PNAME=q=>q.kind==='coax'?'coax':q.col+' lead';
+const KNAME=g=>JKIND(g)==='coax'?'coax':(LEADDEF[g].pol==='-'?'black':'red')+' lead';
 const isCoax=g=>!!LEADDEF[g].coax;
 const FV={left:{x:-1,y:0},right:{x:1,y:0},up:{x:0,y:-1},down:{x:0,y:1}};
 const FACE={};INST.forEach(i=>{const fs=(i.leads||[]).map(l=>fromOf(l.k));if(!fs.length){FACE[i.key]='down';return}

@@ -7,6 +7,12 @@ export async function run(page, vp, ok) {
   await sit(page, 'ee312/exp3', 'manual');
   const H = bench(page); H.touch = vp === 'phone';
   const done = async n => (await H.steps()).done >= n;
+  { // one kind of coax cable, like the lab: every coax lead fits every free BNC (scope CH1–CH4 and the generator OUT)
+    const r = await page.evaluate(() => { const R = BENCH.sim.RT, L = R.layout; const kinds = [...new Set(L.PL.filter(q => q.kind !== 'banana').map(q => q.kind))];
+      const bnc = L.GROUPS.filter(g => g === 'gr' || /^c\dr$/.test(g)); const ids = L.PL.filter(q => q.kind === 'coax').map(q => q.id);
+      const lit = ids.map(id => { R.S.pick = id; BENCH.sim.render(); const n = document.querySelectorAll('#bench .pjack').length; R.S.pick = null; return n; }); BENCH.sim.render();
+      return { kinds, bnc: bnc.length, lit }; });
+    ok(r.kinds.length === 1 && r.kinds[0] === 'coax' && r.lit.every(n => n === r.bnc), `one coax kind; a tap on any coax lead lights all ${r.bnc} free BNCs (${r.lit.join(', ')})`); }
   const cap = id => page.evaluate(id => document.querySelector(`[data-cap="${id}"]`).click(), id);
   // Fig. 3.4a: vI = node 0, vO = node 1, ground = {8, 9, 15}
   await H.focus('board'); await H.place('R1k', 0, 1); await H.place('D4001', 1, 8); await H.place('BR', 8, 15); await H.place('BR', 8, 9);
