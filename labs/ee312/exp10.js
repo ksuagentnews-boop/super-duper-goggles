@@ -117,7 +117,7 @@ setup(RT){
     g.show($('result'))});
   return {status,
     steps:[
-      {dev:'dmm',lines:[{t:'DMM 1 HI → node 0',lead:'mh',at:0},{t:'DMM 1 COM → node 1',note:'كل مقاومة لحالها بين node 0 و node 1',lead:'ml',at:1}],t:'Procedure A: DMM 1 على Ω: قِس كل مقاومة (5.6k، 4.7k، 47k، 27k) وهي لحالها على اللوحة، وسجّلها في Table 10.1.',ok:s=>s.rAll},
+      {dev:'dmm',lines:[{t:'DMM 1 HI → node 0',note:'أو DMM 2',lead:'mh',alt:'m2h',at:0},{t:'DMM 1 COM → node 1',note:'كل مقاومة لحالها بين node 0 و node 1',lead:'ml',alt:'m2l',at:1}],t:'Procedure A: DMM 1 على Ω: قِس كل مقاومة (5.6k، 4.7k، 47k، 27k) وهي لحالها على اللوحة، وسجّلها في Table 10.1.',ok:s=>s.rAll},
       {dev:'board',fig:'labs/ee312/fig/fig10-1.png',figCap:'Fig. 10.1',
         lines:[{t:'BD137: E → node 15, C → node 16, B → node 17',note:'الوجه المكتوب عليه للأمام',ic:'BD137',pins:{E:15,C:16,B:17}},{t:'R<sub>C</sub> = 5.6 kΩ: node 16 ↔ node 23',part:['R5k6',16,23]},
           {t:'R<sub>1</sub> = 47 kΩ: node 17 ↔ node 24',part:['R47k',17,24]},{t:'bridging plug: node 23 ↔ node 24',note:'V<sub>CC</sub>',wire:[23,24]},{t:'R<sub>2</sub> = 27 kΩ: node 17 ↔ node 18',part:['R27k',17,18]},

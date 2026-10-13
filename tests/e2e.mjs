@@ -15,7 +15,7 @@ for (const vp of VPS) {
     const { ctx, page } = await openPage(browser, vp, errors, `${vp}/${m}`);
     console.log(`[${vp}] ${m}`);
     try { await run(page, vp, ok);
-      const ll = await page.evaluate(() => (window.BENCH && BENCH.lineLog) || []); if (m.startsWith('ee312-')) { const lj = await page.evaluate(() => { const sim = BENCH.sim; if (!sim || !sim.RT || !sim.RT.plugged || BENCH.mode !== 'manual') return null; const inLines = new Set(); (sim.steps || []).forEach(s => (s.lines || []).forEach(l => { if (l.jack) inLines.add(l.jack); }));
+      const ll = await page.evaluate(() => (window.BENCH && BENCH.lineLog) || []); if (m.startsWith('ee312-')) { const lj = await page.evaluate(() => { const sim = BENCH.sim; if (!sim || !sim.RT || !sim.RT.plugged || BENCH.mode !== 'manual') return null; const inLines = new Set(); (sim.steps || []).forEach(s => (s.lines || []).forEach(l => { if (l.jack) inLines.add(l.jack); if (l.altJack) inLines.add(l.altJack); }));
           return [...sim.RT.plugged].filter(g => !inLines.has(g)); }); if (lj) ok(!lj.length, 'every lead the run plugs in has its own line in the Manual steps' + (lj.length ? ': ' + lj.join(', ') : '')); }
         if (m.startsWith('ee312-')) ok(!ll.length, `build lines match the board when each build step ticks` + (ll.length ? ': ' + JSON.stringify(ll) : '')); }
     catch (e) { fails.push(`[${vp}] ${m}: ${e.message}`); console.log('  ✗ ' + e.stack.split('\n').slice(0, 10).join(' | ')); await page.screenshot({ path: `/tmp/e2e-fail-${vp}-${m}.png` }).catch(() => {}); }

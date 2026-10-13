@@ -60,8 +60,19 @@ Updated after every finished item (commit + push each time).
   - The parts box is called «العلبة» everywhere (title, folded button, aria labels, the Free-mode description, the Exp 1 step).
   - It has a small open-box SVG icon in the accent colour instead of 🎒. Checked by the instruments test.
 
+## Batch 2 (bench rules, Oct 2026)
+- **B1 · Generic leads**
+  - The tray holds leads by type (`coax probe`, `GEN coax`, `red lead`, `black lead`), one per jack of the table. Each is drawn as a real cable lying coiled, with its head (BNC / banana) and clips.
+  - A lead's jack label (CH1, L +, HI …) appears only once it is plugged.
+  - Drag the head: the whole lead moves as one piece and snaps into the nearest compatible free jack. Its clips stay free for the board.
+  - Tap a lead: every compatible free jack lights up; tap one to plug. Tapping elsewhere cancels.
+  - A head pulled out leaves the clips on the board, out of the circuit. Dropping a head or a clip on the tray puts the whole lead back.
+  - Manual plug-in lines read "coax probe: BNC → CH1" / "red lead → L +".
+  - Lines accept the other unit / meter where the manual names none: the Exp 1 and 2 supply (L or R), and the Exp 10 resistance readings (DMM 1 or 2). Scope channels stay as the manual names them.
+  - Tests updated: the helper plugs a free lead by dragging its head, plus new tray and tap-to-plug checks.
+
 ## In progress
-- Nothing. Items 1–8 are merged into `main` (997bfc6).
+- B2 · Free pan & pinch-zoom.
 
 ## Next
 - Ask the owner whether the request continued after item 8 (the message was cut off after "everywhere in the UI and").

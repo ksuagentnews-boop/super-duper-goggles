@@ -54,11 +54,12 @@ export function bench(page) {
     jack: async (t, key = 'dmm') => { await H.bag(t); const c = await page.evaluate(k => { const L = BENCH.sim.RT.layout, i = BENCH.sim.RT.inst[k]; const P = L.POS[k], r = i.jackSlot; return { x: P.x + r.x + r.w / 2, y: P.y + r.y + r.h / 2 }; }, key); await H.tap(c.x, c.y); },
     place: async (t, a, b) => { await H.bag(t); const A = await H.node(a), B = await H.node(b); await H.tap((A.x + B.x) / 2, (A.y + B.y) / 2); },
     drag: async (from, to) => { await H.unzoom(); const [x0, y0] = await H.toClient(from.x, from.y); const [x1, y1] = await H.toClient(to.x, to.y); await page.mouse.move(x0, y0); await page.mouse.down(); await page.mouse.move(x1, y1, { steps: 6 }); await page.mouse.up(); await page.waitForTimeout(40); },
-    /* plug lead k's instrument end (BNC / banana) from the tray into its jack */
-    plugJack: async k => { const j = await page.evaluate(k => { const R = BENCH.sim.RT, g = R.lead.grpOf(k); if (R.S.jack[g]) return null; return { a: R.lead.instEnd(g), b: R.lead.jackAt(g) }; }, k);
-      if (j) await H.drag(j.a, j.b); },
-    lead: async (k, node) => { await H.unzoom(); if (node != null) await H.plugJack(k); const p = await page.evaluate(k => { const s = document.getElementById('bench'); const e = s.querySelector(`[data-k="lead:${k}"]`); return { x: +e.getAttribute('cx'), y: +e.getAttribute('cy') }; }, k);
-      const to = node == null ? await page.evaluate(k => { const L = BENCH.sim.RT.layout; return { x: L.BX - 40, y: L.parkY - 30 }; }, k) : await H.node(node); await H.drag(p, to); },
+    /* plug a free lead of the right kind into the jack of lead key k: drag its head from the tray; it snaps in */
+    plugJack: async k => { const j = await page.evaluate(k => { const R = BENCH.sim.RT, g = R.lead.grpOf(k); if (R.S.jack[g]) return null; const id = R.lead.leadFor(g); if (id < 0) return null; return { a: R.lead.headPos(id), b: R.lead.jackAt(g) }; }, k);
+      if (j) await H.drag(j.a, { x: j.b.x + 6, y: j.b.y + 4 }); },
+    /* move the clip that serves lead key k (CH1, CH1 ⏚, L +, HI …) to a panel node (null = off the board) */
+    lead: async (k, node) => { await H.unzoom(); if (node != null) await H.plugJack(k); const p = await page.evaluate(k => BENCH.sim.RT.lead.leadPos(k), k); if (!p) return;
+      const to = node == null ? await page.evaluate(() => { const L = BENCH.sim.RT.layout; return { x: L.BX - 40, y: L.parkY - 30 }; }) : await H.node(node); await H.drag(p, to); },
     leadAt: k => page.evaluate(k => BENCH.sim.RT.S.leads[k].node, k),
     select: async (a, b) => { const sel = await page.evaluate(([a, b]) => { const S = BENCH.sim.RT.S; const p = S.parts.find(q => (q.a === a && q.b === b) || (q.a === b && q.b === a)); return p && S.sel === p.id; }, [a, b]);
       if (sel) return; const A = await H.node(a), B = await H.node(b); await H.tap((A.x + B.x) / 2, (A.y + B.y) / 2); },

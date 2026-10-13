@@ -109,7 +109,7 @@ setup(RT){
     steps:[
       {dev:'board',fig:'labs/ee312/fig/fig2-3.png',figCap:'Fig. 2.3',t:'Procedure A: ركّب Fig. 2.3a بالـ 1N4001 reverse biased (الكاثود جهة R<sub>S</sub> و +).',
         lines:[{t:'R<sub>S</sub> = 1 kΩ: node 14 ↔ node 15',part:['R1k',14,15]},{t:'1N4001: cathode → node 15, anode → node 22',note:'الحلقة جهة R<sub>S</sub>',part:['D4001',22,15],pol:true},
-          {t:'DC + (L +) → node 14',note:'الوحدة اليسار',lead:'Lp',at:14},{t:'DC − (L −) → node 22',lead:'Lm',at:22}],ok:s=>s.L&&s.L.type==='D4001'&&!s.L.fwd},
+          {t:'DC + (L +) → node 14',note:'الوحدة اليسار أو اليمين',lead:'Lp',alt:'Rp',at:14},{t:'DC − (L −) → node 22',lead:'Lm',alt:'Rm',at:22}],ok:s=>s.L&&s.L.type==='D4001'&&!s.L.fwd},
       {dev:'psu',t:'شغّل ∼POWER، واضبط CURRENT على 0.05 A و V<sub>BB</sub> = 25 V، وبعدها حوّل الـ dc على ON.',ok:s=>s.L&&!s.L.fwd&&s.L.on&&Math.abs(s.L.U.v-25)<0.006&&s.L.U.ilim<=0.0501},
       {dev:'board',fig:'labs/ee312/fig/fig2-3.png',figCap:'Fig. 2.3',t:'وصّل الملتيميترين مثل Fig. 2.3 (الاثنين على DCV): DMM 1 يقيس V<sub>RS</sub> و DMM 2 يقيس V<sub>D</sub>. سجّلهم في Table 2.2.',
         lines:[{t:'DMM 1 HI → node 14',note:'V<sub>RS</sub>',lead:'mh',at:14},{t:'DMM 1 COM → node 15',lead:'ml',at:15},{t:'DMM 2 HI → node 22',note:'V<sub>D</sub>',lead:'m2h',at:22},{t:'DMM 2 COM → node 15',lead:'m2l',at:15}],ok:s=>s.has('D4001','R',25)},
@@ -118,7 +118,7 @@ setup(RT){
       {dev:'psu',t:'كرّر للقيم الباقية من V<sub>BB</sub> (20، 15، 10، 7، 5، 4، 3 V) للدايودين.',ok:s=>ST._revAll},
       {dev:'psu',t:'طفّ مفتاح الـ dc.',ok:s=>ST.offA||ST._fwdAll},
       {dev:'board',fig:'labs/ee312/fig/fig2-3.png',figCap:'Fig. 2.3',t:'Procedure B: اعكس طرفي الوحدة بس عشان يصير Fig. 2.3b (forward bias). الملتيميترات تبقى مكانها.',
-        lines:[{t:'DC + (L +) → node 22',lead:'Lp',at:22},{t:'DC − (L −) → node 14',lead:'Lm',at:14}],ok:s=>s.L&&s.L.fwd},
+        lines:[{t:'DC + (L +) → node 22',lead:'Lp',alt:'Rp',at:22},{t:'DC − (L −) → node 14',lead:'Lm',alt:'Rm',at:14}],ok:s=>s.L&&s.L.fwd},
       {dev:'psu',t:'اضبط V<sub>FF</sub> = 0.3 V بمقابض VOLTAGE، وشغّل الـ dc، وسجّل V<sub>RS</sub> (DMM 1) و V<sub>D</sub> (DMM 2) للـ 1N4001.',ok:s=>s.has('D4001','F',0.3)},
       {dev:'board',t:'بدّل بالزينر وسجّل V<sub>RS</sub> و V<sub>D</sub>.',ok:s=>s.has('Z4733','F',0.3)},
       {dev:'psu',t:'كرّر لباقي قيم V<sub>FF</sub> (0.4 … 20.7 V) للدايودين.',ok:s=>ST._fwdAll},

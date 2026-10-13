@@ -142,7 +142,7 @@ return {key:KEY,prefix:PFX,size:[W,H],name:opt.n?['MCP MT3805 · DMM '+N,N===1?'
     if(d.jack==='A'){if(d.fuse)ck.els.push({t:'G',a,b,g:100});return}
     if(opts&&opts.meter&&opts.meter.key===KEY){ck.meter={a,b};ck.els.push({t:'CCS',a,b,i0:opts.meter.i0,vmax:opts.meter.vmax});return}
     if(d.pwr&&['DCV','ACV','HZ'].includes(d.fn))ck.els.push({t:'G',a,b,g:1e-7})},
-  jackSlot:{x:J.HI.x-36,y:J.HI.y-26,w:72,h:J.COM.y-J.HI.y+52},insert(t){/* the diode's legs take the jacks: the probe leads come out */RT.S[KEY].jd={type:t,flip:false};[KH,KL].forEach(k=>{const l=RT.S.leads[k];l.node=l.hole=l.bn=l.bh=null;if(RT.S.jack)RT.S.jack[k]=false});RT.dirty=true},
+  jackSlot:{x:J.HI.x-36,y:J.HI.y-26,w:72,h:J.COM.y-J.HI.y+52},insert(t){/* the diode's legs take the jacks: the probe leads come out */RT.S[KEY].jd={type:t,flip:false};if(RT.lead)RT.lead.unplug([KH,KL]);RT.dirty=true},
   reading:()=>({...RD,fn:RT.S[KEY].fn,shown:RT.S[KEY].pwr?display():null}),leadKeys:[KH,KL]};
 };
 ENGINE.dmm.size=[480,232];

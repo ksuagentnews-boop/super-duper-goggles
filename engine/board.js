@@ -32,6 +32,15 @@ const GROUPS=[...new Set(LEADS.map(grpOf))];const GMEM={};GROUPS.forEach(g=>GMEM
 const valOf=v=>typeof v==='function'?v():v;
 const trayName=g=>valOf(LEADDEF[g].tray)||labelOf(g),jackName=g=>valOf(LEADDEF[g].jn)||labelOf(g);
 const jackRel=g=>LEADDEF[g].jat||fromOf(g);
+/* the leads themselves are generic, like on the real bench: coax probes (BNC → red + black clip), generator coax leads and
+   red / black banana leads, named by type. Any lead fits any free jack of its kind; the jack decides what it is (its label
+   CH1, DC +, HI … shows once it is plugged). One lead per jack of the table. */
+const JKIND=g=>{const d=LEADDEF[g];return d.coax?(d.inst.key==='sc'?'probe':'gen'):'banana'};
+const KORD={probe:0,gen:1,banana:2};
+const PL=GROUPS.map(g=>({kind:JKIND(g),col:JKIND(g)==='banana'?(LEADDEF[g].pol==='-'?'black':'red'):null,n:GMEM[g].length}))
+  .sort((a,b)=>KORD[a.kind]-KORD[b.kind]||(a.col==='black')-(b.col==='black')).map((q,i)=>({...q,id:i}));
+const PNAME=q=>q.kind==='probe'?'coax probe':q.kind==='gen'?'GEN coax':q.col+' lead';
+const KNAME=g=>{const k=JKIND(g);return k==='probe'?'coax probe':k==='gen'?'GEN coax':(LEADDEF[g].pol==='-'?'black':'red')+' lead'};
 const isCoax=g=>!!LEADDEF[g].coax;
 const FV={left:{x:-1,y:0},right:{x:1,y:0},up:{x:0,y:-1},down:{x:0,y:1}};
 const FACE={};INST.forEach(i=>{const fs=(i.leads||[]).map(l=>fromOf(l.k));if(!fs.length){FACE[i.key]='down';return}
@@ -79,8 +88,7 @@ const DEF={};{
   /* shift so the whole desk starts at (20,20) */
   const [x0,y0]=bbox();const dx=20-x0,dy=20-y0;BX+=dx;BY+=dy;parkY+=dy;TRAY.x+=dx;TRAY.y+=dy;INST.forEach(i=>{DEF[i.key].x+=dx;DEF[i.key].y+=dy})}
 /* tray slots: the instrument end (BNC / banana plug) on the left, the board end(s) on the right */
-const SLOT={},TPARK={};GROUPS.forEach((g,i)=>{const sx=TRAY.x+8+(i%TRAY.cols)*SW,sy=TRAY.y+30+Math.floor(i/TRAY.cols)*SH;SLOT[g]={x:sx,y:sy,c:{x:sx+26,y:sy+44}};
-  const m=GMEM[g];if(m.length===1)TPARK[m[0]]={x:sx+SW-30,y:sy+44};else m.forEach((k,j)=>TPARK[k]={x:sx+SW-30,y:sy+32+j*24})});
+const SLOT=PL.map((q,i)=>{const sx=TRAY.x+8+(i%TRAY.cols)*SW,sy=TRAY.y+30+Math.floor(i/TRAY.cols)*SH;return {x:sx,y:sy,c:{x:sx+26,y:sy+44},clip:j=>q.n===1?{x:sx+SW-30,y:sy+44}:{x:sx+SW-30,y:sy+32+j*24}}});
 const inTray=p=>TRAY.on&&p.x>=TRAY.x&&p.x<=TRAY.x+TRAY.w&&p.y>=TRAY.y&&p.y<=TRAY.y+TRAY.h;
 /* the student's arrangement, remembered per experiment (relative to the panel) */
 const LSK='eelab:layout:'+(BENCH.exp||'');const POS={};
@@ -101,7 +109,7 @@ const regions={},names={};
 const updRegions=()=>INST.forEach(i=>{const p=POS[i.key];regions[i.key]=[p.x-6,p.y-44,i.size[0]+12,i.size[1]+50]});
 updRegions();INST.forEach(i=>names[i.key]=i.name||ENGINE.NAMES[i.key]);
 regions.board=[BX-66,parkY-34,BW+132,BY+BH+16-(parkY-34)];if(TRAY.on){const r=regions.board,x0=Math.min(r[0],TRAY.x-6),x1=Math.max(r[0]+r[2],TRAY.x+TRAY.w+6),y1=Math.max(r[1]+r[3],TRAY.y+TRAY.h+6);regions.board=[x0,r[1],x1-x0,y1-r[1]]}names.board=ENGINE.NAMES.board;
-RT.inst=byKey;RT.layout={BX,BY,P,COLS,ROWS,parkY,PARK,regions,POS,DEF,FACE,TRAY,SLOT,TPARK,GROUPS};
+RT.inst=byKey;RT.layout={BX,BY,P,COLS,ROWS,parkY,PARK,regions,POS,DEF,FACE,TRAY,SLOT,GROUPS,PL};
 
 /* ---------- parts ---------- */
 const PARTS=def.parts;
@@ -121,11 +129,21 @@ function fresh(){
   INST.forEach(i=>S[i.key]=i.fresh());
   Object.assign(S,{sel:null,wireMode:false,wireStart:null,armed:null});
   LEADS.forEach(k=>S.leads[k]={node:null,hole:null,bn:null,bh:null});S.jack={};GROUPS.forEach(g=>S.jack[g]=false);
+  S.pl=PL.map(q=>({jack:null,clips:Array.from({length:q.n},()=>({bn:null,bh:null}))}));S.pick=null;
   RT.S=S;RT.dirty=true;
 }
-function syncLeads(){const S=RT.S;LEADS.forEach(k=>{const l=S.leads[k];const on=!!S.jack[grpOf(k)]&&l.bn!=null;l.node=on?l.bn:null;l.hole=on?l.bh:null})}
-function toTray(g){RT.S.jack[g]=false;GMEM[g].forEach(k=>{const l=RT.S.leads[k];l.bn=l.bh=null})}
-function leadsChanged(g){syncLeads();if(RT.S.jack[g])(RT.plugged=RT.plugged||new Set()).add(g);if(GMEM[g].some(k=>LEADDEF[k].circuit))circuitChanged();else RT.dirty=true;render()}
+/* jack view for the solver and the labs: S.jack[g] = a lead is in jack g; S.leads[k] = where that lead's clip for member k
+   sits (bn/bh) and, with both ends in, what the circuit sees (node/hole) */
+function syncLeads(){const S=RT.S;GROUPS.forEach(g=>S.jack[g]=false);LEADS.forEach(k=>{const l=S.leads[k];l.node=l.hole=l.bn=l.bh=null});
+  S.pl.forEach(P=>{if(P.jack==null)return;S.jack[P.jack]=true;GMEM[P.jack].forEach((k,j)=>{const c=P.clips[j],l=S.leads[k];if(!c)return;l.bn=l.node=c.bn;l.bh=l.hole=c.bh})})}
+const plIn=g=>RT.S.pl.findIndex(P=>P.jack===g);
+const jackFree=g=>plIn(g)<0&&!(LEADDEF[g].busy&&LEADDEF[g].busy());
+const fitsJ=(id,g)=>PL[id].kind===JKIND(g);
+function toTray(id){const P=RT.S.pl[id];P.jack=null;P.clips.forEach(c=>{c.bn=c.bh=null})}
+function plug(id,g){const S=RT.S;if(!fitsJ(id,g))return false;const o=plIn(g);if(o>=0&&o!==id)return false;if(LEADDEF[g].busy&&LEADDEF[g].busy()){BENCH.say('الـ jacks فيها دايود، طلّعه أول');return false}
+  S.pl[id].jack=g;(RT.plugged=RT.plugged||new Set()).add(g);return true}
+function leadsChanged(){const before=JSON.stringify(LEADS.map(k=>RT.S.leads[k].node));syncLeads();const circ=LEADS.some(k=>LEADDEF[k].circuit);
+  if(circ&&JSON.stringify(LEADS.map(k=>RT.S.leads[k].node))!==before)circuitChanged();else RT.dirty=true;render()}
 let drag=null;
 
 /* ---------- netlist from the bench ---------- */
@@ -266,7 +284,7 @@ function staticSVG(){let s=`<rect x="${BX}" y="${BY}" width="${BW}" height="${BH
   s+=`<rect x="${regions.board[0]+6}" y="${parkY-22}" width="${regions.board[2]-12}" height="44" rx="10" fill="#d9d1c0" opacity=".55"/>`;
   return s}
 function partHoles(p){if(MULTI(p.type))return pinNodes(p).map((n,k)=>n+':'+PARTS[p.type].pins[k].h);return [p.a+':'+dirHole(p.a,p.b),p.b+':'+dirHole(p.b,p.a)]}
-function occupied(skip){const S=RT.S;const occ=new Set();S.parts.forEach(p=>{if(p.id!==skip)partHoles(p).forEach(h=>occ.add(h))});S.wires.forEach(w=>{occ.add(w.a+':'+w.ha);occ.add(w.b+':'+w.hb)});LEADS.forEach(k=>{const l=S.leads[k];if(l.bn!=null)occ.add(l.bn+':'+l.bh)});return occ}
+function occupied(skip){const S=RT.S;const occ=new Set();S.parts.forEach(p=>{if(p.id!==skip)partHoles(p).forEach(h=>occ.add(h))});S.wires.forEach(w=>{occ.add(w.a+':'+w.ha);occ.add(w.b+':'+w.hb)});S.pl.forEach(P=>P.clips.forEach(c=>{if(c.bn!=null)occ.add(c.bn+':'+c.bh)}));return occ}
 function freeHole(node,pref=[4,0,2,6,8,1,3,5,7]){const occ=occupied();for(const h of pref)if(!occ.has(node+':'+h))return h;return null}
 function partsSVG(){const S=RT.S;let s='';
   S.wires.forEach(w=>{const a=holeP(w.a,w.ha),b=holeP(w.b,w.hb);const mx=(a.x+b.x)/2,my=(a.y+b.y)/2-Math.min(40,Math.hypot(b.x-a.x,b.y-a.y)*0.25);const sel=S.sel===w.id;const d=`M${a.x} ${a.y} Q${mx} ${my} ${b.x} ${b.y}`;
@@ -284,20 +302,31 @@ function toolbarSVG(){const S=RT.S;let s='';
   if(sp||sw){let x,y;if(sp&&MULTI(sp.type)){const c=fpC(sp.type,sp.n);x=c.x;y=nodeC(sp.n).y-(PARTS[sp.type].pkg==='DIP8'?34:84)}else if(sp){const a=nodeC(sp.a),b=nodeC(sp.b);x=(a.x+b.x)/2;y=(a.y+b.y)/2-40}else{const a=holeP(sw.a,sw.ha),b=holeP(sw.b,sw.hb);x=(a.x+b.x)/2;y=(a.y+b.y)/2-44}
     const btn=(bx,lab,k,c)=>`<circle cx="${bx}" cy="${y}" r="15" fill="#141c20" stroke="${c}" stroke-width="2" data-k="${k}" style="cursor:pointer"/>`+T(bx,y+5,lab,{size:14,fill:c,a:'middle',w:600});
     s+=sp&&POLAR(sp.type)?btn(x-20,'⇄','tb:flip',CH2)+btn(x+20,'✕','tb:del',RED):btn(x,'✕','tb:del',RED)}
+  /* tap-to-plug: every compatible free jack lights up; a tap plugs the picked lead there */
+  if(S.pick!=null)GROUPS.filter(g=>fitsJ(S.pick,g)&&jackFree(g)).forEach(g=>{const a=jackAt(g);s+=`<circle class="pjack" cx="${a.x}" cy="${a.y}" r="22" fill="rgba(44,122,107,.22)" stroke="${CH2}" stroke-width="3.5" data-k="pj:${g}" style="cursor:pointer"/>`});
   if(S.wireMode&&S.wireStart!=null){const c=nodeC(S.wireStart);s+=`<rect x="${c.x-32}" y="${c.y-32}" width="64" height="64" rx="9" fill="none" stroke="#e0b000" stroke-width="3" pointer-events="none"/>`}
   return s}
-function leadPos(k){const l=RT.S.leads[k];if(drag&&drag.kind==='lead'&&drag.key===k&&drag.active)return {x:drag.x,y:drag.y};if(l.bn!=null)return holeP(l.bn,l.bh);return RT.S.jack[grpOf(k)]?PARK[k]:TPARK[k]}
-/* the instrument end of lead g: in its jack, in the student's hand, or lying in the tray */
-const jackDrag=g=>drag&&drag.kind==='jack'&&drag.key===g&&drag.active;
-const inJack=g=>RT.S.jack[g]&&!jackDrag(g);
+/* lead positions: the head (BNC / banana plug) sits in its jack, in the student's hand (snapping to a near free jack), or in
+   its tray slot; a clip sits in a panel hole, in the hand, on the rack near its instrument (head plugged), or trails the head */
 const jackAt=g=>addP(jackRel(g),POS[instOf(g)]);
-function instEnd(g){if(jackDrag(g))return {x:drag.x,y:drag.y};if(RT.S.jack[g])return jackAt(g);return SLOT[g].c}
+const headDrag=id=>drag&&drag.kind==='head'&&drag.id===id&&drag.active;
+function headPos(id){const P=RT.S.pl[id];if(headDrag(id))return drag.snap!=null?jackAt(drag.snap):{x:drag.x,y:drag.y};if(P.jack!=null)return jackAt(P.jack);return SLOT[id].c}
+const headIn=id=>{const P=RT.S.pl[id];if(headDrag(id))return drag.snap;return P.jack};
+function clipPos(id,j){const P=RT.S.pl[id],c=P.clips[j];if(drag&&drag.kind==='clip'&&drag.id===id&&drag.j===j&&drag.active)return {x:drag.x,y:drag.y};
+  if(c.bn!=null)return holeP(c.bn,c.bh);if(headDrag(id)){const h=headPos(id);return {x:h.x+64,y:h.y+(PL[id].n>1?j*24-12:0)}}
+  if(P.jack!=null)return PARK[GMEM[P.jack][j]];return SLOT[id].clip(j)}
+/* where the clip of jack member k is (tests, guide) */
+function leadPos(k){const g=grpOf(k),id=plIn(g);if(id<0)return null;return clipPos(id,GMEM[g].indexOf(k))}
+/* a free lead for jack g, best one first (in the tray, banana of the jack's colour) */
+function leadFor(g){const S=RT.S;const ok=PL.filter(q=>fitsJ(q.id,g)&&S.pl[q.id].jack==null);const want=JKIND(g)==='banana'?(LEADDEF[g].pol==='-'?'black':'red'):null;
+  const sc=q=>(S.pl[q.id].clips.every(c=>c.bn==null)?0:2)+(want&&q.col!==want?1:0);ok.sort((a,b)=>sc(a)-sc(b));return ok.length?ok[0].id:-1}
 /* cable colours: neutral by default; the student can colour any lead (right-click / long-press) */
 /* colours: instrument leads keep their real colours (red = signal / +, black = ground / −); wires on the board come
    neutral and the student paints them with the "لون السلك" toolbar (or right-click on desktop) */
 const NEUTRAL={c:'#e9e5da',d:'#8a8578'};
 const SWATCH={black:{c:'#30363a',d:'#000',ar:'أسود'},red:{c:'#e2453b',d:'#5a1414',ar:'أحمر'},blue:{c:'#2f6bd9',d:'#173a7a',ar:'أزرق'},grey:{c:'#9aa1a5',d:'#4f585c',ar:'رمادي'},yellow:{c:'#f0c419',d:'#7a5f00',ar:'أصفر'},green:{c:'#2f9a4c',d:'#164a24',ar:'أخضر'}};
 const leadCol=k=>LEADDEF[k].earth||LEADDEF[k].pol==='-'?SWATCH.black:SWATCH.red;
+const plCol=(id,j)=>PL[id].kind==='banana'?SWATCH[PL[id].col]:j?SWATCH.black:SWATCH.red;
 const wireCol=w=>SWATCH[RT.S.wcol[w.id]]||NEUTRAL;
 const plugs=[];
 /* cables: a natural curve that leaves the terminal in the direction it faces and runs into the plug; recomputed on every
@@ -310,25 +339,38 @@ const bz=c=>`M${c[0].x.toFixed(1)} ${c[0].y.toFixed(1)} C${c[1].x.toFixed(1)} ${
 const instOf=k=>LEADDEF[k].inst.key;
 const clearOf=(ik,f0)=>{const [w,h]=byKey[ik].size,F=FACE[ik];return 18+(F==='down'?h-f0.y:F==='up'?f0.y:F==='right'?w-f0.x:f0.x)};
 const DRAW={leadPos,
-  plug:(k,p,col,dark)=>{const l=RT.S.leads[k];if(l.bn!=null||RT.S.jack[grpOf(k)])plugs.push({k,p});return `<circle cx="${p.x}" cy="${p.y}" r="${l.bn!=null?7:9}" fill="${col}" stroke="${dark}" stroke-width="2"/>`+(l.bn==null?`<circle cx="${p.x}" cy="${p.y}" r="3" fill="#c8a24a"/>`:'')+`<circle cx="${p.x}" cy="${p.y}" r="16" fill="transparent" data-k="lead:${k}" style="cursor:grab"/>`},
-  wire:(c,col,dark,k,w=3)=>{const d=bz(c);return `<g data-cab="${k||''}"><path d="${d}" fill="none" stroke="${dark}" stroke-width="${w+2}" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/></g>`},
-  /* the instrument-end connector: small when it sits in its jack, the whole plug when it lies loose; always grabbable */
-  conn:(g,a,c)=>{const j=inJack(g),h=`<circle cx="${a.x}" cy="${a.y}" r="18" fill="transparent" data-k="jack:${g}" style="cursor:grab"/>`;
-    if(isCoax(g))return (j?`<circle cx="${a.x}" cy="${a.y}" r="11" fill="#59646a" stroke="#1e2326" stroke-width="2"/><circle cx="${a.x}" cy="${a.y}" r="5" fill="#2b3236"/>`
-      :`<rect x="${a.x-17}" y="${a.y-9}" width="26" height="18" rx="4" fill="#8d979c" stroke="#3a4448" stroke-width="1.5"/><rect x="${a.x-21}" y="${a.y-5}" width="6" height="10" rx="2" fill="#c9cfd2" stroke="#3a4448"/><text x="${a.x-4}" y="${a.y+3.5}" font-size="8" font-family="monospace" text-anchor="middle" fill="#1e2326" font-weight="700">BNC</text>`)+h;
-    return (j?`<circle cx="${a.x}" cy="${a.y}" r="7" fill="${c.c}" stroke="${c.d}" stroke-width="2"/>`
-      :`<rect x="${a.x-14}" y="${a.y-6}" width="22" height="12" rx="5" fill="${c.c}" stroke="${c.d}" stroke-width="1.5"/><rect x="${a.x-22}" y="${a.y-2.5}" width="9" height="5" rx="2" fill="#c9b37a" stroke="#6b5a2a" stroke-width=".8"/>`)+h},
-  banana:(from,k)=>{const ik=instOf(k),g=grpOf(k);const j=inJack(g);const a=j?addP(from,POS[ik]):instEnd(g);const p=leadPos(k);const c=leadCol(k);const cv=curve(a,j?FV[FACE[ik]]:{x:1,y:0},p,j?clearOf(ik,from):14);CAB.push({k,grp:k,inst:ik,c:cv});return DRAW.wire(cv,c.c,c.d,k)+DRAW.conn(g,a,c)+DRAW.plug(k,p,c.c,c.d)},
-  coax:(A0,kr,kb)=>{const ik=instOf(kr),g=grpOf(kr);const j=inJack(g);const A=j?addP(A0,POS[ik]):instEnd(g);const pr=leadPos(kr),pb=leadPos(kb);const M={x:(pr.x+pb.x)/2,y:(pr.y+pb.y)/2};
-    const f2=j?FV[FACE[ik]]:{x:1,y:0};const Sp={x:M.x-f2.x*(j?34:22),y:M.y-f2.y*(j?34:22)};
-    const trunk=curve(A,f2,Sp,j?clearOf(ik,A0):12);
-    const lr=curve(Sp,f2,pr),lb=curve(Sp,f2,pb);CAB.push({k:kr,grp:kr,inst:ik,c:trunk},{k:kr,grp:kr,inst:ik,c:lr,leg:1},{k:kb,grp:kr,inst:ik,c:lb,leg:1});
-    const cr=leadCol(kr),cb=leadCol(kb);
-    return `<g data-cab="${kr}"><path d="${bz(trunk)}" fill="none" stroke="#1e2326" stroke-width="9" stroke-linecap="round"/><path d="${bz(trunk)}" fill="none" stroke="#4a555b" stroke-width="5" stroke-linecap="round"/></g><rect x="${Sp.x-7}" y="${Sp.y-7}" width="14" height="14" rx="3" fill="#2b3236" pointer-events="none"/>`+DRAW.wire(lr,cr.c,cr.d,kr)+DRAW.wire(lb,cb.c,cb.d,kb)+DRAW.conn(g,A,cr)+DRAW.plug(kr,pr,cr.c,cr.d)+DRAW.plug(kb,pb,cb.c,cb.d)}};
+  wire:(c,col,dark,k,w=3)=>{const d=bz(c);return `<g data-cab="${k||''}"><path d="${d}" fill="none" stroke="${dark}" stroke-width="${w+2}" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/></g>`}};
+/* one lead: coax = BNC head, dark trunk, a split, red + black clips; banana = plug, cable, plug. In the tray it lies coiled. */
+function clipSVG(id,j,p,c,k){const P=RT.S.pl[id],on=P.clips[j].bn!=null;if(k&&(on||P.jack!=null))plugs.push({k,p});
+  return `<circle cx="${p.x}" cy="${p.y}" r="${on?7:9}" fill="${c.c}" stroke="${c.d}" stroke-width="2"/>`+(on?'':`<circle cx="${p.x}" cy="${p.y}" r="3" fill="#c8a24a"/>`)+`<circle cx="${p.x}" cy="${p.y}" r="16" fill="transparent" data-k="clip:${id}:${j}" style="cursor:grab"/>`}
+function headSVG(id,a,j){const q=PL[id],h=`<circle cx="${a.x}" cy="${a.y}" r="18" fill="transparent" data-k="head:${id}" style="cursor:grab"/>`,c=plCol(id,0);
+  if(q.kind!=='banana')return (j?`<circle cx="${a.x}" cy="${a.y}" r="11" fill="#59646a" stroke="#1e2326" stroke-width="2"/><circle cx="${a.x}" cy="${a.y}" r="5" fill="#2b3236"/>`
+    :`<rect x="${a.x-17}" y="${a.y-9}" width="26" height="18" rx="4" fill="#8d979c" stroke="#3a4448" stroke-width="1.5"/><rect x="${a.x-21}" y="${a.y-5}" width="6" height="10" rx="2" fill="#c9cfd2" stroke="#3a4448"/><text x="${a.x-4}" y="${a.y+3.5}" font-size="8" font-family="monospace" text-anchor="middle" fill="#1e2326" font-weight="700">BNC</text>`)+h;
+  return (j?`<circle cx="${a.x}" cy="${a.y}" r="7" fill="${c.c}" stroke="${c.d}" stroke-width="2"/>`
+    :`<rect x="${a.x-14}" y="${a.y-6}" width="22" height="12" rx="5" fill="${c.c}" stroke="${c.d}" stroke-width="1.5"/><rect x="${a.x-22}" y="${a.y-2.5}" width="9" height="5" rx="2" fill="#c9b37a" stroke="#6b5a2a" stroke-width=".8"/>`)+h}
+/* a coiled cable between x0 and x1 at height y: four loops, as a lead lies rolled up in the tray */
+function coil(x0,x1,y,col,dark,w){let d=`M${x0} ${y}`;const n=4,L=(x1-x0)/n;for(let i=0;i<n;i++){const a=x0+i*L;d+=` C${a+L*0.9} ${y-16} ${a+L*1.3} ${y+14} ${a+L*0.55} ${y+9} S${a+L*0.2} ${y-12} ${a+L} ${y}`}
+  return `<path d="${d}" fill="none" stroke="${dark}" stroke-width="${w+2}" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`}
+function leadSVG(id){const S=RT.S,P=S.pl[id],q=PL[id];const g=headIn(id),j=P.jack!=null&&!headDrag(id);const A=headPos(id);const ik=g!=null?instOf(g):null;
+  const keys=g!=null?GMEM[g]:[];const cp=P.clips.map((c,k)=>clipPos(id,k));
+  const resting=P.jack==null&&!headDrag(id)&&P.clips.every(c=>c.bn==null)&&!(drag&&drag.kind==='clip'&&drag.id===id&&drag.active);
+  const tag=k=>keys[k]||('L'+id);
+  if(resting){const o=SLOT[id],y=o.c.y,x1=o.x+SW-58;let b='';
+    if(q.kind==='banana'){const c=plCol(id,0);b=coil(o.c.x+10,x1,y,c.c,c.d,3)+`<path d="M${x1} ${y} L${cp[0].x} ${cp[0].y}" stroke="${c.d}" stroke-width="5" stroke-linecap="round"/><path d="M${x1} ${y} L${cp[0].x} ${cp[0].y}" stroke="${c.c}" stroke-width="3" stroke-linecap="round"/>`}
+    else{b=coil(o.c.x+10,x1-8,y,'#4a555b','#1e2326',5)+`<rect x="${x1-9}" y="${y-6}" width="12" height="12" rx="3" fill="#2b3236"/>`;cp.forEach((p,k)=>{const c=plCol(id,k);b+=`<path d="M${x1} ${y} Q${x1+10} ${p.y} ${p.x} ${p.y}" fill="none" stroke="${c.d}" stroke-width="4"/><path d="M${x1} ${y} Q${x1+10} ${p.y} ${p.x} ${p.y}" fill="none" stroke="${c.c}" stroke-width="2.4"/>`})}
+    return `<g data-cabof="tray">${b}${headSVG(id,A,false)}${cp.map((p,k)=>clipSVG(id,k,p,plCol(id,k),null)).join('')}</g>`}
+  const f=j?FV[FACE[ik]]:{x:1,y:0},cl=j?clearOf(ik,jackRel(g)):14;let out='';
+  if(q.kind==='banana'){const c=plCol(id,0),cv=curve(A,f,cp[0],cl);CAB.push({k:tag(0),grp:'L'+id,inst:j?ik:null,c:cv});out=DRAW.wire(cv,c.c,c.d,tag(0))+headSVG(id,A,j)+clipSVG(id,0,cp[0],c,keys[0])}
+  else{const M={x:(cp[0].x+cp[1].x)/2,y:(cp[0].y+cp[1].y)/2};const Sp={x:M.x-f.x*(j?34:22),y:M.y-f.y*(j?34:22)};const trunk=curve(A,f,Sp,cl);
+    const legs=cp.map(p=>curve(Sp,f,p));CAB.push({k:tag(0),grp:'L'+id,inst:j?ik:null,c:trunk},...legs.map((c,k)=>({k:tag(k),grp:'L'+id,inst:j?ik:null,c,leg:1})));
+    out=`<g data-cab="${tag(0)}"><path d="${bz(trunk)}" fill="none" stroke="#1e2326" stroke-width="9" stroke-linecap="round"/><path d="${bz(trunk)}" fill="none" stroke="#4a555b" stroke-width="5" stroke-linecap="round"/></g><rect x="${Sp.x-7}" y="${Sp.y-7}" width="14" height="14" rx="3" fill="#2b3236" pointer-events="none"/>`
+      +legs.map((c,k)=>{const cc=plCol(id,k);return DRAW.wire(c,cc.c,cc.d,tag(k))}).join('')+headSVG(id,A,j)+cp.map((p,k)=>clipSVG(id,k,p,plCol(id,k),keys[k])).join('')}
+  return `<g data-cabof="${j?ik:'free'}">${out}</g>`}
 /* the lead tray «Coaxial cables & wires»: one slot per lead, named; a slot whose lead is in use stays as a faint outline */
 function traySVG(){if(!TRAY.on)return '';let s=`<rect x="${TRAY.x}" y="${TRAY.y}" width="${TRAY.w}" height="${TRAY.h}" rx="12" fill="#d8cfbd" stroke="#b3a78f" stroke-width="1.5"/>`+T(TRAY.x+12,TRAY.y+20,'Coaxial cables & wires',{size:13,fill:'#4a4234',w:700});
-  GROUPS.forEach(g=>{const o=SLOT[g],home=!RT.S.jack[g]&&GMEM[g].every(k=>RT.S.leads[k].bn==null);s+=`<rect x="${o.x}" y="${o.y}" width="${SW-8}" height="${SH-8}" rx="8" fill="${home?'#efe8da':'none'}" stroke="#bfb39b" stroke-width="1" stroke-dasharray="${home?'':'4 4'}"/>`+T(o.x+8,o.y+15,trayName(g),{size:10.5,fill:home?'#2f3a3e':'#9a917f',w:600})});
-  return `<g pointer-events="none">${s}</g>`}
+  PL.forEach(q=>{const id=q.id,o=SLOT[id],P=RT.S.pl[id],home=P.jack==null&&P.clips.every(c=>c.bn==null),pick=RT.S.pick===id;
+    s+=`<rect x="${o.x}" y="${o.y}" width="${SW-8}" height="${SH-8}" rx="8" fill="${pick?'#d6eae4':home?'#efe8da':'none'}" stroke="${pick?'#2c7a6b':'#bfb39b'}" stroke-width="${pick?2.5:1}" stroke-dasharray="${home||pick?'':'4 4'}"${home?` data-k="head:${id}" style="cursor:grab"`:''}/>`+`<g pointer-events="none">${T(o.x+8,o.y+15,PNAME(q),{size:10.5,fill:home?'#2f3a3e':'#9a917f',w:600})}</g>`});
+  return s}
 /* small readable label next to each plug, never overlapping another label or plug */
 function labelsSVG(){const boxes=[];const all=plugs.map(q=>({x:q.p.x-10,y:q.p.y-10,w:20,h:20}));let s='';
   const hit=(b,list)=>list.some(o=>b.x<o.x+o.w&&b.x+b.w>o.x&&b.y<o.y+o.h&&b.y+b.h>o.y);
@@ -338,7 +380,7 @@ function labelsSVG(){const boxes=[];const all=plugs.map(q=>({x:q.p.x-10,y:q.p.y-
     if(!b)b={x:p.x-w/2,y:p.y-24-h/2,w,h};boxes.push(b);
     s+=`<rect x="${b.x}" y="${b.y}" width="${w}" height="${h}" rx="4" fill="#fffdf7" fill-opacity=".92" stroke="#b9c2c4" stroke-width=".8" pointer-events="none"/>`+T(b.x+w/2,b.y+11,t,{size:9.5,fill:'#26343a',a:'middle',w:600})});
   return s}
-function cablesSVG(){plugs.length=0;CAB.length=0;updPark();const tray=traySVG();const body=INST.map(i=>i.cables?`<g data-cabof="${i.key}">${i.cables(DRAW)}</g>`:'').join('');return `<g class="ltray">${tray}</g><g filter="url(#cabShadow)">${body}</g><g class="cablbl">${labelsSVG()}</g>`}
+function cablesSVG(){plugs.length=0;CAB.length=0;updPark();syncLeads();const tray=traySVG();const body=PL.map(q=>leadSVG(q.id)).join('');return `<g class="ltray">${tray}</g><g filter="url(#cabShadow)">${body}</g><g class="cablbl">${labelsSVG()}</g>`}
 function nearestEdge(x,y){let best=null,bd=34;EDGES.forEach(e=>{const a=nodeC(e[0]),b=nodeC(e[1]);const d=Math.hypot((a.x+b.x)/2-x,(a.y+b.y)/2-y);if(d<bd){bd=d;best=e}});return best}
 /* best anchor for a multi-pin part near (x,y): footprint inside the panel, every leg hole free */
 function nearestAnchor(t,x,y,skip,lim=90){const occ=occupied(skip);let best=null,bd=lim;for(let n=0;n<NN;n++){if(!fits(t,n))continue;const c=fpC(t,n);const d=Math.hypot(c.x-x,c.y-y);if(d>=bd)continue;
@@ -347,13 +389,13 @@ function nearestAnchor(t,x,y,skip,lim=90){const occ=occupied(skip);let best=null
 const edgeFree=(e,skip)=>{const occ=occupied(skip);return !occ.has(e[0]+':'+dirHole(e[0],e[1]))&&!occ.has(e[1]+':'+dirHole(e[1],e[0]))};
 function nearestNode(x,y){let best=null,bd=40;for(let i=0;i<NN;i++){const c=nodeC(i);const d=Math.hypot(c.x-x,c.y-y);if(d<bd){bd=d;best=i}}return best}
 function dragSVG(){if(!drag||!drag.active)return '';let s='';
-  if(drag.kind==='jack'){const a=jackAt(drag.key);const near=Math.hypot(drag.x-a.x,drag.y-a.y)<48;s+=`<circle cx="${a.x}" cy="${a.y}" r="24" fill="${near?'rgba(44,122,107,.22)':'none'}" stroke="${CH2}" stroke-width="3" stroke-dasharray="${near?'':'7 5'}"/>`}
+  if(drag.kind==='head')GROUPS.filter(g=>fitsJ(drag.id,g)&&(jackFree(g)||plIn(g)===drag.id)).forEach(g=>{const a=jackAt(g),on=drag.snap===g;s+=`<circle cx="${a.x}" cy="${a.y}" r="24" fill="${on?'rgba(44,122,107,.25)':'none'}" stroke="${CH2}" stroke-width="3" stroke-dasharray="${on?'':'7 5'}" pointer-events="none"/>`});
   if((drag.kind==='new'||drag.kind==='move')&&MULTI(drag.type)){const n=nearestAnchor(drag.type,drag.x,drag.y,drag.id);
     if(n!=null)PARTS[drag.type].pins.forEach(q=>{const c=nodeC(n+q.dy*COLS+q.dx);s+=`<rect x="${c.x-32}" y="${c.y-32}" width="64" height="64" rx="9" fill="none" stroke="${CH2}" stroke-width="3" opacity=".6"/>`});
     const c0=n!=null?nodeC(n):{x:drag.x-fpC(drag.type,0).x+nodeC(0).x,y:drag.y-fpC(drag.type,0).y+nodeC(0).y};return s+`<g transform="translate(${c0.x} ${c0.y})" opacity=".85">${pkgBody(drag.type,false)}</g>`}
   if(drag.kind==='new'||drag.kind==='move'){const e=nearestEdge(drag.x,drag.y);if(e){const a=nodeC(e[0]),b=nodeC(e[1]);s+=`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${CH2}" stroke-width="6" opacity=".5" stroke-linecap="round"/>`}
     s+=`<g transform="translate(${drag.x} ${drag.y}) rotate(${e&&e[1]-e[0]===COLS?90:0})" opacity=".9">${partBody(drag.type,52,false)}</g>`}
-  if(drag.kind==='lead'){const n=nearestNode(drag.x,drag.y);if(n!=null){const c=nodeC(n);s+=`<rect x="${c.x-32}" y="${c.y-32}" width="64" height="64" rx="9" fill="none" stroke="${CH2}" stroke-width="3"/>`}}
+  if(drag.kind==='clip'){const n=nearestNode(drag.x,drag.y);if(n!=null){const c=nodeC(n);s+=`<rect x="${c.x-32}" y="${c.y-32}" width="64" height="64" rx="9" fill="none" stroke="${CH2}" stroke-width="3"/>`}}
   return s}
 
 /* ---------- moving instruments: a grab handle on top of each one; dragging it moves the instrument (never its controls) ---------- */
@@ -394,10 +436,11 @@ function crossings(){return crossCount(CAB,POS)}
    line = {t, part:[type,a,b], pol?} | {ic:type, pins:{E:n,…}} | {lead:k, at:n} | {wire:[a,b]}; a, b, n are panel nodes.
    lineDone checks it on the live netlist (any node of the same net counts); the current line's nodes and jacks glow. */
 function lineDone(L){const N=RT.netOf;if(RT.dirty)recompute();
-  if(L.jack)return !!RT.S.jack[L.jack];
+  if(L.jack)return !!RT.S.jack[L.jack]||!!(L.altJack&&RT.S.jack[L.altJack]);
   if(L.part){const [t,a,b]=L.part;return RT.between(N(a),N(b)).some(x=>x.p.type===t&&(!L.pol||x.dir===1))}
   if(L.ic)return RT.S.parts.some(p=>p.type===L.ic&&Object.entries(L.pins).every(([r,n])=>pinNet(p,r)===N(n)));
-  if(L.lead)return RT.leadNet(L.lead)!=null&&RT.leadNet(L.lead)===N(L.at);
+  /* alt: the manual does not name the unit / meter, so the same connection on the other one counts too */
+  if(L.lead)return [L.lead,L.alt].some(k=>k&&RT.leadNet(k)!=null&&RT.leadNet(k)===N(L.at));
   if(L.wire){const [a,b]=L.wire;return N(a)!=null&&N(a)===N(b)}
   return true}
 function lineSpots(L){if(L.jack)return {nodes:[],jacks:[],jg:[L.jack]};if(L.part)return {nodes:L.part.slice(1,3),jacks:[]};if(L.ic)return {nodes:Object.values(L.pins),jacks:[]};
@@ -406,8 +449,8 @@ let GUIDE=null;
 function guideSVG(){if(!GUIDE)return '';let s='';const pulse=GUIDE.flash?' class="gflash"':'';
   GUIDE.nodes.forEach(n=>{if(n==null||n<0||n>=NN)return;const c=nodeC(n);s+=`<rect${pulse} x="${c.x-34}" y="${c.y-34}" width="68" height="68" rx="11" fill="rgba(44,122,107,.14)" stroke="#2c7a6b" stroke-width="4" stroke-dasharray="9 6"/>`+T(c.x,c.y-38,'node '+n,{size:11,fill:'#1f5b50',a:'middle',w:700})});
   GUIDE.jacks.forEach(k=>{if(!LEADDEF[k])return;const a=termOf(k);s+=`<circle${pulse} cx="${a.x}" cy="${a.y}" r="22" fill="rgba(44,122,107,.16)" stroke="#2c7a6b" stroke-width="4" stroke-dasharray="8 5"/>`;
-    const p=leadPos(k);s+=`<circle${pulse} cx="${p.x}" cy="${p.y}" r="17" fill="none" stroke="#2c7a6b" stroke-width="3"/>`});
-  (GUIDE.jg||[]).forEach(g=>{if(!GMEM[g])return;const a=jackAt(g),c=instEnd(g);s+=`<circle${pulse} cx="${a.x}" cy="${a.y}" r="22" fill="rgba(44,122,107,.16)" stroke="#2c7a6b" stroke-width="4" stroke-dasharray="8 5"/>`;
+    const p=leadPos(k);if(p)s+=`<circle${pulse} cx="${p.x}" cy="${p.y}" r="17" fill="none" stroke="#2c7a6b" stroke-width="3"/>`});
+  (GUIDE.jg||[]).forEach(g=>{if(!GMEM[g])return;const a=jackAt(g),f=leadFor(g),c=f>=0?headPos(f):a;s+=`<circle${pulse} cx="${a.x}" cy="${a.y}" r="22" fill="rgba(44,122,107,.16)" stroke="#2c7a6b" stroke-width="4" stroke-dasharray="8 5"/>`;
     if(!RT.S.jack[g])s+=`<circle${pulse} cx="${c.x}" cy="${c.y}" r="20" fill="none" stroke="#2c7a6b" stroke-width="3"/>`});
   return s}
 function setGuide(g){GUIDE=g;const L=$('Lguide');if(L)L.innerHTML=guideSVG()}
@@ -433,19 +476,20 @@ svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;close
   /* overview: controls, leads, parts and placing work right here; only a tap on a device body (or an idle node) zooms */
   if(BENCH.view==='ov'&&!S.armed&&!S.wireMode&&(!el||el.dataset.k.startsWith('node:'))){BENCH.ovClick(p);return}
   showHL(el,true);
-  const cab=e.target.closest&&e.target.closest('[data-cab]');const lk=el&&el.dataset.k.startsWith('lead:')?el.dataset.k.slice(5):cab&&cab.dataset.cab;
   if(BENCH.paint!==null&&el&&el.dataset.k.startsWith('wire:')){const id=+el.dataset.k.slice(5);if(BENCH.paint){S.wcol[id]=BENCH.paint;render(true)}else BENCH.say('اختر لون من الشريط أول');return}
   if(S.armed&&jackDrop(S.armed,p)){S.armed=null;BENCH.drawerSync();return}
   /* placing a wire or a part: a tap on a lead's clip sitting on a node is a tap on that node */
-  if((S.armed||S.wireMode)&&el&&el.dataset.k.startsWith('lead:')){const l=S.leads[el.dataset.k.slice(5)];if(l&&l.bn!=null){if(S.armed){placeArmed(p);return}el={dataset:{k:'node:'+l.bn}}}}
+  if((S.armed||S.wireMode)&&el&&el.dataset.k.startsWith('clip:')){const [,id,j]=el.dataset.k.split(':');const c=S.pl[+id].clips[+j];if(c.bn!=null){if(S.armed){placeArmed(p);return}el={dataset:{k:'node:'+c.bn}}}}
+  /* a lead picked by a tap: a lit jack plugs it, anything else cancels */
+  if(S.pick!=null&&!(el&&el.dataset.k.startsWith('head:'))){const id=S.pick;S.pick=null;if(el&&el.dataset.k.startsWith('pj:')){if(plug(id,el.dataset.k.slice(3)))leadsChanged();else render(true)}else render(true);return}
   if(S.armed&&(!el||el.dataset.k.startsWith('node:'))){placeArmed(p);return}
   if(!el){const r=BENCH.regionAt(p);if(r&&r!==BENCH.view){BENCH.focus(r);return}if(S.sel){S.sel=null;render(true)}return}
   const k=el.dataset.k;
   if(k.startsWith('mv:')){const ik=k.slice(3);drag={kind:'inst',key:ik,x:p.x,y:p.y,sx:p.x,sy:p.y,ox:POS[ik].x,oy:POS[ik].y,active:false};svg.setPointerCapture(e.pointerId);svg.classList.add('grabbing');BENCH.clearHover();return}
   if(k.startsWith('part:')){const id=+k.slice(5);const pr=S.parts.find(q=>q.id===id);drag={kind:'move',id,type:pr.type,x:p.x,y:p.y,sx:p.x,sy:p.y,active:false};svg.setPointerCapture(e.pointerId);return}
   if(k.startsWith('wire:')){S.sel=S.sel===+k.slice(5)?null:+k.slice(5);render(true);return}
-  if(k.startsWith('jack:')){drag={kind:'jack',key:k.slice(5),x:p.x,y:p.y,sx:p.x,sy:p.y,active:false};svg.setPointerCapture(e.pointerId);return}
-  if(k.startsWith('lead:')){drag={kind:'lead',key:k.slice(5),x:p.x,y:p.y,sx:p.x,sy:p.y,active:false};svg.setPointerCapture(e.pointerId);return}
+  if(k.startsWith('head:')){drag={kind:'head',id:+k.slice(5),x:p.x,y:p.y,sx:p.x,sy:p.y,active:false,snap:null};svg.setPointerCapture(e.pointerId);return}
+  if(k.startsWith('clip:')){const [,id,j]=k.split(':');drag={kind:'clip',id:+id,j:+j,x:p.x,y:p.y,sx:p.x,sy:p.y,active:false};svg.setPointerCapture(e.pointerId);return}
   if(k==='tb:flip'){const pr=S.parts.find(q=>q.id===S.sel);if(pr){const t=pr.a;pr.a=pr.b;pr.b=t;circuitChanged();render()}return}
   if(k==='tb:del'){S.parts=S.parts.filter(q=>q.id!==S.sel);S.wires=S.wires.filter(w=>w.id!==S.sel);S.sel=null;circuitChanged();render();return}
   if(k.startsWith('node:')){const n=+k.slice(5);if(S.wireMode){if(S.wireStart==null)S.wireStart=n;else if(S.wireStart!==n){const pr=[0,2,6,8,4,1,3,5,7];const ha=freeHole(S.wireStart,pr),hb=freeHole(n,pr);if(ha!=null&&hb!=null){S.wires.push({id:RT.uid++,a:S.wireStart,b:n,ha,hb});circuitChanged()}S.wireStart=null}render();return}
@@ -457,6 +501,8 @@ svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;close
 svg.addEventListener('pointermove',e=>{if(press&&Math.hypot(e.clientX-press.x,e.clientY-press.y)>8){clearTimeout(press.t);press=null}
   if(!drag){if(e.pointerType==='mouse'){const t=targetOf(e);showHL(t&&!(BENCH.view==='ov'&&t.dataset.k.startsWith('node:')&&!RT.S.armed&&!RT.S.wireMode)?t:null)}return}
   const p=pt(e);drag.x=p.x;drag.y=p.y;if(!drag.active&&Math.hypot(p.x-drag.sx,p.y-drag.sy)>6){drag.active=true;if(drag.kind==='move')RT.S.sel=null}
+  /* the head snaps into the nearest compatible free jack as it comes close */
+  if(drag.active&&drag.kind==='head'){let best=null,bd=56;GROUPS.forEach(g=>{if(!fitsJ(drag.id,g)||!(jackFree(g)||plIn(g)===drag.id))return;const a=jackAt(g),d=Math.hypot(p.x-a.x,p.y-a.y);if(d<bd){bd=d;best=g}});drag.snap=best}
   if(drag.active&&drag.kind==='inst'){moveInst(drag.key,drag.ox+p.x-drag.sx,drag.oy+p.y-drag.sy);return}if(drag.active)render(true)});
 function endDrag(){stopRep();if(press){clearTimeout(press.t);press=null}const S=RT.S;if(!drag)return;if(drag.fromTray&&Math.hypot(drag.x-drag.sx,drag.y-drag.sy)<8){S.armed=drag.type;drag=null;BENCH.drawerSync();render(true);return}const d=drag;drag=null;svg.classList.remove('grabbing');
   if(d.kind==='inst'){showHL(null);if(d.active){savePos();BENCH.layoutChanged(false,d.key)}return}
@@ -469,13 +515,12 @@ function endDrag(){stopRep();if(press){clearTimeout(press.t);press=null}const S=
     if(d.kind==='move'){const pr=S.parts.find(q=>q.id===d.id);if(e&&!taken){pr.a=e[0];pr.b=e[1]}else if(!e){S.parts=S.parts.filter(q=>q.id!==d.id)}}
     else if(e&&!taken){S.parts.push({id:RT.uid++,type:d.type,a:e[0],b:e[1]})}
     circuitChanged();render();return}
-  if(d.kind==='jack'){const g=d.key;if(!d.active){if(!S.jack[g]){BENCH.say(`اسحب ${trayName(g)} إلى ${jackName(g)}`);setGuide({nodes:[],jacks:[],jg:[g],flash:true})}render(true);return}
-    const a=jackAt(g),near=Math.hypot(d.x-a.x,d.y-a.y)<48;
-    if(near&&LEADDEF[g].busy&&LEADDEF[g].busy()){BENCH.say('الـ jacks فيها دايود، طلّعه أول');render(true);return}
-    if(!near&&inTray(d))toTray(g);else S.jack[g]=near;leadsChanged(g);return}
-  if(d.kind==='lead'){if(!d.active)return;const l=S.leads[d.key];if(inTray(d)){toTray(grpOf(d.key));leadsChanged(grpOf(d.key));return}
-    const n=nearestNode(d.x,d.y);l.bn=null;l.bh=null;if(n!=null){const h=freeHole(n);if(h!=null){l.bn=n;l.bh=h}}
-    leadsChanged(grpOf(d.key))}}
+  if(d.kind==='head'){const id=d.id,P=S.pl[id];
+    if(!d.active){S.pick=S.pick===id?null:id;if(S.pick!=null)BENCH.say(`اختر وين يدخل الـ ${PNAME(PL[id])}: الـ jacks المناسبة منوّرة`);render(true);return}
+    if(d.snap!=null){P.jack=null;plug(id,d.snap)}else if(inTray(d))toTray(id);else P.jack=null;leadsChanged();return}
+  if(d.kind==='clip'){if(!d.active)return;const c=S.pl[d.id].clips[d.j];if(inTray(d)){toTray(d.id);leadsChanged();return}
+    const n=nearestNode(d.x,d.y);c.bn=null;c.bh=null;if(n!=null){const h=freeHole(n);if(h!=null){c.bn=n;c.bh=h}}
+    leadsChanged()}}
 svg.addEventListener('pointerup',e=>{endDrag();if(e.pointerType!=='mouse')setTimeout(()=>showHL(null),220)});
 svg.addEventListener('pointercancel',()=>{stopRep();if(drag&&drag.kind==='inst'&&drag.active)savePos();drag=null;svg.classList.remove('grabbing');render(true)});
 svg.addEventListener('pointerleave',()=>{stopRep();if(!drag)showHL(null)});
@@ -516,8 +561,9 @@ function trayDown(t,e){const S=RT.S;if(t==='W'){S.wireMode=!S.wireMode;S.wireSta
    (from the tray), ticked from the real connection */
 function jackLines(steps){const seen=new Set();steps.forEach(st=>{if(!st.lines)return;const out=[];
   st.lines.forEach(L=>{if(L.jack)seen.add(L.jack);const g=L.lead&&LEADDEF[L.lead]?grpOf(L.lead):null;
-    if(g&&!seen.has(g)){seen.add(g);out.push({t:isCoax(g)?`${trayName(g)}: BNC → ${jackName(g)}`:`${trayName(g)} → ${jackName(g)}`,note:'من «Coaxial cables & wires»',jack:g})}out.push(L)});st.lines=out});return steps}
-RT.lead={grpOf,trayName,jackName,jackAt:g=>jackAt(g),instEnd:g=>instEnd(g),sync:()=>syncLeads()};
+    if(g&&!seen.has(g)){seen.add(g);out.push({altJack:L.alt?grpOf(L.alt):undefined,t:JKIND(g)==='banana'?`${KNAME(g)} → ${jackName(g)}`:`${KNAME(g)}: BNC → ${jackName(g)}`,note:'من «Coaxial cables & wires»'+(L.alt?` · أو ${jackName(grpOf(L.alt))}`:''),jack:g})}out.push(L)});st.lines=out});return steps}
+RT.lead={grpOf,trayName,jackName,PL,PNAME,jackAt:g=>jackAt(g),headPos:id=>headPos(id),clipPos:(id,j)=>clipPos(id,j),leadPos:k=>leadPos(k),leadFor:g=>leadFor(g),plIn:g=>plIn(g),
+  sync:()=>syncLeads(),unplug:gs=>{gs.forEach(g=>{const i=plIn(g);if(i>=0)RT.S.pl[i].jack=null});syncLeads()}};
 const X=def.setup(RT);
 BENCH.register({
   regions,names,

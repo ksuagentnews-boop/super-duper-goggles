@@ -11,7 +11,17 @@ export async function run(page, vp, ok) {
   const H = bench(page); H.touch = vp === 'phone';
   ok(await page.evaluate(() => { const c = BENCH.sim.RT.crossings(); return !c.cc.length && !c.ci.length; }), 'default layout: no cable crosses another cable or an instrument');
   ok(await page.evaluate(() => { const S = BENCH.sim.RT.S; return Object.values(S.jack).every(v => !v) && Object.values(S.leads).every(l => l.bn == null && l.node == null); }), 'every lead starts unplugged in the «Coaxial cables & wires» tray');
-  { const t = await page.evaluate(() => [...document.querySelectorAll('#Lcables .ltray text')].map(e => e.textContent)); ok(t[0] === 'Coaxial cables & wires' && ['DC + (L)', 'DC − (L)', 'DMM red', 'DMM black'].every(n => t.includes(n)), 'the tray is labelled and names every lead: ' + t.slice(1).join(', ')); }
+  { const t = await page.evaluate(() => [...document.querySelectorAll('#Lcables .ltray text')].map(e => e.textContent)); ok(t[0] === 'Coaxial cables & wires' && t.filter(n => n === 'red lead').length === 3 && t.filter(n => n === 'black lead').length === 3, 'the tray is labelled and holds generic leads, named by type: ' + t.slice(1).join(', ')); }
+  ok(await page.evaluate(() => !document.querySelector('#Lcables .cablbl text')), 'no lead carries a jack label while nothing is plugged');
+  { // tap a lead: every compatible free jack lights up; tap one to plug it there; the label then shows
+    const h = await page.evaluate(() => { const R = BENCH.sim.RT; return R.lead.headPos(R.lead.PL.find(q => q.col === 'red').id); }); await H.tap(h.x, h.y);
+    const rings = await page.evaluate(() => [...document.querySelectorAll('#bench .pjack')].map(e => e.dataset.k.slice(3)).sort().join());
+    ok(rings === 'Lm,Lp,Rm,Rp,mh,ml', `tapping a red lead lights every free banana jack (${rings})`);
+    const j = await page.evaluate(() => BENCH.sim.RT.lead.jackAt('Rp')); await H.tap(j.x, j.y);
+    ok(await page.evaluate(() => BENCH.sim.RT.S.jack.Rp && !document.querySelector('#bench .pjack')), 'tapping the lit R + plugs it there');
+    const lab = await page.evaluate(() => [...document.querySelectorAll('#Lcables .cablbl text')].map(e => e.textContent)); ok(lab.includes('R +'), 'its label R + appears once plugged: ' + lab.join(','));
+    const tr = await page.evaluate(() => { const T = BENCH.sim.RT.layout.TRAY; return { x: T.x + T.w / 2, y: T.y + 14 }; });
+    await H.drag(j, tr); ok(await page.evaluate(() => !BENCH.sim.RT.S.jack.Rp && BENCH.sim.RT.S.pl.every(P => P.jack == null)), 'its head dropped on the tray puts it back'); }
   const rd = () => page.evaluate(() => { const r = BENCH.sim.RT.inst.dmm.reading(); return r.shown ? (r.shown.main.trim() + ' ' + r.shown.unit) : 'off'; });
   const num = async () => parseFloat((await rd()).replace(/^\s+/, ''));
   await H.focus('dmm'); await H.key('m:PWR'); ok((await rd()).endsWith('V'), 'DMM powers up in DCV: ' + await rd());
@@ -48,10 +58,11 @@ export async function run(page, vp, ok) {
   await H.place('R100', 30, 31); ok((await view()) === 'ov' && await page.evaluate(() => BENCH.sim.RT.S.parts.some(p => p.a === 30 && p.b === 31)), 'overview: placing a part works without zooming');
   await H.lead('mh', 30); ok((await view()) === 'ov' && await page.evaluate(() => BENCH.sim.RT.S.leads.mh.node === 30), 'overview: moving a lead works without zooming');
   { const tr = await page.evaluate(() => { const T = BENCH.sim.RT.layout.TRAY; return { x: T.x + T.w / 2, y: T.y + 14 }; });
+    const id = await page.evaluate(() => BENCH.sim.RT.lead.plIn('mh'));
     const ja = await page.evaluate(() => BENCH.sim.RT.lead.jackAt('mh')); await H.drag(ja, { x: ja.x + 160, y: ja.y + 120 });
-    ok(await page.evaluate(() => { const l = BENCH.sim.RT.S.leads.mh; return !BENCH.sim.RT.S.jack.mh && l.bn === 30 && l.node == null; }), 'pulling the red lead out of HI leaves its clip on the board but out of the circuit');
-    const pb = await page.evaluate(() => { const e = document.querySelector('[data-k="lead:mh"]'); return { x: +e.getAttribute('cx'), y: +e.getAttribute('cy') }; }); await H.drag(pb, tr);
-    ok(await page.evaluate(() => { const l = BENCH.sim.RT.S.leads.mh; return !BENCH.sim.RT.S.jack.mh && l.bn == null; }), 'dropping it on the tray puts the whole lead back');
+    ok(await page.evaluate(id => { const R = BENCH.sim.RT, P = R.S.pl[id]; return P.jack == null && P.clips[0].bn === 30 && R.S.leads.mh.node == null; }, id), 'pulling the red lead out of HI leaves its clip on the board but out of the circuit');
+    const pb = await page.evaluate(id => BENCH.sim.RT.lead.clipPos(id, 0), id); await H.drag(pb, tr);
+    ok(await page.evaluate(id => { const P = BENCH.sim.RT.S.pl[id]; return P.jack == null && P.clips[0].bn == null; }, id), 'dropping it on the tray puts the whole lead back');
     await H.lead('mh', 30); ok(await page.evaluate(() => BENCH.sim.RT.S.leads.mh.node === 30), 'plugged again: instrument end first, then the board end'); }
   const rg = await page.evaluate(() => BENCH.sim.regions.dmm); await H.tap(rg[0] + rg[2] * 0.3, rg[1] + 90); await page.waitForTimeout(500);
   ok((await view()) === 'dmm', 'tapping the DMM body zooms on it');

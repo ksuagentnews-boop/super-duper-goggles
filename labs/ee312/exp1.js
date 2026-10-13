@@ -135,7 +135,7 @@ setup(RT){
       {dev:'dmm',t:'اضغط "شيل" وكرّر بنفس الطريقة (الأنود في HI) مع: الزينر 1N4733A، والـ LED (الرجل الطويلة في HI، ويضوي خفيف)، والـ Ge diode، وسجّل الـ forward drop لكل واحد.',ok:s=>ST.f_Z4733!=null&&ST.f_LED!=null&&ST.f_GE!=null},
       {dev:'dmm',t:'شيل الدايود من مداخل DMM 1 (زر "شيل") عشان ترجع تستخدم أطرافه.',ok:s=>!s.jdIn},
       {dev:'board',fig:'labs/ee312/fig/fig1-3.png',figCap:'Fig. 1.3',t:'Procedure B: ركّب Fig. 1.3a (open circuit مكان الدايود). شيل الدايود من Procedure A أول.',
-        lines:[{t:'R<sub>S</sub> = 100 Ω: node 14 ↔ node 15',part:['R100',14,15]},{t:'DC + (L +) → node 14',note:'الوحدة اليسار',lead:'Lp',at:14},{t:'DC − (L −) → node 22',lead:'Lm',at:22},
+        lines:[{t:'R<sub>S</sub> = 100 Ω: node 14 ↔ node 15',part:['R100',14,15]},{t:'DC + (L +) → node 14',note:'الوحدة اليسار أو اليمين',lead:'Lp',alt:'Rp',at:14},{t:'DC − (L −) → node 22',lead:'Lm',alt:'Rm',at:22},
           {t:'DMM 2 HI → node 15',note:'طرف R<sub>S</sub> الفاضي: V<sub>OC</sub>',lead:'m2h',at:15},{t:'DMM 2 COM → node 22',lead:'m2l',at:22}],ok:s=>s.figA},
       {dev:'dmm2',t:'شغّل DMM 2 وحوّله على DCV.',ok:s=>s.figA&&s.vxDCV},
       {dev:'psu',t:'شغّل ∼POWER. ومفتاح الـ dc على OFF (PRESET): اضبط CURRENT على 0.05 A، و COARSE و FINE على 5 V، وبعدين حوّل الـ dc على ON.',ok:s=>s.figA&&s.unitOK},
