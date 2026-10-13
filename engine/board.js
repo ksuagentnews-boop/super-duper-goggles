@@ -569,7 +569,7 @@ RT.lead={grpOf,trayName,jackName,PL,PNAME,jackAt:g=>jackAt(g),headPos:id=>headPo
   sync:()=>syncLeads(),unplug:gs=>{gs.forEach(g=>{const i=plIn(g);if(i>=0)RT.S.pl[i].jack=null});syncLeads()}};
 const X=def.setup(RT);
 BENCH.register({
-  regions,names,
+  regions,names,boardRect:[BX,BY,BW,BH],
   tray:def.tray.map(([t,l])=>({t,l})),
   icon:t=>t==='W'?'<svg viewBox="-34 -18 68 36"><path d="M-24 8 q24 -26 48 0" fill="none" stroke="#e0b000" stroke-width="5" stroke-linecap="round"/></svg>':`<svg viewBox="-36 -18 72 36">${partBody(t,40,false)}</svg>`,
   trayDown,isWire:()=>RT.S.wireMode,armed:()=>RT.S&&RT.S.armed,

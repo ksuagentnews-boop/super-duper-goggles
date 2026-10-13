@@ -80,8 +80,13 @@ Updated after every finished item (commit + push each time).
   - The user's zoom is kept while working (step card changes, moved instruments). A change of view resets it.
   - Test `tests/exp/gestures.mjs` (wheel on desktop, CDP two-finger pinch on phone).
 
+- **B3 · Board zoom**
+  - Tapping the board's frame (not a hole) zooms onto the plug-in panel at ≈90 % of the free area (90–91 % measured on desktop, phone and portrait). The parts box stays visible.
+  - Pinch / wheel and pan work inside it.
+  - On a lead line, «وريني وين» shows the overview (jack + node), because the tray and the rack are outside the board zoom.
+
 ## In progress
-- B3 · Board zoom.
+- B4 · `?debug=1` overlay.
 
 ## Next
 - Ask the owner whether the request continued after item 8 (the message was cut off after "everywhere in the UI and").

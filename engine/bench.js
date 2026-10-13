@@ -97,7 +97,10 @@ const BENCH={
   animTo(to){if(!to)return;cancelAnimationFrame(this.anim);if(!this.vb||reduceMotion){this.setVB(to);return}const from={...this.vb},t0=performance.now(),dur=560;
     const step=now=>{const k=ease(Math.min(1,(now-t0)/dur));this.setVB({x:from.x+(to.x-from.x)*k,y:from.y+(to.y-from.y)*k,w:from.w+(to.w-from.w)*k,h:from.h+(to.h-from.h)*k});if(k<1)this.anim=requestAnimationFrame(step)};this.anim=requestAnimationFrame(step)},
   /* focus: the device plus a margin of context (about a quarter of its size on each side), never closer than that */
-  curRect(){if(this.view==='ov')return this.ovRect;const r=this.sim.regions[this.view];if(this.el.view.classList.contains('devzoom')){const m=0.035;return [r[0]-r[2]*m,r[1]-r[3]*m,r[2]*(1+2*m),r[3]*(1+2*m)]}const small=this.stageSize().H<520,f=small?0.1:0.26;const mx=Math.max(small?24:70,r[2]*f),my=Math.max(small?20:60,r[3]*f);return [r[0]-mx,r[1]-my,r[2]+2*mx,r[3]+2*my]},
+  curRect(){if(this.view==='ov')return this.ovRect;
+    /* board zoom: the plug-in panel itself at ≈90 % of the free area (the parts box stays; the lead tray is a pan away) */
+    if(this.view==="board"&&this.sim.boardRect){const r=this.sim.boardRect,m=0.015;return [r[0]-r[2]*m,r[1]-r[3]*m-16,r[2]*(1+2*m),r[3]*(1+2*m)+16]}
+    const r=this.sim.regions[this.view];if(this.el.view.classList.contains('devzoom')){const m=0.035;return [r[0]-r[2]*m,r[1]-r[3]*m,r[2]*(1+2*m),r[3]*(1+2*m)]}const small=this.stageSize().H<520,f=small?0.1:0.26;const mx=Math.max(small?24:70,r[2]*f),my=Math.max(small?20:60,r[3]*f);return [r[0]-mx,r[1]-my,r[2]+2*mx,r[3]+2*my]},
   /* free pan & zoom (like a map): pinch / wheel between the fitted view and ≈4× closer, drag on empty desk to pan a little
      past the edges; double-tap or «عرض كامل» refits. The camera is the SVG viewBox, so nothing is laid out again. */
   refit(anim,force){if(!this.sim||!this.svg)return;if(this.user&&!force){const c=this.clampVB(this.vb);c&&this.setVB(c);return}this.setUser(false);
@@ -210,7 +213,7 @@ const BENCH={
     c.innerHTML=`<div class="num">${pi}</div><div class="body"><div class="k">${s.proc&&this.procs.length>1?`Procedure ${s.proc} · `:''}الخطوة ${pi} من ${PS.length}</div><div class="t">${s.t}</div>${lines}<div class="acts"><button class="go" id="scGo">وريني وين</button><button id="scAll">كل الخطوات</button></div></div>${fig}<button class="mini" id="scMin" aria-label="${min?'توسيع':'تصغير'}">${min?'▴':'▾'}</button>`;
     BIDI.fix(c);{const wl=c.querySelector('.wl'),cl=wl&&wl.querySelector('li.cur');if(cl)wl.scrollTop=Math.max(0,cl.offsetTop-wl.offsetTop-30)}if(Math.abs(c.offsetHeight-h0)>8&&this.view)requestAnimationFrame(()=>this.refit(true));
     const small=()=>innerHeight<=500||innerWidth<=600;
-    c.querySelector('#scGo').onclick=()=>{if(small()&&!c.classList.contains('min')){c.classList.add('min');c.dataset.key='';this.drawStepCard()}if(L){if(!here)this.focus('board');if(cur>=0)setTimeout(()=>this.sim.setGuide({...this.sim.lineSpots(L[cur]),flash:true}),reduceMotion?0:420)}else this.focus(s.dev)};
+    c.querySelector('#scGo').onclick=()=>{if(small()&&!c.classList.contains('min')){c.classList.add('min');c.dataset.key='';this.drawStepCard()}if(L){const ln=cur>=0&&(L[cur].lead||L[cur].jack);if(ln){if(this.view!=='ov')this.back()}else if(!here)this.focus('board');if(cur>=0)setTimeout(()=>this.sim.setGuide({...this.sim.lineSpots(L[cur]),flash:true}),reduceMotion?0:420)}else this.focus(s.dev)};
     c.querySelector('#scAll').onclick=()=>this.togglePanel(true);
     c.querySelector('#scMin').onclick=()=>{c.classList.toggle('min');c.dataset.key='';this.drawStepCard();this.refit(true)}}
 };

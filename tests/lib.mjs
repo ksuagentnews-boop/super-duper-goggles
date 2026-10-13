@@ -58,7 +58,9 @@ export function bench(page) {
     plugJack: async k => { const j = await page.evaluate(k => { const R = BENCH.sim.RT, g = R.lead.grpOf(k); if (R.S.jack[g]) return null; const id = R.lead.leadFor(g); if (id < 0) return null; return { a: R.lead.headPos(id), b: R.lead.jackAt(g) }; }, k);
       if (j) await H.drag(j.a, { x: j.b.x + 6, y: j.b.y + 4 }); },
     /* move the clip that serves lead key k (CH1, CH1 ⏚, L +, HI …) to a panel node (null = off the board) */
-    lead: async (k, node) => { await H.unzoom(); if (node != null) await H.plugJack(k); const p = await page.evaluate(k => BENCH.sim.RT.lead.leadPos(k), k); if (!p) return;
+    /* leads live in the tray / on the rack: work on them from the overview, as a student would */
+    toOv: async () => { if (await page.evaluate(() => { if (BENCH.view === 'ov') return false; BENCH.back(); return true; })) await page.waitForTimeout(60); },
+    lead: async (k, node) => { await H.toOv(); if (node != null) await H.plugJack(k); const p = await page.evaluate(k => BENCH.sim.RT.lead.leadPos(k), k); if (!p) return;
       const to = node == null ? await page.evaluate(() => { const L = BENCH.sim.RT.layout; return { x: L.BX - 40, y: L.parkY - 30 }; }) : await H.node(node); await H.drag(p, to); },
     leadAt: k => page.evaluate(k => BENCH.sim.RT.S.leads[k].node, k),
     select: async (a, b) => { const sel = await page.evaluate(([a, b]) => { const S = BENCH.sim.RT.S; const p = S.parts.find(q => (q.a === a && q.b === b) || (q.a === b && q.b === a)); return p && S.sel === p.id; }, [a, b]);
