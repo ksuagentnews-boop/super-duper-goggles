@@ -429,13 +429,15 @@ function pt(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const m=
 function targetOf(e){let t=e.target;if(t&&t.closest&&t.closest('[data-cab]')){const under=document.elementsFromPoint(e.clientX,e.clientY).find(el=>svg.contains(el)&&!el.closest('[data-cab]'));if(under)t=under}return t&&t.closest?t.closest('[data-k]'):null}
 let rep=null;const stopRep=()=>{clearTimeout(rep);clearInterval(rep);rep=null};
 let press=null;
-svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;closeMenu();const el=targetOf(e);const p=pt(e);
+svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;closeMenu();let el=targetOf(e);const p=pt(e);
   /* overview: controls, leads, parts and placing work right here; only a tap on a device body (or an idle node) zooms */
   if(BENCH.view==='ov'&&!S.armed&&!S.wireMode&&(!el||el.dataset.k.startsWith('node:'))){BENCH.ovClick(p);return}
   showHL(el,true);
   const cab=e.target.closest&&e.target.closest('[data-cab]');const lk=el&&el.dataset.k.startsWith('lead:')?el.dataset.k.slice(5):cab&&cab.dataset.cab;
   if(BENCH.paint!==null&&el&&el.dataset.k.startsWith('wire:')){const id=+el.dataset.k.slice(5);if(BENCH.paint){S.wcol[id]=BENCH.paint;render(true)}else BENCH.say('اختر لون من الشريط أول');return}
   if(S.armed&&jackDrop(S.armed,p)){S.armed=null;BENCH.drawerSync();return}
+  /* placing a wire or a part: a tap on a lead's clip sitting on a node is a tap on that node */
+  if((S.armed||S.wireMode)&&el&&el.dataset.k.startsWith('lead:')){const l=S.leads[el.dataset.k.slice(5)];if(l&&l.bn!=null){if(S.armed){placeArmed(p);return}el={dataset:{k:'node:'+l.bn}}}}
   if(S.armed&&(!el||el.dataset.k.startsWith('node:'))){placeArmed(p);return}
   if(!el){const r=BENCH.regionAt(p);if(r&&r!==BENCH.view){BENCH.focus(r);return}if(S.sel){S.sel=null;render(true)}return}
   const k=el.dataset.k;

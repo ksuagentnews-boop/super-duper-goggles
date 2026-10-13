@@ -49,10 +49,15 @@ Updated after every finished item (commit + push each time).
   - `<meta name="robots" content="noindex,nofollow">` in `index.html` (checked by the hall test).
   - `robots.txt` with `Disallow: /`. On a GitHub Pages *project* site, robots.txt only counts at the domain root, so the meta tag is the part that matters there.
 
+- **7 · Pre-launch validation** → `docs/ee312/VALIDATION.md`
+  - `tests/validate.mjs` runs every Manual procedure and compares 67 graded values with theory, datasheets and the real Exp 1 readings: **67/67 within tolerance**. The PC tables are re-simulated in steady state.
+  - `tests/robust.mjs`: 120 random actions per bench plus edge cases (OVL, short → CC, A jack across the supply, knobs at both ends, reversed electrolytic 💥, scope knobs at their ends). No errors, no NaN.
+  - Fixed: placing a wire or part on a node that holds a lead clip grabbed the lead.
+  - Hall renders at 1.5× on touch devices (≈1.7× faster).
+  - Device matrix: Chromium desktop / phone / iPad emulation pass. Safari, Firefox and real phones still need a manual check.
+
 ## In progress
-- 7 · Pre-launch validation → `docs/ee312/VALIDATION.md`.
+- 8 · Parts box renamed «العلبة» with a small SVG box icon.
 
 ## Next
-- 5 · Procedure picker in Manual mode; sheet and grading cover only the selected procedures.
-- 7 · Pre-launch validation → `docs/ee312/VALIDATION.md`.
-- 8 · Parts box renamed «العلبة» with a small SVG box icon.
+- Merge into `main` after item 8; ask the owner whether the request continued after item 8 (the message was cut off).

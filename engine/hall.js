@@ -371,7 +371,7 @@ const HALL=(()=>{
     $q('#smStand').onclick=()=>{if(ok)standUp();else{$q('#seatModal').hidden=true;seatB=null}};
     if(!window.THREE){fail();return}
     try{R=new THREE.WebGLRenderer({canvas:cv,antialias:true});}catch(e){fail();return}
-    R.setPixelRatio(Math.min(devicePixelRatio,2));R.outputEncoding=THREE.sRGBEncoding;R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;
+    /* phones and tablets: 1.5× is sharp enough for the 3D scene and draws ≈45 % fewer pixels than 2× (smooth frame rate) */R.setPixelRatio(Math.min(devicePixelRatio,matchMedia('(pointer:coarse)').matches?1.5:2));R.outputEncoding=THREE.sRGBEncoding;R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;
     try{await Promise.race([Promise.all([document.fonts.load(`600 40px "IBM Plex Sans Arabic"`),document.fonts.load(`600 40px "IBM Plex Mono"`)]),new Promise(r=>setTimeout(r,1800))])}catch(_){}
     cam=new THREE.PerspectiveCamera(62,1,0.05,70);cam.rotation.order='YXZ';
     show('corridor',null,null,true);
