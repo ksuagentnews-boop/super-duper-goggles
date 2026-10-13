@@ -71,7 +71,22 @@ export async function run(page, vp, ok) {
     const tm = await page.evaluate(() => { const e = document.getElementById('tmenu'); return { shown: !e.hidden, rows: [...e.querySelectorAll('button')].map(b => Math.round(b.getBoundingClientRect().height)) }; });
     ok(tm.shown && tm.rows.length >= 5 && Math.min(...tm.rows) >= 40, `the Measure menu opens as a big touch list (${tm.rows.length} rows, ≥ ${Math.min(...tm.rows)} px)`);
     const b0 = await page.evaluate(() => { const r = document.querySelector('#tmenu button').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }); await page.touchscreen.tap(b0[0], b0[1]); await page.waitForTimeout(200);
-    ok(await page.evaluate(() => BENCH.sim.RT.S.sc.side === 'add' && /Add Measurement/.test(document.querySelector('#tmenu .tm-t').textContent)), 'picking «Add Measurement» in the list works like the soft key'); }
+    ok(await page.evaluate(() => BENCH.sim.RT.S.sc.side === 'add' && /Add Measurement/.test(document.querySelector('#tmenu .tm-t').textContent)), 'picking «Add Measurement» in the list works like the soft key');
+    // the VARIABLE knob by finger (the owner's main complaint): drag turns it, a tap shows big ◀ ▶ with the list item, and it still works pinch-zoomed
+    await page.evaluate(() => { BENCH.sim.RT.S.sc.list = { kind: 'vi', idx: 0 }; BENCH.sim.render(); }); await page.waitForTimeout(100);
+    const vk = () => page.evaluate(() => { const c = document.querySelector('#bench circle[data-knob="s:VAR"][stroke]').getBoundingClientRect(); return { x: c.x + c.width / 2, y: c.y + c.height / 2 }; });
+    const idx = () => page.evaluate(() => BENCH.sim.RT.S.sc.list.idx);
+    const turn = async (k, px) => { await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: k.x, y: k.y, id: 0 }] });
+      for (let i = 1; i <= 8; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: k.x + px * i / 8, y: k.y, id: 0 }] }); await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await page.waitForTimeout(100); };
+    let k = await vk(); await turn(k, 44); const i1 = await idx(); ok(i1 === 3, `zoomed scope: a 44 px finger drag on VARIABLE moves the list 3 items (0 → ${i1})`);
+    await page.touchscreen.tap(k.x, k.y); await page.waitForTimeout(150);
+    const vp2 = await page.evaluate(() => { const e = document.getElementById('kpad'); return { shown: !e.hidden, val: e.querySelector('.kv').textContent, b: [...e.querySelectorAll('.kb')].map(x => Math.min(x.getBoundingClientRect().width, x.getBoundingClientRect().height)) }; });
+    ok(vp2.shown && Math.min(...vp2.b) >= 44 && vp2.val.length > 0, `a tap on VARIABLE shows big ◀ ▶ (${vp2.b.join(', ')} px) and the item «${vp2.val}»`);
+    const mn = await page.evaluate(() => { const r = document.querySelector('#kpad .kb[data-d="-"]').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }); await page.touchscreen.tap(mn[0], mn[1]); await page.waitForTimeout(100);
+    ok((await idx()) === 2, '◀ turns it back one item');
+    await page.evaluate(k => BENCH.zoomAt(k.x, k.y, 2), k); await page.waitForTimeout(150); k = await vk(); await turn(k, -30);
+    ok((await idx()) === 0, 'pinch-zoomed closer, the drag still turns VARIABLE');
+    await page.evaluate(() => { BENCH.sim.RT.S.sc.list = null; BENCH.sim.render(); }); }
   await page.keyboard.press('Escape'); await page.waitForTimeout(700); const d2 = await st(); ok(d2.view === 'ov' && !d2.user && Math.abs(d2.w - d2.fw) < 1, '✕ / ESC back to the fitted overview');
   // ?debug=1: the real viewport numbers on screen (and nothing without it)
   if (touch) { // «العلبة» on touch: strip, swipes scroll, parts lift only after a hold or a sideways move

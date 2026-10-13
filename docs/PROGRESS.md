@@ -144,8 +144,11 @@ Updated after every finished item (commit + push each time).
   - Also: the ✥ handle shrinks on instruments drawn small (portrait), never under 24 px, and stays 36 px in phone landscape. A view change closes the knob ◀ ▶ buttons.
   - Tests (gestures, every touch viewport): strip, swipe on a part / on the gaps, track tap, thumb drag, sideways lift, hold lift, tap arm / disarm. Checked at 844×390, 932×430, 390×844 and iPad.
 
+- **Batch 3 checks:** full desktop + phone regressions pass. The touch checks also run at 932×430, 390×844 and iPad.
+- **Knobs on touch, owner's correction re-checked:** a new gestures test turns the scope's VARIABLE knob by finger in the scope zoom: a 44 px drag moves the list 3 items, a tap shows ◀ ▶ (44 px) with the item name, and ◀ steps back. It also turns it pinch-zoomed closer. Checked on phone, portrait and iPad.
+
 ## In progress
-- Batch 3 regressions, then push.
+- Nothing.
 
 ## Next
 - Owner: open the site with `?debug=1` on the iPhone (Claude app + Safari) and send one screenshot of the Exp 9 overview and one of a device zoom, so the real numbers can be compared.
