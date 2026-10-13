@@ -71,8 +71,17 @@ Updated after every finished item (commit + push each time).
   - Lines accept the other unit / meter where the manual names none: the Exp 1 and 2 supply (L or R), and the Exp 10 resistance readings (DMM 1 or 2). Scope channels stay as the manual names them.
   - Tests updated: the helper plugs a free lead by dragging its head, plus new tray and tap-to-plug checks.
 
+- **B2 · Free pan & pinch-zoom**
+  - Pinch (phone / iPad) or wheel (desktop) zooms between the fitted view and 4× closer, around the fingers / pointer.
+  - Dragging empty desk pans, stopping a little past the edges. Dragging a control, part, lead or handle never pans.
+  - A double-tap on empty desk or the «عرض كامل» button refits.
+  - The same works inside a device zoom and the board zoom.
+  - The camera is the SVG viewBox, so nothing is laid out again.
+  - The user's zoom is kept while working (step card changes, moved instruments). A change of view resets it.
+  - Test `tests/exp/gestures.mjs` (wheel on desktop, CDP two-finger pinch on phone).
+
 ## In progress
-- B2 · Free pan & pinch-zoom.
+- B3 · Board zoom.
 
 ## Next
 - Ask the owner whether the request continued after item 8 (the message was cut off after "everywhere in the UI and").

@@ -474,7 +474,8 @@ let rep=null;const stopRep=()=>{clearTimeout(rep);clearInterval(rep);rep=null};
 let press=null;
 svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;closeMenu();let el=targetOf(e);const p=pt(e);
   /* overview: controls, leads, parts and placing work right here; only a tap on a device body (or an idle node) zooms */
-  if(BENCH.view==='ov'&&!S.armed&&!S.wireMode&&(!el||el.dataset.k.startsWith('node:'))){BENCH.ovClick(p);return}
+  /* empty desk (or an idle node in the overview): a drag pans, a tap does what it did (zoom onto the device under it) */
+  if(BENCH.view==='ov'&&!S.armed&&!S.wireMode&&(!el||el.dataset.k.startsWith('node:'))){BENCH.panStart(e,()=>BENCH.ovClick(p));return}
   showHL(el,true);
   if(BENCH.paint!==null&&el&&el.dataset.k.startsWith('wire:')){const id=+el.dataset.k.slice(5);if(BENCH.paint){S.wcol[id]=BENCH.paint;render(true)}else BENCH.say('اختر لون من الشريط أول');return}
   if(S.armed&&jackDrop(S.armed,p)){S.armed=null;BENCH.drawerSync();return}
@@ -483,7 +484,7 @@ svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;close
   /* a lead picked by a tap: a lit jack plugs it, anything else cancels */
   if(S.pick!=null&&!(el&&el.dataset.k.startsWith('head:'))){const id=S.pick;S.pick=null;if(el&&el.dataset.k.startsWith('pj:')){if(plug(id,el.dataset.k.slice(3)))leadsChanged();else render(true)}else render(true);return}
   if(S.armed&&(!el||el.dataset.k.startsWith('node:'))){placeArmed(p);return}
-  if(!el){const r=BENCH.regionAt(p);if(r&&r!==BENCH.view){BENCH.focus(r);return}if(S.sel){S.sel=null;render(true)}return}
+  if(!el){BENCH.panStart(e,()=>{const r=BENCH.regionAt(p);if(r&&r!==BENCH.view){BENCH.focus(r);return}if(S.sel){S.sel=null;render(true)}});return}
   const k=el.dataset.k;
   if(k.startsWith('mv:')){const ik=k.slice(3);drag={kind:'inst',key:ik,x:p.x,y:p.y,sx:p.x,sy:p.y,ox:POS[ik].x,oy:POS[ik].y,active:false};svg.setPointerCapture(e.pointerId);svg.classList.add('grabbing');BENCH.clearHover();return}
   if(k.startsWith('part:')){const id=+k.slice(5);const pr=S.parts.find(q=>q.id===id);drag={kind:'move',id,type:pr.type,x:p.x,y:p.y,sx:p.x,sy:p.y,active:false};svg.setPointerCapture(e.pointerId);return}
@@ -522,6 +523,8 @@ function endDrag(){stopRep();if(press){clearTimeout(press.t);press=null}const S=
     const n=nearestNode(d.x,d.y);c.bn=null;c.bh=null;if(n!=null){const h=freeHole(n);if(h!=null){c.bn=n;c.bh=h}}
     leadsChanged()}}
 svg.addEventListener('pointerup',e=>{endDrag();if(e.pointerType!=='mouse')setTimeout(()=>showHL(null),220)});
+/* a second finger starts a pinch: whatever the first one was doing stops */
+RT.cancelDrag=()=>{stopRep();if(press){clearTimeout(press.t);press=null}if(drag&&drag.kind==='inst'&&drag.active)savePos();drag=null;svg.classList.remove('grabbing');render(true)};
 svg.addEventListener('pointercancel',()=>{stopRep();if(drag&&drag.kind==='inst'&&drag.active)savePos();drag=null;svg.classList.remove('grabbing');render(true)});
 svg.addEventListener('pointerleave',()=>{stopRep();if(!drag)showHL(null)});
 svg.addEventListener('contextmenu',e=>{e.preventDefault();const w=e.target.closest&&e.target.closest('[data-k^="wire:"]');if(w)openMenu(+w.dataset.k.slice(5),e.clientX,e.clientY)});

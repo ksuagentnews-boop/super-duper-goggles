@@ -25,7 +25,7 @@ const BENCH={
     /* iPhone: size the bench to the visual viewport and re-fit on resize / rotation / toolbar changes */
     const vv=window.visualViewport;const sync=()=>{if(vv){const st=E.view.style;st.top=vv.offsetTop+'px';st.left=vv.offsetLeft+'px';st.width=vv.width+'px';st.height=vv.height+'px'}if(!E.view.hidden)requestAnimationFrame(()=>this.refit(false))};
     addEventListener('resize',sync);addEventListener('orientationchange',()=>setTimeout(sync,250));if(vv){vv.addEventListener('resize',sync);vv.addEventListener('scroll',sync)}this._vvSync=sync;sync();
-    this.panelDefault();
+    this.panelDefault();this.gestures();
   },
   sheetOverlay(){return matchMedia('(max-width:900px),(max-height:520px),(pointer:coarse) and (max-width:1400px)').matches},
   panelDefault(){const mob=BENCH.sheetOverlay();this.el.view.classList.toggle('panel-closed',!mob&&false);this.el.view.classList.remove('panel-open')},
@@ -37,7 +37,7 @@ const BENCH={
     const E=this.el;E.view.hidden=false;HALL.pause();
     if(!force&&this.built===exp+'|'+mode){this.refit(false);return}
     if(!EXP_DEFS[exp]){REGISTRY.load(exp).then(()=>this.enter(exp,mode,true)).catch(()=>{this.say('تعذّر تحميل التجربة');this.leave()});return}
-    this.exp=exp;this.mode=mode;this.built=exp+'|'+mode;this.lineLog=[];STATS.start(exp,mode);this.view='ov';this.done=[];this.sim=null;this.devZoom();
+    this.exp=exp;this.mode=mode;this.built=exp+'|'+mode;this.lineLog=[];STATS.start(exp,mode);this.view='ov';this.setUser(false);this.done=[];this.sim=null;this.devZoom();
     E.view.dataset.mode=mode;
     /* the parts box stays open next to the board (its arrow collapses it); none on PC tables or benches without parts */
     const hasBag=!EXP_DEFS[exp].pc&&!!(EXP_DEFS[exp].tray&&EXP_DEFS[exp].tray.length);E.view.classList.toggle('no-wires',!(EXP_DEFS[exp].tray||[]).some(t=>t[0]==='W'));this.setPaint(null);E.view.classList.toggle('no-bag',!hasBag);/* portrait phones: the box starts folded (its arrow opens it) so the desk keeps the width */const bagOpen=hasBag&&innerWidth>=520;this.drawer=bagOpen;E.view.classList.toggle('drawer-open',bagOpen);$q('#dClose').textContent=bagOpen?'◂':'▸';
@@ -71,7 +71,7 @@ const BENCH={
      follows when something left the visible area (or on a reset) */
   clearHover(){this._hk=null;if(this.hl)this.hl.innerHTML=''},
   layoutChanged(reset,k){if(!this.sim||this.sim.pc)return;this.clearHover();this.calcOv();this.syncLayoutBtn();if(this.view!=='ov'&&!reset)return;
-    const v=this.vb,r=k&&this.sim.regions[k];const out=!v||!r||r[0]<v.x||r[1]<v.y||r[0]+r[2]>v.x+v.w||r[1]+r[3]>v.y+v.h;if(reset||out)this.refit(true)},
+    const v=this.vb,r=k&&this.sim.regions[k];const out=!v||!r||r[0]<v.x||r[1]<v.y||r[0]+r[2]>v.x+v.w||r[1]+r[3]>v.y+v.h;if(reset)this.refit(true,true);else if(out&&!this.user)this.refit(true)},
   syncLayoutBtn(){const b=$q('#bLayout');if(b)b.classList.toggle('dim',!!(this.sim&&this.sim.isDefault&&this.sim.isDefault()))},
   drawerSync(){if(!this.sim)return;const a=this.sim.armed(),w=this.sim.isWire();
     this.el.bag.querySelectorAll('.bag-item').forEach(b=>b.classList.toggle('on',b.dataset.t===a||(b.dataset.t==='W'&&w)));
@@ -98,7 +98,37 @@ const BENCH={
     const step=now=>{const k=ease(Math.min(1,(now-t0)/dur));this.setVB({x:from.x+(to.x-from.x)*k,y:from.y+(to.y-from.y)*k,w:from.w+(to.w-from.w)*k,h:from.h+(to.h-from.h)*k});if(k<1)this.anim=requestAnimationFrame(step)};this.anim=requestAnimationFrame(step)},
   /* focus: the device plus a margin of context (about a quarter of its size on each side), never closer than that */
   curRect(){if(this.view==='ov')return this.ovRect;const r=this.sim.regions[this.view];if(this.el.view.classList.contains('devzoom')){const m=0.035;return [r[0]-r[2]*m,r[1]-r[3]*m,r[2]*(1+2*m),r[3]*(1+2*m)]}const small=this.stageSize().H<520,f=small?0.1:0.26;const mx=Math.max(small?24:70,r[2]*f),my=Math.max(small?20:60,r[3]*f);return [r[0]-mx,r[1]-my,r[2]+2*mx,r[3]+2*my]},
-  refit(anim){if(!this.sim||!this.svg)return;const t=this.fit(this.curRect());if(anim)this.animTo(t);else{cancelAnimationFrame(this.anim);t&&this.setVB(t)}},
+  /* free pan & zoom (like a map): pinch / wheel between the fitted view and ≈4× closer, drag on empty desk to pan a little
+     past the edges; double-tap or «عرض كامل» refits. The camera is the SVG viewBox, so nothing is laid out again. */
+  refit(anim,force){if(!this.sim||!this.svg)return;if(this.user&&!force){const c=this.clampVB(this.vb);c&&this.setVB(c);return}this.setUser(false);
+    const t=this.fit(this.curRect());if(anim)this.animTo(t);else{cancelAnimationFrame(this.anim);t&&this.setVB(t)}},
+  setUser(on){this.user=on;const b=$q('#bFit');if(b)b.hidden=!on||!!(this.sim&&this.sim.pc)},
+  clampVB(v){const f=this.fit(this.curRect());if(!f||!v)return v;const w=clamp(v.w,f.w/4,f.w),h=w*f.h/f.w;let cx=v.x+v.w/2,cy=v.y+v.h/2;const mx=f.w*0.08,my=f.h*0.08;
+    cx=clamp(cx,f.x+w/2-mx,f.x+f.w-w/2+mx);cy=clamp(cy,f.y+h/2-my,f.y+f.h-h/2+my);return {x:cx-w/2,y:cy-h/2,w,h}},
+  toSvg(cx,cy){const r=this.svg.getBoundingClientRect(),v=this.vb;return {x:v.x+(cx-r.left)/r.width*v.w,y:v.y+(cy-r.top)/r.height*v.h,fx:(cx-r.left)/r.width,fy:(cy-r.top)/r.height}},
+  zoomAt(cx,cy,k,base){const v=base||this.vb;if(!v)return;const r=this.svg.getBoundingClientRect(),fx=(cx-r.left)/r.width,fy=(cy-r.top)/r.height;const P={x:v.x+fx*v.w,y:v.y+fy*v.h};
+    const w=v.w/k,h=v.h/k;cancelAnimationFrame(this.anim);const n=this.clampVB({x:P.x-fx*w,y:P.y-fy*h,w,h});this.setVB(n);const f=this.fit(this.curRect());this.setUser(!!f&&n.w<f.w*0.995)},
+  panBy(dx,dy,base){const v=base||this.vb,r=this.svg.getBoundingClientRect();cancelAnimationFrame(this.anim);this.setVB(this.clampVB({x:v.x-dx/r.width*v.w,y:v.y-dy/r.height*v.h,w:v.w,h:v.h}));if(this.vb.w<this.fit(this.curRect()).w*0.995)this.setUser(true)},
+  fitAll(){this.setUser(false);this.refit(true,true)},
+  /* one finger on empty desk: pan once it moves, otherwise a tap (double-tap = refit) */
+  panStart(e,onTap){this.pan={id:e.pointerId,x:e.clientX,y:e.clientY,vb:{...this.vb},moved:false,onTap};try{this.svg.setPointerCapture(e.pointerId)}catch(_){}},
+  gestures(){const st=this.el.stage,P=new Map();let pinch=null;
+    st.addEventListener('pointerdown',e=>{if(!this.sim||this.sim.pc)return;P.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(P.size===2){const [a,b]=[...P.values()];this.pan=null;if(this.sim.RT&&this.sim.RT.cancelDrag)this.sim.RT.cancelDrag();
+        pinch={d:Math.hypot(a.x-b.x,a.y-b.y)||1,mx:(a.x+b.x)/2,my:(a.y+b.y)/2,vb:{...this.vb}};e.stopPropagation();e.preventDefault()}
+      else if(P.size>2){e.stopPropagation()}},true);
+    st.addEventListener('pointermove',e=>{if(!P.has(e.pointerId))return;P.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(pinch&&P.size>=2){const [a,b]=[...P.values()];const d=Math.hypot(a.x-b.x,a.y-b.y),mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
+        this.zoomAt(pinch.mx,pinch.my,d/pinch.d,pinch.vb);this.panBy(mx-pinch.mx,my-pinch.my,this.vb);e.stopPropagation();return}
+      if(pinch){e.stopPropagation();return}
+      const p=this.pan;if(p&&p.id===e.pointerId){const dx=e.clientX-p.x,dy=e.clientY-p.y;if(!p.moved&&Math.hypot(dx,dy)>8)p.moved=true;if(p.moved){this.panBy(dx,dy,p.vb);e.stopPropagation()}}},true);
+    const up=e=>{P.delete(e.pointerId);if(pinch){if(P.size===0)pinch=null;e.stopPropagation();return}
+      const p=this.pan;if(p&&p.id===e.pointerId){this.pan=null;if(p.moved){e.stopPropagation();return}
+        const now=performance.now(),last=this._tap;this._tap={t:now,x:e.clientX,y:e.clientY};
+        if(last&&now-last.t<320&&Math.hypot(e.clientX-last.x,e.clientY-last.y)<30&&this.user){this._tap=null;this.fitAll();return}p.onTap&&p.onTap()}};
+    st.addEventListener('pointerup',up,true);st.addEventListener('pointercancel',up,true);
+    st.addEventListener('wheel',e=>{if(!this.sim||this.sim.pc||e.defaultPrevented)return;e.preventDefault();this.zoomAt(e.clientX,e.clientY,Math.exp(-e.deltaY*(e.ctrlKey?0.01:0.0018)))},{passive:false});
+    $q('#bFit').onclick=()=>this.fitAll()},
   /* the overview hint: once per session, small, then it fades away */
   hintOnce(ov){const h=this.el.ovHint;let seen=false;try{seen=sessionStorage.getItem('eelab:hint')==='1'}catch(_){}
     if(!ov||seen||this._hintShown){h.hidden=true;return}this._hintShown=true;h.hidden=false;h.classList.remove('fade');try{sessionStorage.setItem('eelab:hint','1')}catch(_){}
@@ -110,14 +140,14 @@ const BENCH={
     this.drawStepCard()},
   regionAt(p){const R=this.sim.regions;for(const k of Object.keys(R).reverse()){const r=R[k];if(p.x>=r[0]&&p.x<=r[0]+r[2]&&p.y>=r[1]&&p.y<=r[1]+r[3])return k}return null},
   ovClick(p){const k=this.regionAt(p);if(k){this._hk=null;this.focus(k)}},
-  focus(k){if(this.sim&&this.sim.pc){this.sim.focus(k);return}if(!this.sim||!this.sim.regions[k])return;this.view=k;this.devZoom();this.ui();this.refit(true)},
+  focus(k){if(this.sim&&this.sim.pc){this.sim.focus(k);return}if(!this.sim||!this.sim.regions[k])return;this.view=k;this.devZoom();this.ui();this.refit(true,true)},
   /* close device zoom: the device alone at ≈90 % of the screen; the box, hints, tools, board and the other instruments hide */
   devZoom(){const k=this.view,on=k!=='ov'&&k!=='board'&&!(this.sim&&this.sim.pc);const E=this.el;E.view.classList.toggle('devzoom',on);
     let st=document.getElementById('zoomStyle');if(!st){st=document.createElement('style');st.id='zoomStyle';document.head.appendChild(st)}
     st.textContent=on?`#benchView.devzoom #Ldyn>g:not([data-inst="${k}"]),#benchView.devzoom #Lcables g[data-cabof]:not([data-cabof="${k}"]),#benchView.devzoom #Lcables .cablbl{display:none}`:'';
     const c=E.card;if(on&&c&&!c.hidden&&(innerHeight<=520||innerWidth<=600)&&!c.classList.contains('min')){c.classList.add('min');c.dataset.key='';this._unminCard=true}
     else if(!on&&this._unminCard){this._unminCard=false;if(c){c.classList.remove('min');c.dataset.key=''}}},
-  back(){if(this.sim&&this.sim.pc)return;this.view='ov';this.devZoom();this.ui();this.refit(true)},
+  back(){if(this.sim&&this.sim.pc)return;this.view='ov';this.devZoom();this.ui();this.refit(true,true)},
   /* open / collapse the side parts box */
   setDrawer(open,silent){if(this.el.view.classList.contains('no-bag'))return;this.drawer=open;const E=this.el;E.view.classList.toggle('drawer-open',open);$q('#dClose').textContent=open?'◂':'▸';
     if(!silent)setTimeout(()=>this.refit(true),20)},
