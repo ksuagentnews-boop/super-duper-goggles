@@ -96,10 +96,10 @@ const BENCH={
     const left=bag?(this.drawer?(small?104:136):42):0;const card=this.mode==='manual'?(small?64:150):0;const tall=H>W*1.1,tr=tall?0:(small?70:96),tt=tall?52:0;return {W:Math.max(200,W-left-16-tr),H:Math.max(150,H-16-card-tt)}},
   fit(r){const {W,H}=this.stageSize();if(!W||!H)return null;const {top,bottom,left,right}=this.pads();const m=Math.min(12,W*0.015);
     /* ≈4 % margin around what is on the desk */
-    const mx=r[2]*0.02,my=r[3]*0.02;r=[r[0]-mx,r[1]-my,r[2]+2*mx,r[3]+2*my];
+    const mg=this.el.view.classList.contains('devzoom')?0:0.02,mx=r[2]*mg,my=r[3]*mg;r=[r[0]-mx,r[1]-my,r[2]+2*mx,r[3]+2*my];
     const aw=Math.max(60,W-2*m-left-right),ah=Math.max(60,H-top-bottom);const s=Math.max(r[2]/aw,r[3]/ah);const vw=W*s,vh=H*s;
     const cx=left+m+aw/2,cy=top+ah/2;return {x:r[0]+r[2]/2-cx*s,y:r[1]+r[3]/2-cy*s,w:vw,h:vh}},
-  setVB(v){{const {W,H}=this.stageSize();if(W&&H)this.el.view.classList.toggle('tall',H>W*1.1)}this.vb=v;this.svg.setAttribute('viewBox',`${v.x} ${v.y} ${v.w} ${v.h}`)},
+  setVB(v){{const {W,H}=this.stageSize();if(W&&H)this.el.view.classList.toggle('tall',H>W*1.1)}this.vb=v;this.svg.setAttribute('viewBox',`${v.x} ${v.y} ${v.w} ${v.h}`);if(this._tmk||this.el.view.classList.contains('devzoom'))this.syncTouchMenu()},
   /* a smooth camera move (≈380 ms ease); the target may be updated while it runs (e.g. the parts box hides as a device
      zoom starts and the free area grows), so the move never ends in a jump */
   animTo(to){if(!to)return;cancelAnimationFrame(this.anim);this._to=to;if(!this.vb||reduceMotion){this.setVB(to);this._to=null;return}const from={...this.vb},t0=performance.now(),dur=380;
@@ -108,7 +108,7 @@ const BENCH={
   curRect(){if(this.view==='ov')return this.ovRect;
     /* board zoom: the plug-in panel itself at ≈90 % of the free area (the parts box stays; the lead tray is a pan away) */
     if(this.view==="board"&&this.sim.boardRect){const r=this.sim.boardRect,m=0.015;return [r[0]-r[2]*m,r[1]-r[3]*m-16,r[2]*(1+2*m),r[3]*(1+2*m)+16]}
-    const r=this.sim.regions[this.view];if(this.el.view.classList.contains('devzoom')){const m=0.035;return [r[0]-r[2]*m,r[1]-r[3]*m,r[2]*(1+2*m),r[3]*(1+2*m)]}const small=this.stageSize().H<520,f=small?0.1:0.26;const mx=Math.max(small?24:70,r[2]*f),my=Math.max(small?20:60,r[3]*f);return [r[0]-mx,r[1]-my,r[2]+2*mx,r[3]+2*my]},
+    const r=this.sim.regions[this.view];if(this.el.view.classList.contains('devzoom')){/* the device body itself, edge to edge (≈97 % of the limiting side) */const b=(this.sim.bodyRect&&this.sim.bodyRect(this.view))||r,m=0.016;return [b[0]-b[2]*m,b[1]-b[3]*m,b[2]*(1+2*m),b[3]*(1+2*m)]}const small=this.stageSize().H<520,f=small?0.1:0.26;const mx=Math.max(small?24:70,r[2]*f),my=Math.max(small?20:60,r[3]*f);return [r[0]-mx,r[1]-my,r[2]+2*mx,r[3]+2*my]},
   /* free pan & zoom (like a map): pinch / wheel between the fitted view and ≈4× closer, drag on empty desk to pan a little
      past the edges; double-tap or «عرض كامل» refits. The camera is the SVG viewBox, so nothing is laid out again. */
   refit(anim,force){if(!this.sim||!this.svg)return;if(this.user&&!force){const c=this.clampVB(this.vb);c&&this.setVB(c);return}this.setUser(false);
@@ -153,7 +153,7 @@ const BENCH={
   ovClick(p){const k=this.regionAt(p);if(k){this._hk=null;this.focus(k)}},
   focus(k){if(this.sim&&this.sim.pc){this.sim.focus(k);return}if(!this.sim||!this.sim.regions[k])return;this.view=k;this.devZoom();this.ui();this.refit(true,true)},
   /* close device zoom: the device alone at ≈90 % of the screen; the box, hints, tools, board and the other instruments hide */
-  devZoom(){const k=this.view,on=k!=='ov'&&k!=='board'&&!(this.sim&&this.sim.pc);const E=this.el;E.view.classList.toggle('devzoom',on);
+  devZoom(){setTimeout(()=>this.syncTouchMenu(),0);const k=this.view,on=k!=='ov'&&k!=='board'&&!(this.sim&&this.sim.pc);const E=this.el;E.view.classList.toggle('devzoom',on);
     let st=document.getElementById('zoomStyle');if(!st){st=document.createElement('style');st.id='zoomStyle';document.head.appendChild(st)}
     st.textContent=on?`#benchView.devzoom #Ldyn>g:not([data-inst="${k}"]),#benchView.devzoom #Lcables g[data-cabof]:not([data-cabof="${k}"]),#benchView.devzoom #Lcables .cablbl,#benchView.devzoom #Lcables .ltray{opacity:0;pointer-events:none}`:'';
     const c=E.card;if(on&&c&&!c.hidden&&(innerHeight<=520||innerWidth<=600)&&!c.classList.contains('min')){c.classList.add('min');c.dataset.key='';this._unminCard=true}
@@ -192,7 +192,17 @@ const BENCH={
   procNext(a,b){const el=$q('#procNext');el.innerHTML=`<b>خلصت Procedure ${a}</b> ← ننتقل لـ Procedure ${b}`;BIDI.fix(el);el.hidden=false;el.classList.remove('on');void el.offsetWidth;el.classList.add('on');
     clearTimeout(this._pn);this._pn=setTimeout(()=>{el.hidden=true},2600);el.onclick=()=>{el.hidden=true}},
   /* ---- practice stepper ---- */
-  onRender(){if(!this.sim)return;this.drawerSync();if(this.mode!=='manual')return;
+  /* touch: an open instrument menu (scope Measure, Acquire, Cursor, soft keys, measurement list) as a large list over its
+     screen while the device is zoomed; a row = the same soft key / list item */
+  syncTouchMenu(){const el=$q('#tmenu');if(!el)return;const on=this.el.view.classList.contains('devzoom')&&matchMedia('(pointer:coarse)').matches&&this.sim&&this.sim.touchMenu;
+    const m=on?this.sim.touchMenu(this.view):null;if(!m){el.hidden=true;this._tmk='';return}
+    const c=this.svg.getScreenCTM(),st=this.el.stage.getBoundingClientRect();let x=m.rect[0]*c.a+c.e-st.left,y=m.rect[1]*c.d+c.f-st.top,w=m.rect[2]*c.a,h=m.rect[3]*c.d;
+    /* exactly over the screen, never over the keys around it; the rows scroll if there are many */const W=w,H=h;
+    Object.assign(el.style,{left:x+'px',top:y+'px',width:W+'px',maxHeight:H+'px'});const key=m.title+'|'+m.items.map(i=>i.label+(i.on?'*':'')).join('|');this._tm=m;
+    if(key!==this._tmk){this._tmk=key;el.innerHTML=`<div class="tm-t">${m.title}</div>`+m.items.map((it,i)=>`<button data-i="${i}" class="${it.on?'on':''}${it.side?' sd':''}">${it.label}</button>`).join('');
+      el.querySelectorAll('button').forEach(b=>b.onclick=()=>{const it=this._tm.items[+b.dataset.i];if(it)this._tm.press(it)})}
+    el.hidden=false},
+  onRender(){if(!this.sim)return;this.drawerSync();this.syncTouchMenu();if(this.mode!=='manual')return;
     const st=this.sim.status(),S=this.sim.steps;let just=-1;
     for(let i=0;i<S.length;i++){if(this.done[i])continue;if(S[i].ok(st)){this.done[i]=true;just=i;
         /* a build step that ticks with one of its lines not matching the board means the lines are wrong (tests read this) */

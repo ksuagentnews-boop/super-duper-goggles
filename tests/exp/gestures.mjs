@@ -45,6 +45,16 @@ export async function run(page, vp, ok) {
   // inside a device zoom
   await page.evaluate(() => BENCH.focus('sc')); await page.waitForTimeout(700); const d0 = await st();
   await zoomIn(2); const d1 = await st(); ok(d1.view === 'sc' && d1.w < d0.w * 0.8, `inside the scope zoom, ${touch ? 'pinch' : 'wheel'} goes closer (${Math.round(d0.w)} → ${Math.round(d1.w)})`);
+  if (touch) { // zoomed scope on touch: menus as a big list, and controls with finger-sized targets
+    await page.evaluate(() => BENCH.fitAll()); await page.waitForTimeout(300);
+    const near = await page.evaluate(() => { const r = document.querySelector('#Ldyn [data-k="s:Measure"]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top - 12 }; });
+    await page.evaluate(() => { const sc = BENCH.sim.RT.S.sc; sc.pwr = true; sc.menu = null; BENCH.sim.render(); });
+    await page.touchscreen.tap(near.x, near.y); await page.waitForTimeout(250);
+    ok(await page.evaluate(() => BENCH.sim.RT.S.sc.menu === 'measure'), 'a tap 12 px off the small Measure key still presses it (finger-sized target)');
+    const tm = await page.evaluate(() => { const e = document.getElementById('tmenu'); return { shown: !e.hidden, rows: [...e.querySelectorAll('button')].map(b => Math.round(b.getBoundingClientRect().height)) }; });
+    ok(tm.shown && tm.rows.length >= 5 && Math.min(...tm.rows) >= 40, `the Measure menu opens as a big touch list (${tm.rows.length} rows, ≥ ${Math.min(...tm.rows)} px)`);
+    const b0 = await page.evaluate(() => { const r = document.querySelector('#tmenu button').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }); await page.touchscreen.tap(b0[0], b0[1]); await page.waitForTimeout(200);
+    ok(await page.evaluate(() => BENCH.sim.RT.S.sc.side === 'add' && /Add Measurement/.test(document.querySelector('#tmenu .tm-t').textContent)), 'picking «Add Measurement» in the list works like the soft key'); }
   await page.keyboard.press('Escape'); await page.waitForTimeout(700); const d2 = await st(); ok(d2.view === 'ov' && !d2.user && Math.abs(d2.w - d2.fw) < 1, '✕ / ESC back to the fitted overview');
   // ?debug=1: the real viewport numbers on screen (and nothing without it)
   ok(await page.evaluate(() => !document.getElementById('dbgOverlay')), 'no debug overlay without ?debug=1');

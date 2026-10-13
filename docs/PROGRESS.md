@@ -110,8 +110,16 @@ Updated after every finished item (commit + push each time).
   - The rest of the desk fades out instead of vanishing.
   - Tested with motion on, in and out, on desktop and phone.
 
+- **P2 · Zoomed instrument usable by finger**
+  - A device zoom frames the instrument body edge to edge: 97–99 % of the limiting side. The ✥ handle is hidden there.
+  - On touch inside a device zoom, a tap that misses every control goes to the nearest control within 22 px. Every knob, key and arrow gets a ≥ 44 px target without the targets overlapping.
+  - Scope menus (Measure, Acquire, Display, Cursor, Trigger, channel menus, the side keys and the measurement lists) open on touch as a large list over the scope's screen: 44 px rows that scroll if many. A row presses the same soft key or picks the same list item.
+  - The list stays exactly over the screen, so the soft keys around it stay free.
+  - Pinch still goes closer.
+  - Tests: gestures (near-tap, list rows, picking), instruments (zoom fill > 95 %), full phone regression.
+
 ## In progress
-- P2 · Zoomed device ≈96–98 %, ≥40 px touch targets, touch-friendly scope menus.
+- P3 · Moved instrument on top, settles off the board / tray, bigger ✥ on phones.
 
 ## Next
 - Owner: open the site with `?debug=1` on the iPhone (Claude app + Safari) and send one screenshot of the Exp 9 overview and one of a device zoom, so the real numbers can be compared.

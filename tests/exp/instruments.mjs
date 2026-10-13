@@ -70,7 +70,7 @@ export async function run(page, vp, ok) {
       const g = document.querySelector('#Ldyn [data-inst="dmm"]').getBoundingClientRect(); const aw = st.width, ah = st.height - pd.top - pd.bottom;
       const shown = s => { const e = document.querySelector(s); if (!e) return false; const c = getComputedStyle(e); return c.display !== 'none' && +c.opacity > 0.05; };
       return { fill: Math.max(g.width / aw, g.height / ah), box: shown('#drawer'), board: shown('#Lstatic'), other: shown('#Ldyn [data-inst="psu"]'), hint: shown('.ovhint') }; });
-    ok(z.fill > 0.84 && !z.box && !z.board && !z.other && !z.hint, `device zoom: the DMM alone at ${(z.fill * 100).toFixed(0)} % of the screen; parts box, hint, board and the supply hidden`); }
+    ok(z.fill > 0.95 && !z.box && !z.board && !z.other && !z.hint, `device zoom: the DMM alone at ${(z.fill * 100).toFixed(0)} % of the screen; parts box, hint, board and the supply hidden`); }
   await page.keyboard.press('Escape'); await page.waitForTimeout(300); ok((await view()) === 'ov' && await page.$eval('#drawer', e => getComputedStyle(e).display !== 'none'), 'ESC returns to the overview with the parts box back');
   await page.click('#dClose'); ok(await page.$eval('#drawer', e => e.offsetWidth < 50), 'the arrow folds the parts box');
   await page.click('#dClose'); ok(await page.$eval('#drawer', e => e.offsetWidth > 60), 'and opens it again');

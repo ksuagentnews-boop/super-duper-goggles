@@ -469,7 +469,13 @@ function circuitChanged(){RT.dirty=true;INST.forEach(i=>i.onCircuitChange&&i.onC
 const svg=$('bench');
 function pt(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const m=svg.getScreenCTM().inverse();const r=p.matrixTransform(m);return {x:r.x,y:r.y}}
 /* cables never block what lies under them: a tap on a cable goes to the control below */
-function targetOf(e){let t=e.target;if(t&&t.closest&&t.closest('[data-cab]')){const under=document.elementsFromPoint(e.clientX,e.clientY).find(el=>svg.contains(el)&&!el.closest('[data-cab]'));if(under)t=under}return t&&t.closest?t.closest('[data-k]'):null}
+/* inside a device zoom on touch, a tap that misses every control goes to the nearest one within 22 px: every control gets a
+   finger-sized target (≥ 44 px) without the targets overlapping */
+function nearControl(e){if(e.pointerType==='mouse'||!document.getElementById('benchView').classList.contains('devzoom'))return null;
+  const g=$('Ldyn').querySelector(`[data-inst="${BENCH.view}"]`);if(!g)return null;let best=null,bd=22;
+  g.querySelectorAll('[data-k]').forEach(el=>{if(el.dataset.k.startsWith('mv:'))return;const r=el.getBoundingClientRect();if(!r.width&&!r.height)return;
+    const dx=Math.max(r.left-e.clientX,0,e.clientX-r.right),dy=Math.max(r.top-e.clientY,0,e.clientY-r.bottom),d=Math.hypot(dx,dy);if(d<bd){bd=d;best=el}});return best}
+function targetOf(e){let t=e.target;if(t&&t.closest&&t.closest('[data-cab]')){const under=document.elementsFromPoint(e.clientX,e.clientY).find(el=>svg.contains(el)&&!el.closest('[data-cab]'));if(under)t=under}const el=t&&t.closest?t.closest('[data-k]'):null;return el||(e.type==='pointerdown'?nearControl(e):null)}
 let rep=null;const stopRep=()=>{clearTimeout(rep);clearInterval(rep);rep=null};
 let press=null;
 svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;closeMenu();let el=targetOf(e);const p=pt(e);
@@ -570,6 +576,9 @@ RT.lead={grpOf,trayName,jackName,PL,PNAME,jackAt:g=>jackAt(g),headPos:id=>headPo
 const X=def.setup(RT);
 BENCH.register({
   regions,names,boardRect:[BX,BY,BW,BH],
+  touchMenu:k=>{const i=byKey[k];if(!i||!i.touchMenu)return null;const m=i.touchMenu();if(!m)return null;const P=POS[k];m.rect=[m.rect[0]+P.x,m.rect[1]+P.y,m.rect[2],m.rect[3]];
+    m.press=it=>{if(it.act)it.act();else i.keyFn(it.key);render()};return m},
+  bodyRect:k=>{const i=byKey[k],P=POS[k];return i?[P.x,P.y,i.size[0],i.size[1]]:null},
   tray:def.tray.map(([t,l])=>({t,l})),
   icon:t=>t==='W'?'<svg viewBox="-34 -18 68 36"><path d="M-24 8 q24 -26 48 0" fill="none" stroke="#e0b000" stroke-width="5" stroke-linecap="round"/></svg>':`<svg viewBox="-36 -18 72 36">${partBody(t,40,false)}</svg>`,
   trayDown,isWire:()=>RT.S.wireMode,armed:()=>RT.S&&RT.S.armed,

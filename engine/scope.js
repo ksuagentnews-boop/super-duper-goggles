@@ -188,6 +188,13 @@ return {key:'sc',prefix:'s',bnc:SC_BNC,size:[W,H],
   cables:D=>PR.map(c=>D.coax(SC_BNC[c],`c${c+1}r`,`c${c+1}b`,'CH'+(c+1))).join(''),
   /* each plugged probe loads its node with 1 MΩ to earth */
   stamp(ck){const L=RT.S.leads;ck.probes=ALL.map(c=>{const l=L[`c${c+1}r`];if(!l||l.node==null)return null;const p=ck.idx(l.node);if(p>=0)ck.els.push({t:'G',a:p,b:-1,g:1e-6});return p});ck.p1=ck.probes[0];ck.p2=ck.probes[1]},
+  /* on touch, the open menu as a large list over the screen (same keys / items as the soft keys and the list) */
+  touchMenu(){const sc=RT.S.sc;if(!sc.pwr||!(sc.menu||sc.list))return null;const scr=[C0.x+SX+4,C0.y+SY+18,358,304];
+    if(sc.list){const it=listItems();return {rect:scr,title:listTitle(sc.list.kind),items:it.map((x,k)=>({label:x,on:k===sc.list.idx,act:()=>{sc.list.idx=k;listSelect()}})).concat([{label:'✕ Menu Off',key:'MOFF'}])}}
+    const {b,sd}=menuLabels();const one=l=>l.replace('\n',' · ');const items=[];
+    (sd||[]).forEach((l,i)=>{if(l)items.push({label:one(l),key:'S'+i,side:true})});(b||[]).forEach((l,i)=>{if(l)items.push({label:one(l),key:'B'+i})});
+    items.push({label:'✕ Menu Off',key:'MOFF'});const nm={measure:'Measure',acquire:'Acquire',display:'Display',cursor:'Cursor',trig:'Trigger',utility:'Utility'}[sc.menu]||(sc.menu||'').toUpperCase();
+    return {rect:scr,title:nm+(sc.side?' · '+{add:'Add Measurement',rem:'Remove Measurement',xy:'XY'}[sc.side]:''),items}},
   fresh,scNew,chNew,svg:scopeSVG,screenInner,dsig,chVDS,flash,autoset,keyFn:scKey,
   wheel:['P1P','P2P','P3P','P4P','V1','V2','V3','V4','HP','H','VAR','LV']};
 };
