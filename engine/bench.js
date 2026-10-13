@@ -99,7 +99,7 @@ const BENCH={
     const mg=this.el.view.classList.contains('devzoom')?0:0.02,mx=r[2]*mg,my=r[3]*mg;r=[r[0]-mx,r[1]-my,r[2]+2*mx,r[3]+2*my];
     const aw=Math.max(60,W-2*m-left-right),ah=Math.max(60,H-top-bottom);const s=Math.max(r[2]/aw,r[3]/ah);const vw=W*s,vh=H*s;
     const cx=left+m+aw/2,cy=top+ah/2;return {x:r[0]+r[2]/2-cx*s,y:r[1]+r[3]/2-cy*s,w:vw,h:vh}},
-  setVB(v){{const {W,H}=this.stageSize();if(W&&H)this.el.view.classList.toggle('tall',H>W*1.1)}this.vb=v;this.svg.setAttribute('viewBox',`${v.x} ${v.y} ${v.w} ${v.h}`);if(this._tmk||this.el.view.classList.contains('devzoom'))this.syncTouchMenu();if(this.sim&&this.sim.RT&&this.sim.RT.knobPad)this.sim.RT.knobPad()},
+  setVB(v){{const {W,H}=this.stageSize();if(W&&H)this.el.view.classList.toggle('tall',H>W*1.1)}this.vb=v;this.svg.setAttribute('viewBox',`${v.x} ${v.y} ${v.w} ${v.h}`);if(this._tmk||this.el.view.classList.contains('devzoom'))this.syncTouchMenu();if(this.sim&&this.sim.RT&&this.sim.RT.camera)this.sim.RT.camera()},
   /* a smooth camera move (≈380 ms ease); the target may be updated while it runs (e.g. the parts box hides as a device
      zoom starts and the free area grows), so the move never ends in a jump */
   animTo(to){if(!to)return;cancelAnimationFrame(this.anim);this._to=to;if(!this.vb||reduceMotion){this.setVB(to);this._to=null;return}const from={...this.vb},t0=performance.now(),dur=380;
@@ -155,7 +155,7 @@ const BENCH={
   /* close device zoom: the device alone at ≈90 % of the screen; the box, hints, tools, board and the other instruments hide */
   devZoom(){setTimeout(()=>this.syncTouchMenu(),0);const k=this.view,on=k!=='ov'&&k!=='board'&&!(this.sim&&this.sim.pc);const E=this.el;E.view.classList.toggle('devzoom',on);
     let st=document.getElementById('zoomStyle');if(!st){st=document.createElement('style');st.id='zoomStyle';document.head.appendChild(st)}
-    st.textContent=on?`#benchView.devzoom #Ldyn>g:not([data-inst="${k}"]),#benchView.devzoom #Lcables g[data-cabof]:not([data-cabof="${k}"]),#benchView.devzoom #Lcables .cablbl,#benchView.devzoom #Lcables .ltray{opacity:0;pointer-events:none}`:'';
+    st.textContent=on?`#benchView.devzoom .Linst>g:not([data-inst="${k}"]),#benchView.devzoom #Lcables g[data-cabof]:not([data-cabof="${k}"]),#benchView.devzoom #Lcables .cablbl,#benchView.devzoom #Lcables .ltray{opacity:0;pointer-events:none}`:'';
     const c=E.card;if(on&&c&&!c.hidden&&(innerHeight<=520||innerWidth<=600)&&!c.classList.contains('min')){c.classList.add('min');c.dataset.key='';this._unminCard=true}
     else if(!on&&this._unminCard){this._unminCard=false;if(c){c.classList.remove('min');c.dataset.key=''}}},
   back(){if(this.sim&&this.sim.pc)return;this.view='ov';this.devZoom();this.ui();this.refit(true,true)},

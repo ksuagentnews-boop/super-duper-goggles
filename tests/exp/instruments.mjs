@@ -37,7 +37,7 @@ export async function run(page, vp, ok) {
   await H.focus('board'); await H.del(0, 1);
   await H.place('R100', 14, 15); await H.place('D4001', 15, 22); await H.lead('Lp', 14); await H.lead('Lm', 22); await H.lead('mh', 15); await H.lead('ml', 22);
   await H.focus('psu'); await H.key('p:PWR');
-  const disp = () => page.evaluate(() => { const t = [...document.querySelectorAll('#Ldyn text')].map(e => e.textContent); return t; });
+  const disp = () => page.evaluate(() => { const t = [...document.querySelectorAll('#bench .Linst text')].map(e => e.textContent); return t; });
   await H.key('p:LI-', 45); await H.key('p:LVC-', 7);
   let st = await page.evaluate(() => BENCH.sim.RT.S.psu.u[0]); ok(Math.abs(st.v - 5) < 1e-9 && Math.abs(st.ilim - 0.05) < 1e-9, 'unit L preset 5.00 V / 0.050 A (dc OFF)');
   ok((await disp()).includes('5.00') && (await disp()).includes('0.050'), 'OFF (PRESET) shows the set voltage and current limit');
@@ -67,9 +67,9 @@ export async function run(page, vp, ok) {
   const rg = await page.evaluate(() => BENCH.sim.regions.dmm); await H.tap(rg[0] + rg[2] * 0.3, rg[1] + 90); await page.waitForTimeout(500);
   ok((await view()) === 'dmm', 'tapping the DMM body zooms on it');
   { await page.waitForTimeout(300); const z = await page.evaluate(() => { const v = document.getElementById('benchView'), st = document.getElementById('bstage').getBoundingClientRect(), pd = BENCH.pads();
-      const g = document.querySelector('#Ldyn [data-inst="dmm"]').getBoundingClientRect(); const aw = st.width, ah = st.height - pd.top - pd.bottom;
+      const g = document.querySelector('#bench .Linst [data-inst="dmm"]').getBoundingClientRect(); const aw = st.width, ah = st.height - pd.top - pd.bottom;
       const shown = s => { const e = document.querySelector(s); if (!e) return false; const c = getComputedStyle(e); return c.display !== 'none' && +c.opacity > 0.05; };
-      return { fill: Math.max(g.width / aw, g.height / ah), box: shown('#drawer'), board: shown('#Lstatic'), other: shown('#Ldyn [data-inst="psu"]'), hint: shown('.ovhint') }; });
+      return { fill: Math.max(g.width / aw, g.height / ah), box: shown('#drawer'), board: shown('#Lstatic'), other: shown('#bench .Linst [data-inst="psu"]'), hint: shown('.ovhint') }; });
     ok(z.fill > 0.95 && !z.box && !z.board && !z.other && !z.hint, `device zoom: the DMM alone at ${(z.fill * 100).toFixed(0)} % of the screen; parts box, hint, board and the supply hidden`); }
   await page.keyboard.press('Escape'); await page.waitForTimeout(300); ok((await view()) === 'ov' && await page.$eval('#drawer', e => getComputedStyle(e).display !== 'none'), 'ESC returns to the overview with the parts box back');
   await page.click('#dClose'); ok(await page.$eval('#drawer', e => e.offsetWidth < 50), 'the arrow folds the parts box');
@@ -111,11 +111,28 @@ export async function run(page, vp, ok) {
   ok((await dmmState()) === st0, 'moving the DMM pressed none of its controls');
   ok(await page.evaluate(([p0, p1]) => { const L = BENCH.sim.RT.layout; if (BENCH.sim.RT.S.leads.ml.node != null) return true; const d = L.PARK.ml; const f = { x: L.POS.dmm.x + 440, y: L.POS.dmm.y + 116 };
     const d0 = { x: d.x - (p1.x - p0.x), y: d.y - (p1.y - p0.y) }, f0 = { x: f.x - (p1.x - p0.x), y: f.y - (p1.y - p0.y) }; return Math.abs(Math.hypot(d.x - f.x, d.y - f.y) - Math.hypot(d0.x - f0.x, d0.y - f0.y)) < 0.5; }, [p0, p1]), 'the unplugged COM lead travels with the DMM (same length, no old route)');
-  const cab = await page.evaluate(() => { const d = document.querySelector('#Lcables [data-cab="ml"] path').getAttribute('d').match(/M([\d.-]+) ([\d.-]+)/); const L = BENCH.sim.RT.layout; return { x: +d[1], y: +d[2], want: { x: L.POS.dmm.x + 440, y: L.POS.dmm.y + 116 } }; });
+  const cab = await page.evaluate(() => { const d = document.querySelector('#bench [data-cab="ml"] path').getAttribute('d').match(/M([\d.-]+) ([\d.-]+)/); const L = BENCH.sim.RT.layout; return { x: +d[1], y: +d[2], want: { x: L.POS.dmm.x + 440, y: L.POS.dmm.y + 116 } }; });
   ok(Math.abs(cab.x - cab.want.x) < 1 && Math.abs(cab.y - cab.want.y) < 1, 'the COM cable stays on the moved jack');
+  ok(await page.evaluate(() => { const g = document.querySelector('#Ltop [data-inst="dmm"]'), t = document.getElementById('Ltop'), c = document.getElementById('Lcables');
+    return !!g && !!(c.compareDocumentPosition(t) & Node.DOCUMENT_POSITION_FOLLOWING) && !!document.querySelector('#LtopCab [data-cab="ml"]'); }), 'the moved DMM is drawn on top (above the leads, tray and board), its own leads with it');
+  const hpx = await page.$eval('#bench [data-k="mv:dmm"] circle:nth-child(2)', e => e.getBoundingClientRect().width);
+  ok(hpx >= (vp === 'phone' ? 34 : 26), `the ✥ handle is ${Math.round(hpx)} px on screen`);
+  /* drop the DMM right onto the board: it settles to the nearest free spot */
+  const hb2 = await page.$eval('#bench [data-k="mv:dmm"] circle:nth-child(2)', e => { const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
+  const tgt = await page.evaluate(() => { const b = BENCH.sim.boardRect, m = document.getElementById('bench').getScreenCTM(); return [(b[0] + b[2] / 2) * m.a + m.e, (b[1] + b[3] / 2) * m.d + m.f]; });
+  if (vp === 'phone') { const cdp = await page.context().newCDPSession(page); const tp = (x, y) => [{ x, y, id: 1 }];
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: tp(hb2[0], hb2[1]) });
+    for (let i = 1; i <= 8; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: tp(hb2[0] + (tgt[0] - hb2[0]) * i / 8, hb2[1] + (tgt[1] - hb2[1]) * i / 8) });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); }
+  else { await page.mouse.move(hb2[0], hb2[1]); await page.mouse.down(); await page.mouse.move(tgt[0], tgt[1], { steps: 8 }); await page.mouse.up(); }
+  await page.waitForTimeout(200);
+  ok(await page.evaluate(() => { const L = BENCH.sim.RT.layout, P = L.POS.dmm, z = BENCH.sim.RT.inst.dmm.size, b = BENCH.sim.boardRect;
+    const r = [P.x, P.y, z[0], z[1]]; const hit = (a, c) => a[0] < c[0] + c[2] && c[0] < a[0] + a[2] && a[1] < c[1] + c[3] && c[1] < a[1] + a[3];
+    const tr = L.TRAY ? [L.TRAY.x, L.TRAY.y, L.TRAY.w, L.TRAY.h] : null; return !hit(r, b) && !(tr && hit(r, tr)); }), 'dropped on the board, the DMM settles to the nearest free spot (off the board and the tray)');
+  const p1s = await pos();
   ok(await page.evaluate(() => !!localStorage.getItem('eelab:layout:ee312/exp1')), 'arrangement saved for this experiment');
   await page.evaluate(() => BENCH.enter('ee312/exp1', 'free', true)); await page.waitForTimeout(300);
-  const p2 = await pos(); ok(Math.abs(p2.x - p1.x) < 1 && Math.abs(p2.y - p1.y) < 1, 'arrangement restored on the next visit');
+  const p2 = await pos(); ok(Math.abs(p2.x - p1s.x) < 1 && Math.abs(p2.y - p1s.y) < 1, 'arrangement restored on the next visit');
   await page.click('#bLayout'); await page.waitForTimeout(600);
   const p3 = await pos(); const d0 = await page.evaluate(() => BENCH.sim.RT.layout.DEF.dmm);
   ok(Math.abs(p3.x - d0.x) < 1 && Math.abs(p3.y - d0.y) < 1 && !(await page.evaluate(() => localStorage.getItem('eelab:layout:ee312/exp1'))), '"ترتيب افتراضي" restores the default layout');

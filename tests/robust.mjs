@@ -20,7 +20,7 @@ for (const n of EXPS) {
     const r = rnd(); let kind;
     try {
       if (r < 0.55) { kind = 'control';
-        const c = await page.evaluate(seedv => { const els = [...document.querySelectorAll('#Ldyn [data-k]')].filter(e => !e.dataset.k.startsWith('mv:')); const e = els[Math.floor(seedv * els.length)]; if (!e) return null; const b = e.getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2, e.dataset.k]; }, rnd());
+        const c = await page.evaluate(seedv => { const els = [...document.querySelectorAll('#bench .Linst [data-k]')].filter(e => !e.dataset.k.startsWith('mv:')); const e = els[Math.floor(seedv * els.length)]; if (!e) return null; const b = e.getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2, e.dataset.k]; }, rnd());
         if (c && c[0] > 0 && c[1] > 0) { const hold = /[+-]$/.test(c[2]) && rnd() < 0.3; await page.mouse.click(c[0], c[1]); if (hold) for (let k = 0; k < 40; k++) await page.mouse.click(c[0], c[1]); } }
       else if (r < 0.72) { kind = 'part'; const t = pick(L.tray); const a = Math.floor(rnd() * L.NN); const b = (a % L.COLS < L.COLS - 1 && rnd() < 0.5) ? a + 1 : (a + L.COLS < L.NN ? a + L.COLS : a - 1); await H.place(t, a, b); if (rnd() < 0.4) await H.flip(a, b).catch(() => {}); }
       else if (r < 0.88) { kind = 'lead'; const g = pick(L.groups); const k = await page.evaluate(g => { const R = BENCH.sim.RT; const m = Object.keys(R.S.leads).filter(k => R.lead.grpOf(k) === g); return m[Math.floor(Math.random() * m.length)]; }, g);
@@ -73,7 +73,7 @@ for (const n of EXPS) {
 { const { ctx, page } = await openPage(browser, VP, errors, 'scope'); await sit(page, 'ee312/exp3', 'free'); const H = bench(page); H.touch = false;
   // every V/div and time/div step, both channels, with a live signal
   await H.lead('gr', 0); await H.lead('gb', 15); await H.lead('c1r', 0); await H.lead('c1b', 15); await H.focus('gen'); await H.key('g:PWR'); await H.key('g:OUT').catch(() => {}); await H.focus('sc'); await H.key('s:PWR');
-  const keys = await page.evaluate(() => [...document.querySelectorAll('#Ldyn [data-k^="s:"]')].map(e => e.dataset.k).filter(k => /[+-]$/.test(k)));
+  const keys = await page.evaluate(() => [...document.querySelectorAll('#bench .Linst [data-k^="s:"]')].map(e => e.dataset.k).filter(k => /[+-]$/.test(k)));
   for (const kk of keys) { await H.key(kk, 25); } await page.waitForTimeout(300);
   ok(!(await scan(page)).length, `scope: ${keys.length} knobs turned to their ends, no NaN on the screen`); await ctx.close(); }
 

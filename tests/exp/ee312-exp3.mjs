@@ -1,6 +1,6 @@
 import { sit, bench } from '../lib.mjs';
 export async function measureText(page, label) {
-  return page.evaluate(label => { const t = [...document.querySelectorAll('#Ldyn text')].map(e => e.textContent).find(s => s.startsWith(label)); if (!t) return null;
+  return page.evaluate(label => { const t = [...document.querySelectorAll('#bench .Linst text')].map(e => e.textContent).find(s => s.startsWith(label)); if (!t) return null;
     const m = t.match(/(-?[\d.]+)(mV|V)$/); return m ? +m[1] * (m[2] === 'mV' ? 1e-3 : 1) : null; }, label);
 }
 export async function run(page, vp, ok) {

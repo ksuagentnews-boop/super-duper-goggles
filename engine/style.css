@@ -368,7 +368,7 @@ bdi{unicode-bidi:isolate}
 /* close device zoom: only the device (and the leads plugged into it) */
 #benchView.devzoom #drawer,#benchView.devzoom .ovhint,#benchView.devzoom .btools,#benchView.devzoom #bagBtn{display:none!important}
 #benchView.devzoom #Lstatic,#benchView.devzoom #Lparts,#benchView.devzoom #Lguide,#benchView.devzoom #Ldrag{opacity:0;pointer-events:none}
-#Lstatic,#Lparts,#Lguide,#Ldrag,#Ldyn>g,#Lcables g[data-cabof],#Lcables .cablbl,#Lcables .ltray{transition:opacity .25s ease}
+#Lstatic,#Lparts,#Lguide,#Ldrag,#bench .Linst>g,#Lcables g[data-cabof],#Lcables .cablbl,#Lcables .ltray{transition:opacity .25s ease}
 #benchView.devzoom #stepCard .wl,#benchView.devzoom #stepCard .sfig{display:none}
 
 /* procedure picker (Manual mode) and the short card between procedures */
@@ -412,7 +412,7 @@ bdi{unicode-bidi:isolate}
 .tmenu .tm-t{color:#9fe;font-size:13px;font-weight:700;padding:4px 6px 2px}
 .tmenu button{min-height:44px;border:1px solid #2c5560;background:#16303a;color:#eaf8f9;border-radius:9px;font:600 14px/1.2 var(--f-mono),monospace;text-align:left;padding:8px 12px;cursor:pointer}
 .tmenu button.sd{border-color:#3fd3d8}.tmenu button.on{background:#3fd3d8;color:#05202a}
-#benchView.devzoom #Ldyn [data-k^="mv:"]{display:none}
+#benchView.devzoom .Linst [data-k^="mv:"]{display:none}
 
 /* knob pad on touch: two big − / + buttons beside the active knob, its value between them */
 .kpad{position:absolute;z-index:9;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.97);border:1px solid var(--line);border-radius:14px;padding:5px;box-shadow:0 8px 24px rgba(20,30,28,.22);touch-action:none;user-select:none;-webkit-user-select:none}

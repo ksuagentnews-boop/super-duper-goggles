@@ -380,7 +380,8 @@ function labelsSVG(){const boxes=[];const all=plugs.map(q=>({x:q.p.x-10,y:q.p.y-
     if(!b)b={x:p.x-w/2,y:p.y-24-h/2,w,h};boxes.push(b);
     s+=`<rect x="${b.x}" y="${b.y}" width="${w}" height="${h}" rx="4" fill="#fffdf7" fill-opacity=".92" stroke="#b9c2c4" stroke-width=".8" pointer-events="none"/>`+T(b.x+w/2,b.y+11,t,{size:9.5,fill:'#26343a',a:'middle',w:600})});
   return s}
-function cablesSVG(){plugs.length=0;CAB.length=0;updPark();syncLeads();const tray=traySVG();const body=PL.map(q=>leadSVG(q.id)).join('');return `<g class="ltray">${tray}</g><g filter="url(#cabShadow)">${body}</g><g class="cablbl">${labelsSVG()}</g>`}
+function cablesSVG(){plugs.length=0;CAB.length=0;updPark();syncLeads();const tray=traySVG();const onTop=id=>{const g=headIn(id);return TOP&&g!=null&&instOf(g)===TOP};
+  const body=PL.filter(q=>!onTop(q.id)).map(q=>leadSVG(q.id)).join('');const tb=$('LtopCab');if(tb)tb.innerHTML=`<g filter="url(#cabShadow)">${PL.filter(q=>onTop(q.id)).map(q=>leadSVG(q.id)).join('')}</g>`;return `<g class="ltray">${tray}</g><g filter="url(#cabShadow)">${body}</g><g class="cablbl">${labelsSVG()}</g>`}
 function nearestEdge(x,y){let best=null,bd=34;EDGES.forEach(e=>{const a=nodeC(e[0]),b=nodeC(e[1]);const d=Math.hypot((a.x+b.x)/2-x,(a.y+b.y)/2-y);if(d<bd){bd=d;best=e}});return best}
 /* best anchor for a multi-pin part near (x,y): footprint inside the panel, every leg hole free */
 function nearestAnchor(t,x,y,skip,lim=90){const occ=occupied(skip);let best=null,bd=lim;for(let n=0;n<NN;n++){if(!fits(t,n))continue;const c=fpC(t,n);const d=Math.hypot(c.x-x,c.y-y);if(d>=bd)continue;
@@ -399,13 +400,22 @@ function dragSVG(){if(!drag||!drag.active)return '';let s='';
   return s}
 
 /* ---------- moving instruments: a grab handle on top of each one; dragging it moves the instrument (never its controls) ---------- */
-function handleSVG(i){const c=i.size[0]/2,y=-21;const ar=(r)=>`<path d="M0 -13 L-5.5 -7 L-2 -7 L-2 -2 L2 -2 L2 -7 L5.5 -7 Z" transform="rotate(${r})"/>`;
-  /* four-way move badge; the transparent ring around it is a finger-sized target */
-  return `<g data-k="mv:${i.key}" style="cursor:move"><circle cx="${c}" cy="${y}" r="34" fill="transparent"/><circle cx="${c}" cy="${y}" r="19" fill="#fffdf7" stroke="#8c999c" stroke-width="1.6"/><g transform="translate(${c} ${y})" fill="#4f5b5e" pointer-events="none">${[0,90,180,270].map(ar).join('')}<rect x="-2" y="-2" width="4" height="4"/></g></g>`}
-function placeInst(k){const g=$('Ldyn').querySelector(`[data-inst="${k}"]`);if(g)g.setAttribute('transform',`translate(${POS[k].x} ${POS[k].y})`)}
+/* the ✥ move handle: a dark badge with white arrows at the instrument's top-left corner; it keeps the same size on screen at
+   any zoom (≈36 px on touch, 28 px with a mouse), so it is easy to find and grab on a phone */
+const HPX=matchMedia('(pointer:coarse)').matches?18:14;
+function hScale(){const v=BENCH.vb,w=svg.getBoundingClientRect().width;return v&&w?v.w/w:1}
+function handleSVG(i){const ar=r=>`<path d="M0 -13 L-5.5 -7 L-2 -7 L-2 -2 L2 -2 L2 -7 L5.5 -7 Z" transform="rotate(${r})"/>`,k=HPX/18;
+  return `<g class="mvh" data-k="mv:${i.key}" style="cursor:move" transform="translate(0 0) scale(${hScale()})"><circle r="${HPX+10}" fill="transparent"/><circle r="${HPX}" fill="#1f5b50" stroke="#fff" stroke-width="2.5"/><g transform="scale(${k})" fill="#fff" pointer-events="none">${[0,90,180,270].map(ar).join('')}<rect x="-2" y="-2" width="4" height="4"/></g></g>`}
+function updHandles(){const s=hScale();svg.querySelectorAll('.mvh').forEach(g=>g.setAttribute('transform',`translate(0 0) scale(${s})`))}
+function placeInst(k){const g=svg.querySelector(`.Linst [data-inst="${k}"]`);if(g)g.setAttribute('transform',`translate(${POS[k].x} ${POS[k].y})`)}
 function moveInst(k,x,y){showHL(null);POS[k]={x:Math.round(x),y:Math.round(y)};placeInst(k);updRegions();render(true)}
 /* back to the default arrangement (animated unless the student asked for reduced motion) */
-function resetLayout(){try{localStorage.removeItem(LSK)}catch(_){}const from={};INST.forEach(i=>from[i.key]={...POS[i.key]});
+/* a dropped instrument never stays over the board (with its rack) or the lead tray: it takes the smallest move that clears them */
+function settle(k){const i=byKey[k],w=i.size[0],h=i.size[1],g=16;const obs=[[BX-66,parkY-34,BW+132,BY+BH+16-(parkY-34)]];if(TRAY.on)obs.push([TRAY.x,TRAY.y,TRAY.w,TRAY.h]);
+  const hit=(x,y)=>obs.some(o=>x<o[0]+o[2]&&x+w>o[0]&&y-44<o[1]+o[3]&&y+h>o[1]);const P=POS[k];if(!hit(P.x,P.y))return;
+  const xs=[P.x],ys=[P.y];obs.forEach(o=>{xs.push(o[0]-w-g,o[0]+o[2]+g);ys.push(o[1]-h-g,o[1]+o[3]+g+44)});
+  let best=null;xs.forEach(x=>ys.forEach(y=>{if(hit(x,y))return;const d=Math.hypot(x-P.x,y-P.y);if(!best||d<best.d)best={x,y,d}}));if(best)moveInst(k,best.x,best.y)}
+function resetLayout(){TOP=null;try{localStorage.removeItem(LSK)}catch(_){}const from={};INST.forEach(i=>from[i.key]={...POS[i.key]});
   const done=()=>{INST.forEach(i=>{POS[i.key]={...DEF[i.key]};placeInst(i.key)});updRegions();render(true);BENCH.layoutChanged(true)};
   if(reduceMotion){done();return}const t0=performance.now();
   const step=now=>{const k=ease(Math.min(1,(now-t0)/420));INST.forEach(i=>{const a=from[i.key],b=DEF[i.key];POS[i.key]={x:a.x+(b.x-a.x)*k,y:a.y+(b.y-a.y)*k};placeInst(i.key)});updRegions();render(true);if(k<1)requestAnimationFrame(step);else done()};
@@ -459,7 +469,7 @@ function setGuide(g){GUIDE=g;const L=$('Lguide');if(L)L.innerHTML=guideSVG()}
 let staticDone=false;
 function render(light){
   if(!staticDone){$('Lstatic').innerHTML=staticSVG();staticDone=true}
-  if(!light){if(RT.dirty){recompute();INST.forEach(i=>i.postSim&&i.postSim())}if(def.decorate)def.decorate(RT);$('Ldyn').innerHTML=INST.map(i=>`<g data-inst="${i.key}" transform="translate(${POS[i.key].x} ${POS[i.key].y})">${i.svg()}${handleSVG(i)}</g>`).join('');BENCH.onRender()}
+  if(!light){if(RT.dirty){recompute();INST.forEach(i=>i.postSim&&i.postSim())}if(def.decorate)def.decorate(RT);const ig=i=>`<g data-inst="${i.key}" transform="translate(${POS[i.key].x} ${POS[i.key].y})">${i.svg()}${handleSVG(i)}</g>`;$('Ldyn').innerHTML=INST.filter(i=>i.key!==TOP).map(ig).join('');$('Ltop').innerHTML=TOP?ig(byKey[TOP]):'';updHandles();BENCH.onRender()}
   $('Lparts').innerHTML=partsSVG();$('Lcables').innerHTML=cablesSVG();if($('Lguide'))$('Lguide').innerHTML=guideSVG();$('Ldrag').innerHTML=toolbarSVG()+dragSVG();
   knobPad();
   if(hlEl&&!document.body.contains(hlEl))hlEl=null;
@@ -473,12 +483,12 @@ function pt(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const m=
 /* inside a device zoom on touch, a tap that misses every control goes to the nearest one within 22 px: every control gets a
    finger-sized target (≥ 44 px) without the targets overlapping */
 function nearControl(e){if(e.pointerType==='mouse'||!document.getElementById('benchView').classList.contains('devzoom'))return null;
-  const g=$('Ldyn').querySelector(`[data-inst="${BENCH.view}"]`);if(!g)return null;let best=null,bd=22;
+  const g=svg.querySelector(`.Linst [data-inst="${BENCH.view}"]`);if(!g)return null;let best=null,bd=22;
   g.querySelectorAll('[data-k]').forEach(el=>{if(el.dataset.k.startsWith('mv:'))return;const r=el.getBoundingClientRect();if(!r.width&&!r.height)return;
     const dx=Math.max(r.left-e.clientX,0,e.clientX-r.right),dy=Math.max(r.top-e.clientY,0,e.clientY-r.bottom),d=Math.hypot(dx,dy);if(d<bd){bd=d;best=el}});return best}
 /* which knob a control belongs to (its disk / ring, its push centre, or one of its ◀ ▶ arrows) */
 function knobOf(el){if(!el)return null;if(el.dataset.knob)return el.dataset.knob;const m=el.dataset.k.match(wheelRe);return m?m[1]:null}
-let KPAD=null;
+let KPAD=null,TOP=null;
 function tick(base){const c=svg.querySelector(`circle[data-knob="${base}"][stroke]`);if(!c)return;c.classList.remove('ktick');void c.getBBox();c.classList.add('ktick');try{navigator.vibrate&&navigator.vibrate(5)}catch(_){}}
 /* the knob pad: two large − / + buttons beside the active knob (press and hold repeats), its value, and ● for a push knob */
 function knobPad(){const el=document.getElementById('kpad');if(!el)return;const c=KPAD&&svg.querySelector(`circle[data-knob="${KPAD}"][stroke]`);if(!c){el.hidden=true;return}
@@ -492,7 +502,7 @@ function knobPad(){const el=document.getElementById('kpad');if(!el)return;const 
   el.querySelector('.kv span').textContent=info;
   const w=el.offsetWidth||170,h=el.offsetHeight||52;let x=r.left+r.width/2-st.left-w/2,y=r.top-st.top-h-8;if(y<4)y=r.bottom-st.top+8;
   el.style.left=clamp(x,4,st.width-w-4)+'px';el.style.top=clamp(y,4,st.height-h-4)+'px';el.hidden=false}
-RT.knobPad=()=>knobPad();
+RT.knobPad=()=>knobPad();RT.camera=()=>{updHandles();knobPad()};
 function targetOf(e){let t=e.target;if(t&&t.closest&&t.closest('[data-cab]')){const under=document.elementsFromPoint(e.clientX,e.clientY).find(el=>svg.contains(el)&&!el.closest('[data-cab]'));if(under)t=under}const el=t&&t.closest?t.closest('[data-k]'):null;return el||(e.type==='pointerdown'?nearControl(e):null)}
 let rep=null;const stopRep=()=>{clearTimeout(rep);clearInterval(rep);rep=null};
 let press=null;
@@ -511,7 +521,7 @@ svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;close
   if(S.armed&&(!el||el.dataset.k.startsWith('node:'))){placeArmed(p);return}
   if(!el){BENCH.panStart(e,()=>{const r=BENCH.regionAt(p);if(r&&r!==BENCH.view){BENCH.focus(r);return}if(S.sel){S.sel=null;render(true)}});return}
   const k=el.dataset.k;
-  if(k.startsWith('mv:')){const ik=k.slice(3);drag={kind:'inst',key:ik,x:p.x,y:p.y,sx:p.x,sy:p.y,ox:POS[ik].x,oy:POS[ik].y,active:false};svg.setPointerCapture(e.pointerId);svg.classList.add('grabbing');BENCH.clearHover();return}
+  if(k.startsWith('mv:')){const ik=k.slice(3);if(TOP!==ik){TOP=ik;render()}drag={kind:'inst',key:ik,x:p.x,y:p.y,sx:p.x,sy:p.y,ox:POS[ik].x,oy:POS[ik].y,active:false};svg.setPointerCapture(e.pointerId);svg.classList.add('grabbing');BENCH.clearHover();return}
   if(k.startsWith('part:')){const id=+k.slice(5);const pr=S.parts.find(q=>q.id===id);drag={kind:'move',id,type:pr.type,x:p.x,y:p.y,sx:p.x,sy:p.y,active:false};svg.setPointerCapture(e.pointerId);return}
   if(k.startsWith('wire:')){S.sel=S.sel===+k.slice(5)?null:+k.slice(5);render(true);return}
   if(k.startsWith('head:')){drag={kind:'head',id:+k.slice(5),x:p.x,y:p.y,sx:p.x,sy:p.y,active:false,snap:null};svg.setPointerCapture(e.pointerId);return}
@@ -542,7 +552,7 @@ svg.addEventListener('pointermove',e=>{if(press&&Math.hypot(e.clientX-press.x,e.
   if(drag.active&&drag.kind==='inst'){moveInst(drag.key,drag.ox+p.x-drag.sx,drag.oy+p.y-drag.sy);return}if(drag.active)render(true)});
 function endDrag(){stopRep();if(press){clearTimeout(press.t);press=null}const S=RT.S;if(!drag)return;if(drag.fromTray&&Math.hypot(drag.x-drag.sx,drag.y-drag.sy)<8){S.armed=drag.type;drag=null;BENCH.drawerSync();render(true);return}const d=drag;drag=null;svg.classList.remove('grabbing');
   if(d.kind==='knob'){if(!d.active&&d.tap){KPAD=KPAD===d.base?null:d.base;render(true)}return}
-  if(d.kind==='inst'){showHL(null);if(d.active){savePos();BENCH.layoutChanged(false,d.key)}return}
+  if(d.kind==='inst'){showHL(null);if(d.active){settle(d.key);savePos();BENCH.layoutChanged(false,d.key)}return}
   if(d.kind==='new'||d.kind==='move'){
     if(d.kind==='move'&&!d.active){S.sel=S.sel===d.id?null:d.id;render(true);return}
     if(MULTI(d.type)){const n=nearestAnchor(d.type,d.x,d.y,d.id);if(d.kind==='move'){const pr=S.parts.find(q=>q.id===d.id);if(n!=null)pr.n=n;else if(d.x<BX-20||d.x>BX+BW+20||d.y<BY-20||d.y>BY+BH+20)S.parts=S.parts.filter(q=>q.id!==d.id)}

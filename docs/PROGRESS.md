@@ -124,8 +124,14 @@ Updated after every finished item (commit + push each time).
   - This works in the overview, in device zoom and while pinch-zoomed. On desktop the wheel also turns a knob from its body.
   - Covers the scope (VARIABLE, VOLTS/DIV, TIME/DIV, POSITION, LEVEL), the generator knob, the supply COARSE / FINE / CURRENT knobs and the decade boxes.
 
+- **P3 · A moved instrument stays on top**
+  - Grabbing an instrument's ✥ brings it, and the leads plugged into it, to the top layer, above the tray, the board, the other leads and the other instruments. It stays there after the drop until another one is grabbed.
+  - Dropped over the board or the lead tray, it slides to the nearest free spot clear of both.
+  - The ✥ handle has a constant on-screen size whatever the zoom: 36 px on touch (28 px with a mouse) plus an invisible ring for the finger. It is dark green with a white border, at the instrument's top-left corner.
+  - Tests: instruments (on top, handle size, drop on the board settles).
+
 ## In progress
-- P3 · Moved instrument on top, settles off the board / tray, bigger ✥ on phones.
+- P4 · The hint bubble must not cover the top-bar buttons.
 
 ## Next
 - Owner: open the site with `?debug=1` on the iPhone (Claude app + Safari) and send one screenshot of the Exp 9 overview and one of a device zoom, so the real numbers can be compared.

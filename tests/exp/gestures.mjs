@@ -61,7 +61,7 @@ export async function run(page, vp, ok) {
   await zoomIn(2); const d1 = await st(); ok(d1.view === 'sc' && d1.w < d0.w * 0.8, `inside the scope zoom, ${touch ? 'pinch' : 'wheel'} goes closer (${Math.round(d0.w)} → ${Math.round(d1.w)})`);
   if (touch) { // zoomed scope on touch: menus as a big list, and controls with finger-sized targets
     await page.evaluate(() => BENCH.fitAll()); await page.waitForTimeout(300);
-    const near = await page.evaluate(() => { const r = document.querySelector('#Ldyn [data-k="s:Measure"]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top - 12 }; });
+    const near = await page.evaluate(() => { const r = document.querySelector('#bench .Linst [data-k="s:Measure"]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top - 12 }; });
     await page.evaluate(() => { const sc = BENCH.sim.RT.S.sc; sc.pwr = true; sc.menu = null; BENCH.sim.render(); });
     await page.touchscreen.tap(near.x, near.y); await page.waitForTimeout(250);
     ok(await page.evaluate(() => BENCH.sim.RT.S.sc.menu === 'measure'), 'a tap 12 px off the small Measure key still presses it (finger-sized target)');
