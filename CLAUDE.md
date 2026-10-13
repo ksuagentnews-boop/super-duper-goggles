@@ -138,6 +138,30 @@ A static website (GitHub Pages, no server, no login) that simulates the EE depar
 - Diode looks: `diodes-fig1.2.png` (from right: green LED, Ge diode glass with bands, red Zener, black rectifier with grey band).
 - Full per-experiment plan (parts, values, procedure, results): `docs/ee312/PLAN.md`.
 
+## Procedure picker in Manual mode (all labs, EE312 included)
+- After choosing Manual, a small card lists the experiment's procedures (Procedure I, II, III, IV … with their titles) as a multi-select checklist, all ticked by default, with a note: «بعض الـ Procedures ممكن تكون محذوفة في ترمك، تأكد من دكتور المعمل واختر اللي مطلوبة منك».
+- The student can tick any combination (e.g. I + III). Steps run procedure by procedure in order: when Procedure I is done a short "خلصت Procedure I ← ننتقل لـ Procedure III" card appears, then the next one starts. After the last selected one: the sheet (only the selected procedures' tables/questions) is filled and graded, then «قم من الطاولة».
+- Unselected procedures are skipped in steps, sheet and grading. The step counter and progress show per procedure.
+- Instruments can differ per procedure (EE205 Exp 1: Proc I uses three handheld meters, later procedures another set): an experiment file may give each procedure its own instrument list; the bench swaps them when the procedure changes.
+
+## Tables per lab
+- Every lab room has exactly one table per experiment, in manual order (10, 8, 6 …).
+
+## Manual first, videos only for looks (owner's rule, all labs)
+- The lab videos are ~12 years old; the manual is current and is what the course uses. The manual always wins.
+- Anything in the manual (procedures, parts, values, instruments, steps, tables) MUST be in the site. Anything that appears only in the videos and not in the manual is dropped.
+- Videos/photos are used only for what the manual does not say: the real look/model of each instrument, where things sit on the table, which meter (e.g. GoldStar for small currents), typical readings to sanity-check the solver.
+
+## Pre-launch validation (before sharing the link with students)
+1. Reference check per experiment: run every Manual procedure with the manual's values and compare every table cell the solver produces with (a) the hand calculation / theory (b) the real readings we have (EE312 report, EE205 video readings). Write docs/<lab>/VALIDATION.md: value, expected, simulated, % difference, pass/fail (tolerance per quantity, e.g. ±5 % for passives, ±10 % for semiconductors).
+2. Robustness sweep: automated random/edge actions on every bench — reversed polarity, open/short circuits, every knob at min/max, every scope/DMM range and function, meter on the wrong function (e.g. current jack across a supply → blown fuse), parts removed mid-run, rapid mode switching. Pass = no console error, no NaN/Infinity on any display, realistic failure behaviour (OL, fuse, clipping, CC lamp).
+3. Device matrix: desktop Chrome/Safari/Firefox, iPhone Safari, Android Chrome, iPad; landscape + portrait; frame rate in the hall on phone.
+4. Report a short list of anything that failed or looks unrealistic; fix, re-run.
+- Add `<meta name="robots" content="noindex,nofollow">` and a robots.txt disallow so the site stays out of search engines (department-only sharing).
+
+## Progress file
+- Keep `docs/PROGRESS.md` (done / in progress / next) updated and commit + push after every finished item, so a new session can resume exactly where the last one stopped if usage runs out.
+
 ## Hard rules
 - Instruments must look and behave like the real lab ones listed above. Same buttons, menus, units and limits. Devices start with the "previous group's" leftover settings like the real lab.
 - Parts always sit between two adjacent nodes of the plug-in panel (fixed spacing). Polarity matters (diodes, Zener, electrolytic caps); wrong wiring must fail like in reality (clipped/odd waveform, blown fuse, exploded capacitor).
