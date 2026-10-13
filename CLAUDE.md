@@ -164,6 +164,10 @@ A static website (GitHub Pages, no server, no login) that simulates the EE depar
 ## Progress file
 - Keep `docs/PROGRESS.md` (done / in progress / next) updated and commit + push after every finished item, so a new session can resume exactly where the last one stopped if usage runs out.
 
+## Branches: development vs. the students' copy
+- Work only on `main` (and short-lived feature branches merged into `main`). Never push to, reset or merge into `release` unless the owner explicitly asks ("انقل main إلى release" / "promote main to release").
+- At launch the owner creates `release` from `main` and points GitHub Pages at it; from then on `release` is the frozen copy students use.
+
 ## Hard rules
 - Instruments must look and behave like the real lab ones listed above. Same buttons, menus, units and limits. Devices start with the "previous group's" leftover settings like the real lab.
 - Parts always sit between two adjacent nodes of the plug-in panel (fixed spacing). Polarity matters (diodes, Zener, electrolytic caps); wrong wiring must fail like in reality (clipped/odd waveform, blown fuse, exploded capacitor).
