@@ -184,7 +184,7 @@ function scKey(k){const sc=RT.S.sc;if(k==='PWR'){sc.pwr=!sc.pwr;sc.menu=null;sc.
 function fresh(){const sc=scNew();if(opt.prev)opt.prev(sc);return sc}
 const NP=opt.probes||2;const PR=[...Array(NP).keys()];
 return {key:'sc',prefix:'s',bnc:SC_BNC,size:[W,H],
-  leads:[].concat(...PR.map(c=>[{k:`c${c+1}r`,label:'CH'+(c+1),from:{x:SC_BNC[c].x-14,y:SC_BNC[c].y},coax:true},{k:`c${c+1}b`,label:`CH${c+1} ⏚`,from:{x:SC_BNC[c].x+14,y:SC_BNC[c].y},earth:true,coax:true}])),
+  leads:[].concat(...PR.map(c=>[{k:`c${c+1}r`,label:'CH'+(c+1),from:{x:SC_BNC[c].x-14,y:SC_BNC[c].y},coax:true,grp:`c${c+1}r`,jat:SC_BNC[c],tray:`CH${c+1} probe`,jn:`CH${c+1}`},{k:`c${c+1}b`,label:`CH${c+1} ⏚`,from:{x:SC_BNC[c].x+14,y:SC_BNC[c].y},earth:true,coax:true,grp:`c${c+1}r`}])),
   cables:D=>PR.map(c=>D.coax(SC_BNC[c],`c${c+1}r`,`c${c+1}b`,'CH'+(c+1))).join(''),
   /* each plugged probe loads its node with 1 MΩ to earth */
   stamp(ck){const L=RT.S.leads;ck.probes=ALL.map(c=>{const l=L[`c${c+1}r`];if(!l||l.node==null)return null;const p=ck.idx(l.node);if(p>=0)ck.els.push({t:'G',a:p,b:-1,g:1e-6});return p});ck.p1=ck.probes[0];ck.p2=ck.probes[1]},

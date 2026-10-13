@@ -19,13 +19,21 @@ Updated after every finished item (commit + push each time).
   - The step card keeps only its text.
   - ✕ / ESC returns to the overview.
 
+- **3 · Lead tray**
+  - Every lead starts unplugged in the «Coaxial cables & wires» tray, one named slot per lead: `CH1 probe`, `GEN OUT`, `DC + (L)`, `DMM 1 red`, …
+  - Coax leads lie as a BNC + red clip + black clip; banana leads as red/black plugs.
+  - The student drags the instrument end to its jack/BNC (the target glows) and the board end(s) to nodes. The circuit sees a lead only when both ends are in.
+  - Pulling the instrument end out leaves the clip on the board but takes it out of the circuit. Dropping either end on the tray puts the whole lead back.
+  - A diode put into the DMM jacks pushes the probe leads back to the tray.
+  - The tray is part of the default layout (below, right or left of the board, whichever fits the screen best) and of the overview fit.
+  - Manual steps: before the first line that takes a lead to the board, a line plugs that lead into its instrument (e.g. `CH1 probe: BNC → CH1`), ticked from the real connection. Exp 10 also gets explicit lines for DMM 2.
+  - Tests: helpers plug the instrument end first. New checks for the tray, unplug / return-to-tray, and "every lead the run plugs in has its own line in the Manual steps".
+  - Still open from item 1: portrait (390×844) stays width-bound when a table has many instruments, because each instrument keeps its jacks facing the board.
+
 ## In progress
-- 3 · Lead tray.
+- 4 · Welcome disclaimer; du'a under the department name on the corridor's first sign.
 
 ## Next
-- 3 · All leads start unplugged in the «Coaxial cables & wires» tray; Manual steps include every lead connection.
-  - This also lets the portrait layout stack instruments vertically. Today a DMM must sit beside the board with its jacks facing it, so 390×844 is width-bound.
-- 4 · Welcome disclaimer; du'a under the department name on the corridor's first sign.
 - 5 · Procedure picker in Manual mode; sheet and grading cover only the selected procedures.
 - 6 · noindex meta + robots.txt.
 - 7 · Pre-launch validation → `docs/ee312/VALIDATION.md`.

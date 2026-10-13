@@ -135,14 +135,14 @@ function keyFn(k){const d=RT.S[KEY];
 function measure(){compute();const d=RT.S[KEY];if(d.mm&&RD.val!=null){d.mmv=d.mmv==null?RD.val:d.mm==='MAX'?Math.max(d.mmv,RD.val):Math.min(d.mmv,RD.val)}}
 const redFrom=()=>abs(RT.S&&RT.S[KEY].jack==='A'?J.A:J.HI);
 return {key:KEY,prefix:PFX,size:[W,H],name:opt.n?['MCP MT3805 · DMM '+N,N===1?'الملتيميتر الأول':'الملتيميتر الثاني']:null,fresh,svg,keyFn,measure,
-  leads:[{k:KH,label:()=>(RT.S&&RT.S[KEY].jack==='A'?'A':'HI')+TAG,from:redFrom,banana:true,pol:'+'},{k:KL,label:'COM'+TAG,from:abs(J.COM),banana:true,pol:'-'}],
-  cables:D=>RT.S[KEY].jd?'':D.banana(redFrom(),KH)+D.banana(abs(J.COM),KL),
+  leads:[{k:KH,label:()=>(RT.S&&RT.S[KEY].jack==='A'?'A':'HI')+TAG,from:redFrom,banana:true,pol:'+',tray:`DMM${TAG} red`,jn:()=>`DMM${TAG} `+(RT.S&&RT.S[KEY].jack==='A'?'A':'HI'),busy:()=>!!(RT.S&&RT.S[KEY].jd)},{k:KL,label:'COM'+TAG,from:abs(J.COM),banana:true,pol:'-',tray:`DMM${TAG} black`,jn:`DMM${TAG} COM`,busy:()=>!!(RT.S&&RT.S[KEY].jd)}],
+  cables:D=>D.banana(redFrom(),KH)+D.banana(abs(J.COM),KL),
   /* V modes: 10 MΩ input; A jack: 10 mΩ shunt; Ω / ▶| test source only in its own solve (opts.meter) */
   stamp(ck,force,opts){const d=RT.S[KEY],L=RT.S.leads;if(L[KH].node==null||L[KL].node==null)return;const a=ck.idx(L[KH].node),b=ck.idx(L[KL].node);
     if(d.jack==='A'){if(d.fuse)ck.els.push({t:'G',a,b,g:100});return}
     if(opts&&opts.meter&&opts.meter.key===KEY){ck.meter={a,b};ck.els.push({t:'CCS',a,b,i0:opts.meter.i0,vmax:opts.meter.vmax});return}
     if(d.pwr&&['DCV','ACV','HZ'].includes(d.fn))ck.els.push({t:'G',a,b,g:1e-7})},
-  jackSlot:{x:J.HI.x-36,y:J.HI.y-26,w:72,h:J.COM.y-J.HI.y+52},insert(t){/* the diode's legs take the jacks: the probe leads come out */RT.S[KEY].jd={type:t,flip:false};[KH,KL].forEach(k=>{RT.S.leads[k].node=null;RT.S.leads[k].hole=null});RT.dirty=true},
+  jackSlot:{x:J.HI.x-36,y:J.HI.y-26,w:72,h:J.COM.y-J.HI.y+52},insert(t){/* the diode's legs take the jacks: the probe leads come out */RT.S[KEY].jd={type:t,flip:false};[KH,KL].forEach(k=>{const l=RT.S.leads[k];l.node=l.hole=l.bn=l.bh=null;if(RT.S.jack)RT.S.jack[k]=false});RT.dirty=true},
   reading:()=>({...RD,fn:RT.S[KEY].fn,shown:RT.S[KEY].pwr?display():null}),leadKeys:[KH,KL]};
 };
 ENGINE.dmm.size=[480,232];

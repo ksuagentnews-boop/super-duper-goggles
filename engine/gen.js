@@ -67,7 +67,7 @@ function genKey(k){const g=RT.S.gen;if(!g.dig)g.dig={f:0,a:-1,o:-1};if(k==='PWR'
   g.freq=f;g.amp=+a.toPrecision(6);g.off=+o.toPrecision(6);g.edit=null;RT.dirty=true}
 function fresh(){return Object.assign({pwr:false,out:false,wave:'Square',freq:1000,amp:4,off:0.5,edit:null,buf:'',sel:'a',dig:{f:0,a:-1,o:-1},kang:0},opt.prev||{})}
 return {key:'gen',prefix:'g',size:[440*G0.s,220*G0.s],fresh,svg:genSVG,keyFn:genKey,wheel:['KN'],wv,
-  leads:[{k:'gr',label:'GEN OUT',from:{x:GEN_BNC.x-14,y:GEN_BNC.y},coax:true},{k:'gb',label:'GEN ⏚',from:{x:GEN_BNC.x+14,y:GEN_BNC.y},earth:true,coax:true}],
+  leads:[{k:'gr',label:'GEN OUT',from:{x:GEN_BNC.x-14,y:GEN_BNC.y},coax:true,grp:'gr',jat:GEN_BNC,tray:'GEN OUT',jn:'CH1 OUT'},{k:'gb',label:'GEN ⏚',from:{x:GEN_BNC.x+14,y:GEN_BNC.y},earth:true,coax:true,grp:'gr'}],
   cables:D=>D.coax(GEN_BNC,'gr','gb','GEN'),
   /* 50 Ω output referenced to earth (its black clip is earthed through the mains plug) */
   stamp(ck,force){const g=RT.S.gen,L=RT.S.leads;const genOn=force||(g.pwr&&g.out);if(L.gr.node!=null&&genOn)ck.els.push({t:'VS',a:ck.idx(L.gr.node),r:50})},

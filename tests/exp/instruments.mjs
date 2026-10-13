@@ -10,6 +10,8 @@ export async function run(page, vp, ok) {
   await page.waitForTimeout(400);
   const H = bench(page); H.touch = vp === 'phone';
   ok(await page.evaluate(() => { const c = BENCH.sim.RT.crossings(); return !c.cc.length && !c.ci.length; }), 'default layout: no cable crosses another cable or an instrument');
+  ok(await page.evaluate(() => { const S = BENCH.sim.RT.S; return Object.values(S.jack).every(v => !v) && Object.values(S.leads).every(l => l.bn == null && l.node == null); }), 'every lead starts unplugged in the «Coaxial cables & wires» tray');
+  { const t = await page.evaluate(() => [...document.querySelectorAll('#Lcables .ltray text')].map(e => e.textContent)); ok(t[0] === 'Coaxial cables & wires' && ['DC + (L)', 'DC − (L)', 'DMM red', 'DMM black'].every(n => t.includes(n)), 'the tray is labelled and names every lead: ' + t.slice(1).join(', ')); }
   const rd = () => page.evaluate(() => { const r = BENCH.sim.RT.inst.dmm.reading(); return r.shown ? (r.shown.main.trim() + ' ' + r.shown.unit) : 'off'; });
   const num = async () => parseFloat((await rd()).replace(/^\s+/, ''));
   await H.focus('dmm'); await H.key('m:PWR'); ok((await rd()).endsWith('V'), 'DMM powers up in DCV: ' + await rd());
@@ -44,6 +46,12 @@ export async function run(page, vp, ok) {
   ok(await page.$eval('#drawer', e => e.offsetWidth > 60 && getComputedStyle(e).display !== 'none'), 'side parts box is open next to the board');
   await H.place('R100', 30, 31); ok((await view()) === 'ov' && await page.evaluate(() => BENCH.sim.RT.S.parts.some(p => p.a === 30 && p.b === 31)), 'overview: placing a part works without zooming');
   await H.lead('mh', 30); ok((await view()) === 'ov' && await page.evaluate(() => BENCH.sim.RT.S.leads.mh.node === 30), 'overview: moving a lead works without zooming');
+  { const tr = await page.evaluate(() => { const T = BENCH.sim.RT.layout.TRAY; return { x: T.x + T.w / 2, y: T.y + 14 }; });
+    const ja = await page.evaluate(() => BENCH.sim.RT.lead.jackAt('mh')); await H.drag(ja, { x: ja.x + 160, y: ja.y + 120 });
+    ok(await page.evaluate(() => { const l = BENCH.sim.RT.S.leads.mh; return !BENCH.sim.RT.S.jack.mh && l.bn === 30 && l.node == null; }), 'pulling the red lead out of HI leaves its clip on the board but out of the circuit');
+    const pb = await page.evaluate(() => { const e = document.querySelector('[data-k="lead:mh"]'); return { x: +e.getAttribute('cx'), y: +e.getAttribute('cy') }; }); await H.drag(pb, tr);
+    ok(await page.evaluate(() => { const l = BENCH.sim.RT.S.leads.mh; return !BENCH.sim.RT.S.jack.mh && l.bn == null; }), 'dropping it on the tray puts the whole lead back');
+    await H.lead('mh', 30); ok(await page.evaluate(() => BENCH.sim.RT.S.leads.mh.node === 30), 'plugged again: instrument end first, then the board end'); }
   const rg = await page.evaluate(() => BENCH.sim.regions.dmm); await H.tap(rg[0] + rg[2] * 0.3, rg[1] + 90); await page.waitForTimeout(500);
   ok((await view()) === 'dmm', 'tapping the DMM body zooms on it');
   { await page.waitForTimeout(300); const z = await page.evaluate(() => { const v = document.getElementById('benchView'), st = document.getElementById('bstage').getBoundingClientRect(), pd = BENCH.pads();
@@ -60,7 +68,9 @@ export async function run(page, vp, ok) {
   const jp = await page.evaluate(() => { const L = BENCH.sim.RT.layout, i = BENCH.sim.RT.inst.dmm, P = L.POS.dmm, r = i.jackSlot; return { x: P.x + r.x + r.w / 2, y: P.y + r.y + r.h / 2 }; });
   const A = await H.node(25), B = await H.node(26); await H.drag({ x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 }, jp);
   ok(await page.evaluate(() => BENCH.sim.RT.S.dmm.jd && BENCH.sim.RT.S.dmm.jd.type === 'D4001' && !BENCH.sim.RT.S.parts.some(p => p.a === 25 || p.b === 25)), 'a diode dragged off the board onto the DMM jacks plugs straight in');
-  await H.key('m:JDOUT');
+  ok(await page.evaluate(() => !BENCH.sim.RT.S.jack.mh && !BENCH.sim.RT.S.jack.ml), 'the probe leads came out of the jacks into the tray');
+  await H.key('m:JDOUT'); await H.plugJack('mh'); await H.plugJack('ml');
+  ok(await page.evaluate(() => BENCH.sim.RT.S.jack.mh && BENCH.sim.RT.S.jack.ml), 'leads dragged from the tray plug into HI and COM');
   // wire colours: bucket → swatch → tap the wire; instrument leads keep red (+/signal) and black (−/ground)
   await H.wire(32, 33); const wid = await page.evaluate(() => BENCH.sim.RT.S.wires.at(-1).id);
   ok(await page.evaluate(id => !BENCH.sim.RT.S.wcol[id], wid), 'a new wire on the board is uncoloured');

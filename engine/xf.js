@@ -37,7 +37,7 @@ function xfKey(k){const X=RT.S.xf;if(k==='CHECK'){const [ok,say]=safety();X.ok=o
 function fresh(){return {plugged:false,ok:false,once:false,say:'',blown:null}}
 return {key:'xf',prefix:'x',fresh,svg:xfSVG,keyFn:xfKey,wheel:[],FQ,
   size:[450,416],
-  leads:['tA','tB','tC'].map(k=>({k,label:XT[k].l,from:XT[k],circuit:true,banana:true,pol:k==='tB'?'-':'+'})),
+  leads:['tA','tB','tC'].map(k=>({k,label:XT[k].l,from:XT[k],circuit:true,banana:true,pol:k==='tB'?'-':'+',tray:`${XT[k].l} lead`,jn:`transformer ${XT[k].l}`})),
   cables:D=>['tA','tB','tC'].map(k=>D.banana(XT[k],k)).join(''),
   stamp(ck,force){const L=RT.S.leads;const on=force||RT.S.xf.plugged;
     if(on&&L.tA.node!=null&&L.tB.node!=null)ck.els.push({t:'XS',a:ck.idx(L.tA.node),b:ck.idx(L.tB.node),s:1,vp:VP,f:FQ,r:XR});
