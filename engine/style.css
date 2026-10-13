@@ -375,7 +375,7 @@ bdi{unicode-bidi:isolate}
 /* procedure picker (Manual mode) and the short card between procedures */
 #procPick{position:fixed;inset:0;z-index:31;display:grid;place-items:center;padding:16px;background:rgba(30,42,40,.32);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);direction:rtl}
 #procPick[hidden],#procNext[hidden]{display:none}
-.pp-card{background:#fff;border-radius:16px;box-shadow:0 18px 50px rgba(20,30,28,.25);padding:20px 22px;width:min(440px,100%);max-height:90%;overflow:auto}
+.pp-card{box-sizing:border-box;max-width:calc(100vw - 20px);min-width:0;background:#fff;border-radius:16px;box-shadow:0 18px 50px rgba(20,30,28,.25);padding:20px 22px;width:min(440px,100%);max-height:90%;overflow:auto}
 .pp-card h3{margin:0 0 6px;font-size:17px}.pp-note{margin:0 0 12px;font-size:12.5px;line-height:1.7;color:var(--muted)}
 .pp-i{display:flex;align-items:baseline;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px;cursor:pointer;font-size:14px}
 .pp-i input{width:18px;height:18px;accent-color:#2c7a6b;flex:none;transform:translateY(3px)}.pp-i span{color:var(--muted);font-size:12.5px}

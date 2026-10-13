@@ -6,8 +6,14 @@ export function pcDriver(page, touch) {
     act: k => P.tapSel(`#pcTools [data-pc="${k}"]`),
     tool: () => page.evaluate(() => [BENCH.sim.RT.S.tool, BENCH.sim.RT.S.ptool]),
     xy: (gx, gy) => page.evaluate(([gx, gy]) => BENCH.sim.RT.client(gx, gy), [gx, gy]),
-    at: async (gx, gy) => { const [x, y] = await P.xy(gx, gy); const inSch = await page.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return !!(e && e.closest('#pcSch')); }, [x, y]);
+    /* narrow screens: pan the schematic to a grid point that is out of view, as a student would */
+    show: async (gx, gy) => { if (!(await P.vis(gx, gy))) await page.evaluate(([gx, gy]) => {
+        const RT = BENCH.sim.RT, r = document.getElementById('pcSch').getBoundingClientRect(), d = RT.client(gx + 1, gy)[0] - RT.client(gx, gy)[0], v = RT.S.view;
+        v.x = gx - r.width / 2 / d; v.y = gy - r.height / 2 / d; BENCH.sim.render(); }, [gx, gy]); },
+    at: async (gx, gy) => { await P.show(gx, gy);
+      const [x, y] = await P.xy(gx, gy); const inSch = await page.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return !!(e && e.closest('#pcSch')); }, [x, y]);
       if (!inSch) throw new Error(`grid point ${gx},${gy} is not on the visible schematic`); if (touch) await page.touchscreen.tap(x, y); else await page.mouse.click(x, y); await page.waitForTimeout(25); },
+    vis: async (gx, gy) => { const [x, y] = await P.xy(gx, gy); return page.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return !!(e && e.closest('#pcSch')); }, [x, y]); },
     view: (x, y, s) => page.evaluate(([x, y, s]) => { BENCH.sim.RT.S.view = { x, y, s }; BENCH.sim.render(); }, [x, y, s]),
     sel: async () => { const [t] = await P.tool(); if (t === 'sel') return; const [, p] = await P.tool(); await P.act(t === 'place' ? (['V', 'OA', 'NM', 'PM'].includes(p) ? null : p) || 'wire' : t); if ((await P.tool())[0] !== 'sel') await page.evaluate(() => { BENCH.sim.RT.S.tool = 'sel'; BENCH.sim.render(); }); },
     /* place a part: type R C L D GND (toolbar) or V / OA:OP747 / NM / PM (Component dialog); rot = Ctrl+R presses before the click */
@@ -16,7 +22,8 @@ export function pcDriver(page, touch) {
     wire: async (...pts) => { if ((await P.tool())[0] !== 'wire') await P.act('wire'); for (let i = 0; i + 1 < pts.length; i += 2) { await P.at(...pts[i]); await P.at(...pts[i + 1]); } },
     label: async (name, gx, gy) => { await P.sel(); await P.act('label'); await page.fill('#pcIn', name); await P.tapSel('#pcDlg [data-dl="ok"]'); await P.at(gx, gy); },
     dir: async (text, gx, gy) => { await P.sel(); await P.act('dir'); await page.fill('#pcIn', text); await P.tapSel('#pcDlg [data-dl="ok"]'); await P.at(gx, gy); },
-    center: name => page.evaluate(n => { const RT = BENCH.sim.RT; const c = RT.S.comps.find(q => q.name === n); const ps = RT.pinsOf(c); const gx = ps.reduce((a, p) => a + p[0], 0) / ps.length, gy = ps.reduce((a, p) => a + p[1], 0) / ps.length; return RT.client(gx, gy); }, name),
+    center: async name => { const g = await page.evaluate(n => { const RT = BENCH.sim.RT; const c = RT.S.comps.find(q => q.name === n); const ps = RT.pinsOf(c); return [ps.reduce((a, p) => a + p[0], 0) / ps.length, ps.reduce((a, p) => a + p[1], 0) / ps.length]; }, name);
+      await P.show(g[0], g[1]); return P.xy(g[0], g[1]); },
     rclick: async name => { await P.sel(); const [x, y] = await P.center(name); await page.mouse.click(x, y, { button: 'right' }); await page.waitForTimeout(40); },
     value: async (name, v) => { await P.rclick(name); await page.fill('#pcIn', v); await P.tapSel('#pcDlg [data-dl="ok"]'); },
     diode: async (name, m) => { await P.rclick(name); await P.tapSel(`#pcDlg [data-dm="${m}"]`); },
@@ -27,7 +34,11 @@ export function pcDriver(page, touch) {
     run: async () => { await P.sel(); await P.act('run'); await page.waitForTimeout(80); const e = await page.evaluate(() => BENCH.sim.RT.S.err); if (e) throw new Error('LTspice: ' + e); },
     probe: async (gx, gy) => { await P.sel(); await P.at(gx, gy); },
     probeI: async name => { await P.sel(); const [x, y] = await P.center(name); if (touch) await page.touchscreen.tap(x, y); else await page.mouse.click(x, y); await page.waitForTimeout(30); },
-    probe2: async (a, b) => { await P.sel(); const [x0, y0] = await P.xy(...a), [x1, y1] = await P.xy(...b); await page.mouse.move(x0, y0); await page.mouse.down(); await page.mouse.move(x1, y1, { steps: 8 }); await page.mouse.up(); await page.waitForTimeout(40); },
+    probe2: async (a, b) => { await P.sel(); if (!(await P.vis(...a)) || !(await P.vis(...b))) await page.evaluate(([a, b]) => { /* both ends in view: centre and zoom out if needed */
+        const RT = BENCH.sim.RT, r = document.getElementById('pcSch').getBoundingClientRect(), v = RT.S.view, U = (RT.client(a[0] + 1, a[1])[0] - RT.client(a[0], a[1])[0]) / v.s;
+        v.s = Math.min(v.s, 0.8 * r.width / (Math.abs(a[0] - b[0]) * U + 1), 0.8 * r.height / (Math.abs(a[1] - b[1]) * U + 1)); const d = U * v.s;
+        v.x = (a[0] + b[0]) / 2 - r.width / 2 / d; v.y = (a[1] + b[1]) / 2 - r.height / 2 / d; BENCH.sim.render(); }, [a, b]);
+      const [x0, y0] = await P.xy(...a), [x1, y1] = await P.xy(...b); await page.mouse.move(x0, y0); await page.mouse.down(); await page.mouse.move(x1, y1, { steps: 8 }); await page.mouse.up(); await page.waitForTimeout(40); },
     traces: () => page.evaluate(() => BENCH.sim.RT.S.traces.map(t => t.expr)),
     delTrace: e => P.tapSel(`#pcWave [data-trx="${e}"]`),
     avgOf: e => P.tapSel(`#pcWave [data-tra="${e}"]`),
