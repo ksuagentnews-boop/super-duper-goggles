@@ -190,7 +190,7 @@ const BENCH={
     if(!ov){const n=this.sim.names[this.view];E.zEn.textContent=n[0];E.zAr.textContent=n[1]}
     if(ov)this.hl.innerHTML='';else this.hl.innerHTML='';
     this.drawStepCard()},
-  regionAt(p){const R=this.sim.regions;for(const k of Object.keys(R).reverse()){const r=R[k];if(p.x>=r[0]&&p.x<=r[0]+r[2]&&p.y>=r[1]&&p.y<=r[1]+r[3])return k}return null},
+  regionAt(p){const R=this.sim.regions;for(const k of Object.keys(R).reverse()){if(k==='rack')continue;const r=R[k];if(p.x>=r[0]&&p.x<=r[0]+r[2]&&p.y>=r[1]&&p.y<=r[1]+r[3])return k}return null},
   ovClick(p){const k=this.regionAt(p);if(k){this._hk=null;this.focus(k)}},
   focus(k){if(this.sim&&this.sim.pc){this.sim.focus(k);return}if(!this.sim||!this.sim.regions[k])return;this.view=k;this.devZoom();this.ui();this.refit(true,true)},
   /* close device zoom: the device alone at ≈90 % of the screen; the box, hints, tools, board and the other instruments hide */
@@ -206,7 +206,7 @@ const BENCH={
   hover(e){if(this.view!=='ov'||!this.sim)return;if(this.svg.classList.contains('grabbing')){this.clearHover();return}const ctl=e.target&&e.target.closest&&e.target.closest('[data-k]');if(ctl&&!ctl.dataset.k.startsWith('node:')){if(this._hk){this._hk=null;this.hl.innerHTML=''}this.svg.style.cursor='pointer';return}const p=this.svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(this.svg.getScreenCTM().inverse());const k=this.regionAt(q);
     if(k===this._hk)return;this._hk=k;if(!k){this.hl.innerHTML='';this.svg.style.cursor='';return}this.svg.style.cursor='zoom-in';
     const r=this.sim.regions[k],n=this.sim.names[k];const w=Math.max(n[0].length*9.2+40,150);
-    this.hl.innerHTML=`<rect x="${r[0]}" y="${r[1]}" width="${r[2]}" height="${r[3]}" rx="16" fill="rgba(255,255,255,.14)" stroke="#fff" stroke-width="4" filter="url(#hlGlow)"/><rect x="${r[0]+r[2]/2-w/2}" y="${r[1]+r[3]-44}" width="${w}" height="34" rx="17" fill="#fff" stroke="#c9d3d0"/><text x="${r[0]+r[2]/2}" y="${r[1]+r[3]-21.5}" text-anchor="middle" font-size="16" font-weight="600" fill="#1e2a28">${n[0]} 🔍</text>`},
+    this.hl.innerHTML=`<rect x="${r[0]}" y="${r[1]}" width="${r[2]}" height="${r[3]}" rx="16" fill="rgba(255,255,255,.14)" stroke="#fff" stroke-width="4" filter="url(#hlGlow)"/><rect x="${r[0]+r[2]/2-w/2}" y="${r[1]-38}" width="${w}" height="32" rx="16" fill="#fff" stroke="#c9d3d0"/><text x="${r[0]+r[2]/2}" y="${r[1]-16.5}" text-anchor="middle" font-size="16" font-weight="600" fill="#1e2a28">${n[0]} 🔍</text>`},
   say(m){const t=this.el.toast;t.textContent=m;t.classList.add('on');clearTimeout(this._tt);this._tt=setTimeout(()=>t.classList.remove('on'),1800)},
   /* ---- procedures: every step belongs to the procedure named at its start ("Procedure A: …") until the next one;
      Manual mode asks which procedures this term runs (all ticked); steps, sheet sections ([data-proc]) and grading

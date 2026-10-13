@@ -108,7 +108,9 @@ function dirHole(a,b){if(b===a+1)return 5;if(b===a-1)return 3;if(b===a+COLS)retu
 const regions={},names={};
 const updRegions=()=>INST.forEach(i=>{const p=POS[i.key];regions[i.key]=[p.x-6,p.y-44,i.size[0]+12,i.size[1]+50]});
 updRegions();INST.forEach(i=>names[i.key]=i.name||ENGINE.NAMES[i.key]);
-regions.board=[BX-66,parkY-34,BW+132,BY+BH+16-(parkY-34)];if(TRAY.on){const r=regions.board,x0=Math.min(r[0],TRAY.x-6),x1=Math.max(r[0]+r[2],TRAY.x+TRAY.w+6),y1=Math.max(r[1]+r[3],TRAY.y+TRAY.h+6);regions.board=[x0,r[1],x1-x0,y1-r[1]]}names.board=ENGINE.NAMES.board;
+/* the board's own frame (a thin border round the panel) is what zooms; the rack row and the lead tray are part of the
+   overview fit only ('rack', never focused), so a touch beside the panel reaches what is there */
+regions.board=[BX-14,BY-14,BW+28,BH+28];regions.rack=[BX-66,parkY-34,BW+132,BY+BH+16-(parkY-34)];if(TRAY.on){const r=regions.rack,x0=Math.min(r[0],TRAY.x-6),x1=Math.max(r[0]+r[2],TRAY.x+TRAY.w+6),y1=Math.max(r[1]+r[3],TRAY.y+TRAY.h+6);regions.rack=[x0,r[1],x1-x0,y1-r[1]]}names.board=ENGINE.NAMES.board;
 RT.inst=byKey;RT.layout={BX,BY,P,COLS,ROWS,parkY,PARK,regions,POS,DEF,FACE,TRAY,SLOT,GROUPS,PL};
 
 /* ---------- parts ---------- */
@@ -281,7 +283,7 @@ function partBody(type,L,sel,lit,col){const h=L/2,d=PARTS[type]||{t:type};const 
 function staticSVG(){let s=`<rect x="${BX}" y="${BY}" width="${BW}" height="${BH}" rx="12" fill="#e9ecea" stroke="#b3bcb8" stroke-width="2"/>`;
   for(let i=0;i<NN;i++){const c=nodeC(i);s+=`<rect x="${c.x-30}" y="${c.y-30}" width="60" height="60" rx="8" fill="#dde2df" stroke="#cdd4d0" data-k="node:${i}"/>`;for(let h=0;h<9;h++){const o=holeOff(h);s+=`<circle cx="${c.x+o.x}" cy="${c.y+o.y}" r="4.2" fill="#2f3739" pointer-events="none"/>`}}
   s+=T(BX+8,BY-8,'Plug-in panel · كل مربع node فيه 9 فتحات موصولة',{size:12,fill:'#7d8e93'});
-  s+=`<rect x="${regions.board[0]+6}" y="${parkY-22}" width="${regions.board[2]-12}" height="44" rx="10" fill="#d9d1c0" opacity=".55"/>`;
+  s+=`<rect x="${BX-60}" y="${parkY-22}" width="${BW+120}" height="44" rx="10" fill="#d9d1c0" opacity=".55"/>`;
   return s}
 function partHoles(p){if(MULTI(p.type))return pinNodes(p).map((n,k)=>n+':'+PARTS[p.type].pins[k].h);return [p.a+':'+dirHole(p.a,p.b),p.b+':'+dirHole(p.b,p.a)]}
 function occupied(skip){const S=RT.S;const occ=new Set();S.parts.forEach(p=>{if(p.id!==skip)partHoles(p).forEach(h=>occ.add(h))});S.wires.forEach(w=>{occ.add(w.a+':'+w.ha);occ.add(w.b+':'+w.hb)});S.pl.forEach(P=>P.clips.forEach(c=>{if(c.bn!=null)occ.add(c.bn+':'+c.bh)}));return occ}

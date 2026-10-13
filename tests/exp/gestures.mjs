@@ -52,6 +52,10 @@ export async function run(page, vp, ok) {
     else { await page.mouse.move(k.x, k.y); await page.mouse.wheel(0, -100); await page.waitForTimeout(80); ok(Math.abs(await v() - 5.1) < 1e-9, 'desktop: the wheel over the knob body turns it'); } }
   await page.evaluate(() => { if (BENCH.view !== 'ov') BENCH.back(); BENCH.fitAll(); }); await page.waitForTimeout(400);
   // board zoom: a tap on the panel's frame (not a hole) zooms onto the board; the parts box stays; pinch goes closer there too
+  { // the board's frame is a thin border: a tap 40 units outside the panel's edge reaches the desk, not the board zoom
+    const R0 = await page.evaluate(() => BENCH.sim.boardRect); const c0 = await page.evaluate(([x, y]) => { const s = document.getElementById('bench'); const p = s.createSVGPoint(); p.x = x; p.y = y; const q = p.matrixTransform(s.getScreenCTM()); return [q.x, q.y]; }, [R0[0] - 40, R0[1] + R0[3] / 2]);
+    const reg = await page.evaluate(([x, y]) => { const q = BENCH.toSvg(x, y); return BENCH.regionAt(q); }, c0);
+    ok(reg !== 'board', `the board's zoom frame is a thin border round the panel (40 units beside it: ${reg || 'desk'})`); }
   { const R = await page.evaluate(() => BENCH.sim.boardRect); const c = await page.evaluate(([x, y]) => { const s = document.getElementById('bench'); const p = s.createSVGPoint(); p.x = x; p.y = y; const q = p.matrixTransform(s.getScreenCTM()); return [q.x, q.y]; }, [R[0] + 6, R[1] + R[3] / 2]);
     if (touch) await page.touchscreen.tap(c[0], c[1]); else await page.mouse.click(c[0], c[1]); await page.waitForTimeout(700);
     const b = await page.evaluate(() => { const s = document.getElementById('bench'), st = document.getElementById('bstage').getBoundingClientRect(), pd = BENCH.pads(), R = BENCH.sim.boardRect, m = s.getScreenCTM();
