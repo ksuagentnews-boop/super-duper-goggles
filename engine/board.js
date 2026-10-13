@@ -55,6 +55,8 @@ function parkFor(list){const want=list.map(w=>({k:w.k,x:w.x})).sort((a,b)=>a.x-b
   want.forEach(w=>w.x=clamp(w.x,lo,hi));for(let i=1;i<want.length;i++)want[i].x=Math.max(want[i].x,want[i-1].x+gap);
   const over=want.length?want[want.length-1].x-hi:0;if(over>0)for(let i=want.length-1;i>=0;i--){want[i].x-=over;if(i>0&&want[i].x-want[i-1].x>=gap)break}
   for(let i=want.length-2;i>=0;i--)want[i].x=Math.min(want[i].x,want[i+1].x-gap);
+  /* crowded rack (many jacks on the table): spread the plugs evenly over it, in order, so none falls off its left end */
+  if(want.length>1&&want[0].x<lo-0.5)want.forEach((w,i)=>w.x=lo+i*(hi-lo)/(want.length-1));
   const out={};want.forEach(w=>out[w.k]={x:Math.round(w.x),y:parkY});return out}
 const TRAY={x:0,y:0,w:0,h:0,cols:1,on:GROUPS.length>0};const SW=150,SH=78;
 function setTray(mode){const n=GROUPS.length;if(!n)return;let cols;

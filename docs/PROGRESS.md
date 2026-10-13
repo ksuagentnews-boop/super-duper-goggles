@@ -156,6 +156,11 @@ Updated after every finished item (commit + push each time).
 - **7 · Decade boxes separate:** `{type:'dbox'}` becomes two instruments (`dbox` A, `dbox2` B), each with its own ✥ handle, saved position and zoom; shared state and circuit unchanged.
 - **8 · Last moved on top:** an instrument, a lead or a part moved last is drawn on the top layer until something else is moved.
 
+## EE205 · Electric Circuits Lab
+- Engine: phasor ac steady state, transient sub-steps, coils and film caps, registry + 2 × 4 room.
+- Instruments: Hameg HM 203-7, Metrix MTX 3240, Thandar TS3022S, handheld DMMs (Fluke 77 / GoldStar / BK 2704B), YEW 2786.
+- Exp 1 built (Procedures I–IV, 30 steps, sheet graded); test `tests/exp/ee205-exp1.mjs` desktop + phone.
+
 ## In progress
 - Batch 4: 10, 6, 1, 7, 8, 2 (4 in a parallel worktree).
 
