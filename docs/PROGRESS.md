@@ -61,7 +61,7 @@ Updated after every finished item (commit + push each time).
   - It has a small open-box SVG icon in the accent colour instead of 🎒. Checked by the instruments test.
 
 ## In progress
-- Merge into `main`.
+- Nothing. Items 1–8 are merged into `main` (997bfc6).
 
 ## Next
 - Ask the owner whether the request continued after item 8 (the message was cut off after "everywhere in the UI and").
