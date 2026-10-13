@@ -403,8 +403,9 @@ bdi{unicode-bidi:isolate}
 #benchView.tall .paint .sw{grid-template-columns:repeat(7,26px)}
 @media (max-width:900px),(max-height:500px){.btools .zback{width:60px;padding:4px 2px}.btools .zback .ti{font-size:13px}.btools .zback .tl{font-size:9.5px}.paint .sw{grid-template-columns:repeat(2,24px)}#benchView.tall .paint .sw{grid-template-columns:repeat(7,24px)}}
 .btop{position:relative}
-.btop .ovhint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);max-width:calc(100% - 16px);z-index:7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-@media (max-width:600px){.btop .ovhint{left:50%;transform:translate(-50%,-50%);max-width:calc(100% - 16px);white-space:nowrap}}
+/* the hint lives in the top bar's free slack between the title and the buttons: it never covers a button */
+.btop .ovhint{position:static;transform:none;flex:0 1 auto;min-width:0;max-width:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:600px){.btop .ovhint{left:auto;transform:none;max-width:none;white-space:nowrap}}
 
 /* touch menu over a zoomed instrument's screen: big rows, easy to pick with a finger */
 .tmenu{box-sizing:border-box;position:absolute;z-index:8;overflow:auto;-webkit-overflow-scrolling:touch;background:rgba(10,33,39,.96);border:2px solid #3fd3d8;border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:6px;box-shadow:0 10px 30px rgba(0,0,0,.35);font-family:var(--f-mono),monospace}

@@ -130,8 +130,13 @@ Updated after every finished item (commit + push each time).
   - The ✥ handle has a constant on-screen size whatever the zoom: 36 px on touch (28 px with a mouse) plus an invisible ring for the finger. It is dark green with a white border, at the instrument's top-left corner.
   - Tests: instruments (on top, handle size, drop on the board settles).
 
+- **P4 · The hint covers no button**
+  - On desktop the once-only hint is now an item in the top bar, in the free space between the title and the buttons. It shortens with "…" if needed, and is skipped if that space is under 160 px.
+  - It is not shown on touch devices (phones, iPad). There it sat over «بدّل للمانيوال» / «من جديد».
+  - Test (instruments): desktop hint over no top-bar button; no hint on the phone.
+
 ## In progress
-- P4 · The hint bubble must not cover the top-bar buttons.
+- P5 · «العلبة» touch scrolling: scrollbar strip, swipes on the gaps, parts drag after hold / sideways move.
 
 ## Next
 - Owner: open the site with `?debug=1` on the iPhone (Claude app + Safari) and send one screenshot of the Exp 9 overview and one of a device zoom, so the real numbers can be compared.

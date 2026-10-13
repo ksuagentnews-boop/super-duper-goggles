@@ -9,6 +9,13 @@ export async function run(page, vp, ok) {
     document.querySelector('#hall').hidden = true; BENCH.enter('ee312/exp1', 'free', true); });
   await page.waitForTimeout(400);
   const H = bench(page); H.touch = vp === 'phone';
+  { /* the once-only hint: in the top bar's slack on desktop, never over a top-bar button; not shown on touch */
+    await page.evaluate(() => { try { sessionStorage.removeItem('eelab:hint'); } catch (_) {} BENCH._hintShown = false; BENCH.ui(); });
+    const r = await page.evaluate(() => { const h = document.getElementById('ovHint'); if (h.hidden) return { shown: false };
+      const a = h.getBoundingClientRect(); const hit = [...document.querySelectorAll('#benchView .btop > :not(#ovHint)')].filter(e => { const b = e.getBoundingClientRect(); return b.width && a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1; }).map(e => e.id || e.className);
+      return { shown: true, hit }; });
+    if (vp === 'phone') ok(!r.shown, 'touch: no hint bubble (nothing over the top-bar buttons)');
+    else ok(r.shown && !r.hit.length, 'the hint sits in the top bar\'s free space, over no button' + (r.hit && r.hit.length ? ': ' + r.hit.join(', ') : '')); }
   ok(await page.evaluate(() => { const c = BENCH.sim.RT.crossings(); return !c.cc.length && !c.ci.length; }), 'default layout: no cable crosses another cable or an instrument');
   ok(await page.evaluate(() => { const S = BENCH.sim.RT.S; return Object.values(S.jack).every(v => !v) && Object.values(S.leads).every(l => l.bn == null && l.node == null); }), 'every lead starts unplugged in the «Coaxial cables & wires» tray');
   { const t = await page.evaluate(() => [...document.querySelectorAll('#Lcables .ltray text')].map(e => e.textContent)); ok(t[0] === 'Coaxial cables & wires' && t.filter(n => n === 'red lead').length === 3 && t.filter(n => n === 'black lead').length === 3, 'the tray is labelled and holds generic leads, named by type: ' + t.slice(1).join(', ')); }

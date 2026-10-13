@@ -142,12 +142,13 @@ const BENCH={
     $q('#bFit').onclick=()=>this.fitAll()},
   /* the overview hint: once per session, small, then it fades away */
   hintOnce(ov){const h=this.el.ovHint;let seen=false;try{seen=sessionStorage.getItem('eelab:hint')==='1'}catch(_){}
-    if(!ov||seen||this._hintShown){h.hidden=true;return}this._hintShown=true;h.hidden=false;h.classList.remove('fade');try{sessionStorage.setItem('eelab:hint','1')}catch(_){}
+    if(!ov||seen||this._hintShown||matchMedia('(pointer:coarse)').matches){h.hidden=true;return}h.hidden=false;h.classList.remove('fade');if(h.clientWidth<160){h.hidden=true;return}this._hintShown=true;h.classList.remove('fade');try{sessionStorage.setItem('eelab:hint','1')}catch(_){}
     clearTimeout(this._hintT);this._hintT=setTimeout(()=>{h.classList.add('fade');setTimeout(()=>{h.hidden=true},700)},4200)},
-  ui(){const E=this.el,ov=this.view==='ov';if(this.sim&&this.sim.pc){E.zoomUI.hidden=true;E.ovHint.hidden=true;E.bagBtn.hidden=true;this.drawStepCard();return}E.zoomUI.hidden=ov;E.bagBtn.hidden=true;this.hintOnce(ov);
+  ui(){const E=this.el,ov=this.view==='ov';if(this.sim&&this.sim.pc){E.zoomUI.hidden=true;E.ovHint.hidden=true;E.bagBtn.hidden=true;this.drawStepCard();return}E.zoomUI.hidden=ov;E.bagBtn.hidden=true;
+    E.ovHint.textContent=innerWidth<600&&innerHeight>innerWidth?'اقلب الجوال بالعرض، واضغط على أي جهاز':matchMedia('(pointer:coarse)').matches?'الأزرار شغّالة من هنا · ✥ تحرّك الجهاز · جسمه يقرّب':'الأزرار والأسلاك شغّالة من هنا · اسحب ✥ عشان تحرّك الجهاز · اضغط على جسمه عشان تقرّب';
+    this.hintOnce(ov);
     if(!ov){const n=this.sim.names[this.view];E.zEn.textContent=n[0];E.zAr.textContent=n[1]}
     if(ov)this.hl.innerHTML='';else this.hl.innerHTML='';
-    E.ovHint.textContent=innerWidth<600&&innerHeight>innerWidth?'اقلب الجوال بالعرض، واضغط على أي جهاز':matchMedia('(pointer:coarse)').matches?'الأزرار شغّالة من هنا · ✥ تحرّك الجهاز · جسمه يقرّب':'الأزرار والأسلاك شغّالة من هنا · اسحب ✥ عشان تحرّك الجهاز · اضغط على جسمه عشان تقرّب';
     this.drawStepCard()},
   regionAt(p){const R=this.sim.regions;for(const k of Object.keys(R).reverse()){const r=R[k];if(p.x>=r[0]&&p.x<=r[0]+r[2]&&p.y>=r[1]&&p.y<=r[1]+r[3])return k}return null},
   ovClick(p){const k=this.regionAt(p);if(k){this._hk=null;this.focus(k)}},
