@@ -153,6 +153,7 @@ Updated after every finished item (commit + push each time).
 - **10 · Lab only:** ⟩ on the step card / the sheet panel's edge hides the right-hand page; the bench refits; a 📋 tab (showing «الخطوة N» in Manual) brings it back; remembered for the session. Test `tests/exp/labonly.mjs`.
 - **4 · PeakTech 4124 redrawn** from the lab photo (blue bumpers, colour LCD with soft menu, F1–F5, keypad, knob, CH1/CH2 area with OUT1/OUT2, waveform keys); behaviour, size and OUT1 position unchanged.
 - **1 · Highlights under parts:** the current line's node squares are drawn in a layer under the parts and leads (jack rings stay on top); they move on as soon as the connection is made.
+- **7 · Decade boxes separate:** `{type:'dbox'}` becomes two instruments (`dbox` A, `dbox2` B), each with its own ✥ handle, saved position and zoom; shared state and circuit unchanged.
 
 ## In progress
 - Batch 4: 10, 6, 1, 7, 8, 2 (4 in a parallel worktree).

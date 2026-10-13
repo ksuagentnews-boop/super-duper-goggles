@@ -32,7 +32,8 @@ export async function run(page, vp, ok) {
   await fill({ d_rc: '280', d_ib: '1', d_rb: '4300' }); await page.waitForTimeout(100); ok(await done(7), 'B1 design entered');
   await H.focus('dbox'); const dig = await page.evaluate(() => BENCH.sim.RT.S.dbox);
   const setBox = async (k, want) => { for (let j = 0; j < 5; j++) { const d = want[j] - dig[k.toLowerCase()][j]; if (d) await H.key(`b:${k}${j}${d > 0 ? '+' : '-'}`, Math.abs(d)); } };
-  await setBox('A', [0, 8, 2, 0, 0]); await setBox('B', [0, 0, 3, 4, 0]); ok(await done(8), 'B2 boxes 280 Ω / 4.3 kΩ');
+  await setBox('A', [0, 8, 2, 0, 0]); await H.focus('dbox2'); await setBox('B', [0, 0, 3, 4, 0]); ok(await done(8), 'B2 boxes 280 Ω / 4.3 kΩ');
+  ok(await page.evaluate(() => { const L = BENCH.sim.RT.layout; return !!(L.POS.dbox && L.POS.dbox2 && document.querySelector('#bench [data-k="mv:dbox"]') && document.querySelector('#bench [data-k="mv:dbox2"]') && BENCH.sim.regions.dbox2); }), 'the two decade boxes are separate instruments: own ✥ handle, position and zoom');
   await H.focus('board'); await H.del(16, 23); await H.del(17, 24); await H.place('LED', 16, 23); await H.flip(16, 23);
   await H.lead('Lp', 30); await H.lead('dA1', 30); await H.lead('dA2', 23); await H.lead('gr', 25); await H.lead('dB1', 25); await H.lead('dB2', 17); await H.lead('gb', 15);
   await H.focus('psu'); await H.key('p:RON'); ok(await done(9), 'B3 Fig. 9.2b');

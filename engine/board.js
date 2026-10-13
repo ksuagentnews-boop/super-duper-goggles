@@ -17,7 +17,8 @@ const RT={S:null,dirty:true,TB:null,PX,MODE,uid:1};
    on the right → left column, on the left → right column), so every cable runs straight to the panel without crossing another
    cable or passing over another instrument. */
 const COLS=def.cols||7,ROWS=def.rows||5,P=88,NN=COLS*ROWS,BW=COLS*P,BH=ROWS*P;
-const specs=def.instruments.map(s=>Object.assign({},s,{at:{x:0,y:0}}));
+/* an instrument drawn as a pair (the two decade boxes) becomes two instruments, each moved and zoomed on its own */
+const specs=[].concat(...def.instruments.map(s=>s.type==='dbox'&&!s.box?[{...s,box:'a'},{...s,box:'b'}]:[s])).map(s=>Object.assign({},s,{at:{x:0,y:0}}));
 const INST=specs.map(spec=>ENGINE[spec.type](RT,spec));
 const byKey={},byPrefix={};INST.forEach(i=>{byKey[i.key]=i;byPrefix[i.prefix]=i});
 const LEADDEF={};INST.forEach(i=>(i.leads||[]).forEach(l=>LEADDEF[l.k]=Object.assign({inst:i},l)));
@@ -641,4 +642,4 @@ BENCH.register({
 RT.crossings=crossings;RT.resetLayout=resetLayout;
 fresh();render();
 };
-ENGINE.NAMES={dmm2:['MCP MT3805 · DMM 2','الملتيميتر الثاني'],gen:['PeakTech 4124','مولّد الإشارات'],psu:['TTi EL302RD','مصدر الجهد المستمر (وحدتين)'],sc:['GW Instek GDS-1104B','راسم الإشارة'],dmm:['MCP MT3805','الملتيميتر'],xf:['Center-tapped Transformer','المحوّل'],dbox:['Decade resistance boxes','صناديق المقاومات'],board:['Plug-in panel','لوحة التوصيل']};
+ENGINE.NAMES={dmm2:['MCP MT3805 · DMM 2','الملتيميتر الثاني'],gen:['PeakTech 4124','مولّد الإشارات'],psu:['TTi EL302RD','مصدر الجهد المستمر (وحدتين)'],sc:['GW Instek GDS-1104B','راسم الإشارة'],dmm:['MCP MT3805','الملتيميتر'],xf:['Center-tapped Transformer','المحوّل'],dbox:['Decade resistance box A','صندوق المقاومات A'],dbox2:['Decade resistance box B','صندوق المقاومات B'],board:['Plug-in panel','لوحة التوصيل']};
