@@ -152,6 +152,7 @@ Updated after every finished item (commit + push each time).
 - **5 · Wire colour tool works:** the bucket opens with a colour picked; real taps paint wires and bridging plugs (wide tap area while painting); new wires / plugs take the picked colour; a tap on an instrument lead gives the fixed-colours toast; hidden when the table has no wire or plug. Test `tests/exp/paint.mjs`.
 - **10 · Lab only:** ⟩ on the step card / the sheet panel's edge hides the right-hand page; the bench refits; a 📋 tab (showing «الخطوة N» in Manual) brings it back; remembered for the session. Test `tests/exp/labonly.mjs`.
 - **4 · PeakTech 4124 redrawn** from the lab photo (blue bumpers, colour LCD with soft menu, F1–F5, keypad, knob, CH1/CH2 area with OUT1/OUT2, waveform keys); behaviour, size and OUT1 position unchanged.
+- **1 · Highlights under parts:** the current line's node squares are drawn in a layer under the parts and leads (jack rings stay on top); they move on as soon as the connection is made.
 
 ## In progress
 - Batch 4: 10, 6, 1, 7, 8, 2 (4 in a parallel worktree).

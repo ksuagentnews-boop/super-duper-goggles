@@ -15,7 +15,11 @@ export async function run(page, vp, ok) {
     ok(r.kinds.length === 1 && r.kinds[0] === 'coax' && r.lit.every(n => n === r.bnc), `one coax kind; a tap on any coax lead lights all ${r.bnc} free BNCs (${r.lit.join(', ')})`); }
   const cap = id => page.evaluate(id => document.querySelector(`[data-cap="${id}"]`).click(), id);
   // Fig. 3.4a: vI = node 0, vO = node 1, ground = {8, 9, 15}
-  await H.focus('board'); await H.place('R1k', 0, 1); await H.place('D4001', 1, 8); await H.place('BR', 8, 15); await H.place('BR', 8, 9);
+  const gl = () => page.evaluate(() => { const B = document.getElementById('LguideB'), P = document.getElementById('Lparts');
+    return { under: !!(B.compareDocumentPosition(P) & Node.DOCUMENT_POSITION_FOLLOWING), n: [...B.querySelectorAll('text')].map(t => t.textContent), top: document.querySelectorAll('#Lguide rect').length }; });
+  await H.focus('board'); const g0 = await gl();
+  await H.place('R1k', 0, 1); const g1 = await gl();
+  ok(g0.under && g0.top === 0 && g0.n.includes('node 0') && g0.n.includes('node 1') && !(g1.n.includes('node 0') && g1.n.includes('node 1')), `the current line's node squares lie under the parts (${g0.n.join(', ')}) and move on once it is made (${g1.n.join(', ') || '—'})`); await H.place('D4001', 1, 8); await H.place('BR', 8, 15); await H.place('BR', 8, 9);
   await H.place('D4001', 1, 2); await H.flip(1, 2); await H.place('D4001', 2, 9); await H.flip(2, 9);
   await H.lead('gr', 0); await H.lead('gb', 15);
   ok(await done(1), 'A1–2 Fig. 3.4a assembled with the generator');

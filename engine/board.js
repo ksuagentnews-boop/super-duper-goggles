@@ -461,21 +461,23 @@ function lineDone(L){const N=RT.netOf;if(RT.dirty)recompute();
 function lineSpots(L){if(L.jack)return {nodes:[],jacks:[],jg:[L.jack]};if(L.part)return {nodes:L.part.slice(1,3),jacks:[]};if(L.ic)return {nodes:Object.values(L.pins),jacks:[]};
   if(L.lead)return {nodes:[L.at],jacks:[L.lead]};if(L.wire)return {nodes:L.wire,jacks:[]};return {nodes:[],jacks:[]}}
 let GUIDE=null;
+/* the current line's node squares lie UNDER the parts and leads (a part on them is never covered); jack rings stay on top */
+function guideNodesSVG(){if(!GUIDE)return '';let s='';const pulse=GUIDE.flash?' class="gflash"':'';
+  GUIDE.nodes.forEach(n=>{if(n==null||n<0||n>=NN)return;const c=nodeC(n);s+=`<rect${pulse} x="${c.x-34}" y="${c.y-34}" width="68" height="68" rx="11" fill="rgba(44,122,107,.14)" stroke="#2c7a6b" stroke-width="4" stroke-dasharray="9 6"/>`+T(c.x,c.y-38,'node '+n,{size:11,fill:'#1f5b50',a:'middle',w:700})});return s}
 function guideSVG(){if(!GUIDE)return '';let s='';const pulse=GUIDE.flash?' class="gflash"':'';
-  GUIDE.nodes.forEach(n=>{if(n==null||n<0||n>=NN)return;const c=nodeC(n);s+=`<rect${pulse} x="${c.x-34}" y="${c.y-34}" width="68" height="68" rx="11" fill="rgba(44,122,107,.14)" stroke="#2c7a6b" stroke-width="4" stroke-dasharray="9 6"/>`+T(c.x,c.y-38,'node '+n,{size:11,fill:'#1f5b50',a:'middle',w:700})});
   GUIDE.jacks.forEach(k=>{if(!LEADDEF[k])return;const a=termOf(k);s+=`<circle${pulse} cx="${a.x}" cy="${a.y}" r="22" fill="rgba(44,122,107,.16)" stroke="#2c7a6b" stroke-width="4" stroke-dasharray="8 5"/>`;
     const p=leadPos(k);if(p)s+=`<circle${pulse} cx="${p.x}" cy="${p.y}" r="17" fill="none" stroke="#2c7a6b" stroke-width="3"/>`});
   (GUIDE.jg||[]).forEach(g=>{if(!GMEM[g])return;const a=jackAt(g),f=leadFor(g),c=f>=0?headPos(f):a;s+=`<circle${pulse} cx="${a.x}" cy="${a.y}" r="22" fill="rgba(44,122,107,.16)" stroke="#2c7a6b" stroke-width="4" stroke-dasharray="8 5"/>`;
     if(!RT.S.jack[g])s+=`<circle${pulse} cx="${c.x}" cy="${c.y}" r="20" fill="none" stroke="#2c7a6b" stroke-width="3"/>`});
   return s}
-function setGuide(g){GUIDE=g;const L=$('Lguide');if(L)L.innerHTML=guideSVG()}
+function setGuide(g){GUIDE=g;const L=$('Lguide');if(L)L.innerHTML=guideSVG();const B=$('LguideB');if(B)B.innerHTML=guideNodesSVG()}
 
 /* ---------- render ---------- */
 let staticDone=false;
 function render(light){
   if(!staticDone){$('Lstatic').innerHTML=staticSVG();staticDone=true}
   if(!light){if(RT.dirty){recompute();INST.forEach(i=>i.postSim&&i.postSim())}if(def.decorate)def.decorate(RT);const ig=i=>`<g data-inst="${i.key}" transform="translate(${POS[i.key].x} ${POS[i.key].y})">${i.svg()}${handleSVG(i)}</g>`;$('Ldyn').innerHTML=INST.filter(i=>i.key!==TOP).map(ig).join('');$('Ltop').innerHTML=TOP?ig(byKey[TOP]):'';updHandles();BENCH.onRender()}
-  $('Lparts').innerHTML=partsSVG();$('Lcables').innerHTML=cablesSVG();if($('Lguide'))$('Lguide').innerHTML=guideSVG();$('Ldrag').innerHTML=toolbarSVG()+dragSVG();
+  $('Lparts').innerHTML=partsSVG();$('Lcables').innerHTML=cablesSVG();if($('Lguide'))$('Lguide').innerHTML=guideSVG();if($('LguideB'))$('LguideB').innerHTML=guideNodesSVG();$('Ldrag').innerHTML=toolbarSVG()+dragSVG();
   knobPad();
   if(hlEl&&!document.body.contains(hlEl))hlEl=null;
 }
