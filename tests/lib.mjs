@@ -1,8 +1,12 @@
 // Shared helpers for headless tests (Playwright + Chromium).
 // Serves the repo from disk at http://app.local/ and maps the three.js CDN to a local copy when THREE_JS is set.
 import fs from 'fs'; import path from 'path'; import { fileURLToPath } from 'url';
-const PW = process.env.PLAYWRIGHT_MODULE || '/opt/node-tools/node_modules/playwright/index.mjs';
-export const { chromium } = await import(PW);
+// Playwright: PLAYWRIGHT_MODULE if set, else the project's own `npm install`, else the cloud workspace copy.
+async function loadPW(){
+  if (process.env.PLAYWRIGHT_MODULE) return import(process.env.PLAYWRIGHT_MODULE);
+  try { return await import('playwright'); } catch (e) { return import('/opt/node-tools/node_modules/playwright/index.mjs'); }
+}
+export const { chromium } = await loadPW();
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml' };
 
