@@ -51,4 +51,11 @@ export async function run(page, vp, ok) {
   await page.goto('http://app.local/?debug=1'); await page.waitForFunction(() => document.querySelector('#hallLoading').hidden, null, { timeout: 20000 }); await page.evaluate(() => WELCOME.close());
   await sit(page, 'ee312/exp9', 'free'); await page.waitForTimeout(600);
   const dbg = await page.$eval('#dbgOverlay', e => e.textContent); ok(/visualViewport \d/.test(dbg) && /safe-area/.test(dbg) && /free rect/.test(dbg) && /fitted bbox/.test(dbg) && /iframe/.test(dbg), '?debug=1 overlay prints the viewport, safe areas, free rect and fitted bbox');
+  // the device zoom is a smooth camera move in and out (no jump cut), with motion allowed
+  await page.emulateMedia({ reducedMotion: 'no-preference' }); await page.reload(); await page.waitForFunction(() => document.querySelector('#hallLoading').hidden, null, { timeout: 20000 }); await page.evaluate(() => WELCOME.close());
+  await sit(page, 'ee312/exp9', 'free'); await page.waitForTimeout(500);
+  const film = k => page.evaluate(k => new Promise(r => { const out = []; const t0 = performance.now(); if (k) BENCH.focus(k); else BENCH.back(); const f = () => { out.push(BENCH.vb.w); if (performance.now() - t0 < 700) requestAnimationFrame(f); else r(out); }; requestAnimationFrame(f); }), k);
+  for (const k of ['sc', null]) { const a = await film(k); const span = Math.abs(a.at(-1) - a[0]) || 1; const steps = a.map((v, i) => i ? Math.abs(v - a[i - 1]) / span : 0);
+    ok(steps.filter(x => x > 0.001).length >= 4 && Math.max(...steps) < 0.5, `device zoom ${k ? 'in' : 'out'} is animated (${steps.filter(x => x > 0.001).length} frames, largest step ${(Math.max(...steps) * 100).toFixed(0)} %)`); }
+  await page.emulateMedia({ reducedMotion: 'reduce' });
 }

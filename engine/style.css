@@ -366,7 +366,9 @@ bdi{unicode-bidi:isolate}
   .tb{padding:4px 8px;font-size:12px;white-space:nowrap;flex:none}.mchip{font-size:11.5px;padding:3px 8px;flex:none}
 }
 /* close device zoom: only the device (and the leads plugged into it) */
-#benchView.devzoom #drawer,#benchView.devzoom .ovhint,#benchView.devzoom .btools,#benchView.devzoom #Lstatic,#benchView.devzoom #Lparts,#benchView.devzoom #Lguide,#benchView.devzoom #Ldrag,#benchView.devzoom #bagBtn{display:none!important}
+#benchView.devzoom #drawer,#benchView.devzoom .ovhint,#benchView.devzoom .btools,#benchView.devzoom #bagBtn{display:none!important}
+#benchView.devzoom #Lstatic,#benchView.devzoom #Lparts,#benchView.devzoom #Lguide,#benchView.devzoom #Ldrag{opacity:0;pointer-events:none}
+#Lstatic,#Lparts,#Lguide,#Ldrag,#Ldyn>g,#Lcables g[data-cabof],#Lcables .cablbl,#Lcables .ltray{transition:opacity .25s ease}
 #benchView.devzoom #stepCard .wl,#benchView.devzoom #stepCard .sfig{display:none}
 
 /* procedure picker (Manual mode) and the short card between procedures */

@@ -27,7 +27,7 @@ const BENCH={
     addEventListener('resize',sync);addEventListener('orientationchange',()=>setTimeout(sync,250));if(vv){vv.addEventListener('resize',sync);vv.addEventListener('scroll',sync)}this._vvSync=sync;sync();
     this.panelDefault();this.gestures();
     /* the stage can change size without a window resize (iOS toolbars, the host app's bars, the sheet panel): refit then too */
-    if(window.ResizeObserver){const ro=new ResizeObserver(()=>{if(E.view.hidden)return;const {W,H}=this.stageSize();E.view.classList.toggle('tall',H>W*1.1);this.refit(false)});[E.stage,E.drawer,E.card].forEach(x=>x&&ro.observe(x))}
+    if(window.ResizeObserver){const ro=new ResizeObserver(()=>{if(E.view.hidden)return;const {W,H}=this.stageSize();E.view.classList.toggle('tall',H>W*1.1);if(this._to&&!this.user){const t=this.fit(this.curRect());if(t)this._to=t}else this.refit(false)});[E.stage,E.drawer,E.card].forEach(x=>x&&ro.observe(x))}
   },
   sheetOverlay(){return matchMedia('(max-width:900px),(max-height:520px),(pointer:coarse) and (max-width:1400px)').matches},
   panelDefault(){const mob=BENCH.sheetOverlay();this.el.view.classList.toggle('panel-closed',!mob&&false);this.el.view.classList.remove('panel-open')},
@@ -100,8 +100,10 @@ const BENCH={
     const aw=Math.max(60,W-2*m-left-right),ah=Math.max(60,H-top-bottom);const s=Math.max(r[2]/aw,r[3]/ah);const vw=W*s,vh=H*s;
     const cx=left+m+aw/2,cy=top+ah/2;return {x:r[0]+r[2]/2-cx*s,y:r[1]+r[3]/2-cy*s,w:vw,h:vh}},
   setVB(v){{const {W,H}=this.stageSize();if(W&&H)this.el.view.classList.toggle('tall',H>W*1.1)}this.vb=v;this.svg.setAttribute('viewBox',`${v.x} ${v.y} ${v.w} ${v.h}`)},
-  animTo(to){if(!to)return;cancelAnimationFrame(this.anim);if(!this.vb||reduceMotion){this.setVB(to);return}const from={...this.vb},t0=performance.now(),dur=560;
-    const step=now=>{const k=ease(Math.min(1,(now-t0)/dur));this.setVB({x:from.x+(to.x-from.x)*k,y:from.y+(to.y-from.y)*k,w:from.w+(to.w-from.w)*k,h:from.h+(to.h-from.h)*k});if(k<1)this.anim=requestAnimationFrame(step)};this.anim=requestAnimationFrame(step)},
+  /* a smooth camera move (≈380 ms ease); the target may be updated while it runs (e.g. the parts box hides as a device
+     zoom starts and the free area grows), so the move never ends in a jump */
+  animTo(to){if(!to)return;cancelAnimationFrame(this.anim);this._to=to;if(!this.vb||reduceMotion){this.setVB(to);this._to=null;return}const from={...this.vb},t0=performance.now(),dur=380;
+    const step=now=>{const k=ease(Math.min(1,(now-t0)/dur)),t=this._to;if(!t)return;this.setVB({x:from.x+(t.x-from.x)*k,y:from.y+(t.y-from.y)*k,w:from.w+(t.w-from.w)*k,h:from.h+(t.h-from.h)*k});if(k<1)this.anim=requestAnimationFrame(step);else this._to=null};this.anim=requestAnimationFrame(step)},
   /* focus: the device plus a margin of context (about a quarter of its size on each side), never closer than that */
   curRect(){if(this.view==='ov')return this.ovRect;
     /* board zoom: the plug-in panel itself at ≈90 % of the free area (the parts box stays; the lead tray is a pan away) */
@@ -110,7 +112,7 @@ const BENCH={
   /* free pan & zoom (like a map): pinch / wheel between the fitted view and ≈4× closer, drag on empty desk to pan a little
      past the edges; double-tap or «عرض كامل» refits. The camera is the SVG viewBox, so nothing is laid out again. */
   refit(anim,force){if(!this.sim||!this.svg)return;if(this.user&&!force){const c=this.clampVB(this.vb);c&&this.setVB(c);return}this.setUser(false);
-    const t=this.fit(this.curRect());if(anim)this.animTo(t);else{cancelAnimationFrame(this.anim);t&&this.setVB(t)}},
+    const t=this.fit(this.curRect());if(anim)this.animTo(t);else if(this._to)this._to=t;else{cancelAnimationFrame(this.anim);t&&this.setVB(t)}},
   setUser(on){this.user=on;const b=$q('#bFit');if(b)b.hidden=!on||!!(this.sim&&this.sim.pc)},
   clampVB(v){const f=this.fit(this.curRect());if(!f||!v)return v;const w=clamp(v.w,f.w/4,f.w),h=w*f.h/f.w;let cx=v.x+v.w/2,cy=v.y+v.h/2;const mx=f.w*0.08,my=f.h*0.08;
     cx=clamp(cx,f.x+w/2-mx,f.x+f.w-w/2+mx);cy=clamp(cy,f.y+h/2-my,f.y+f.h-h/2+my);return {x:cx-w/2,y:cy-h/2,w,h}},
@@ -153,7 +155,7 @@ const BENCH={
   /* close device zoom: the device alone at ≈90 % of the screen; the box, hints, tools, board and the other instruments hide */
   devZoom(){const k=this.view,on=k!=='ov'&&k!=='board'&&!(this.sim&&this.sim.pc);const E=this.el;E.view.classList.toggle('devzoom',on);
     let st=document.getElementById('zoomStyle');if(!st){st=document.createElement('style');st.id='zoomStyle';document.head.appendChild(st)}
-    st.textContent=on?`#benchView.devzoom #Ldyn>g:not([data-inst="${k}"]),#benchView.devzoom #Lcables g[data-cabof]:not([data-cabof="${k}"]),#benchView.devzoom #Lcables .cablbl{display:none}`:'';
+    st.textContent=on?`#benchView.devzoom #Ldyn>g:not([data-inst="${k}"]),#benchView.devzoom #Lcables g[data-cabof]:not([data-cabof="${k}"]),#benchView.devzoom #Lcables .cablbl,#benchView.devzoom #Lcables .ltray{opacity:0;pointer-events:none}`:'';
     const c=E.card;if(on&&c&&!c.hidden&&(innerHeight<=520||innerWidth<=600)&&!c.classList.contains('min')){c.classList.add('min');c.dataset.key='';this._unminCard=true}
     else if(!on&&this._unminCard){this._unminCard=false;if(c){c.classList.remove('min');c.dataset.key=''}}},
   back(){if(this.sim&&this.sim.pc)return;this.view='ov';this.devZoom();this.ui();this.refit(true,true)},

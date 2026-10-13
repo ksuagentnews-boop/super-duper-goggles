@@ -103,9 +103,15 @@ Updated after every finished item (commit + push each time).
   - The check passes at desktop, 844×390, 844×330 (host-app bars), 932×430, 740×360, 667×375, 390×844 and iPad.
   - Full desktop + phone regressions pass.
 
-## In progress
-- Nothing. Batch 2 (B1–B5) is on `main`.
+## Batch 3 (phone polish, real iPhone)
+- **P1 · Device zoom animates**
+  - The camera moves smoothly (380 ms ease) into a device and back out, like the board zoom.
+  - The jump cut came from the parts box hiding as the zoom starts: the stage resize refit the camera instantly. A resize during the move now only updates the move's target.
+  - The rest of the desk fades out instead of vanishing.
+  - Tested with motion on, in and out, on desktop and phone.
 
+## In progress
+- P2 · Zoomed device ≈96–98 %, ≥40 px touch targets, touch-friendly scope menus.
 
 ## Next
 - Owner: open the site with `?debug=1` on the iPhone (Claude app + Safari) and send one screenshot of the Exp 9 overview and one of a device zoom, so the real numbers can be compared.
