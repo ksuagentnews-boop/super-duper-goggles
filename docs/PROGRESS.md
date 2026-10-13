@@ -30,8 +30,12 @@ Updated after every finished item (commit + push each time).
   - Tests: helpers plug the instrument end first. New checks for the tray, unplug / return-to-tray, and "every lead the run plugs in has its own line in the Manual steps".
   - Still open from item 1: portrait (390×844) stays width-bound when a table has many instruments, because each instrument keeps its jacks facing the board.
 
+- **4 · Welcome card and du'a**
+  - The card shows the title, the small light disclaimer «هذه المعامل مصممة لمحاكاة المعمل الأصلي…» and «ابدأ».
+  - The du'a «أسأل الله لنا ولكم التوفيق والسداد» is a small line under «قسم الهندسة الكهربائية» on the corridor's first sign.
+
 ## In progress
-- 4 · Welcome disclaimer; du'a under the department name on the corridor's first sign.
+- 6 · noindex meta + robots.txt (5 · Procedure picker follows).
 
 ## Next
 - 5 · Procedure picker in Manual mode; sheet and grading cover only the selected procedures.

@@ -1,4 +1,4 @@
-/* Welcome card: title, du'a line, "ابدأ". Shown once per browser session (every new visit); ⓘ reopens it.
+/* Welcome card: title, a small disclaimer, "ابدأ" (the du'a is on the corridor's department sign). Shown once per browser session (every new visit); ⓘ reopens it.
    The credit line appears only when SITE.author is filled (with a LinkedIn link when SITE.linkedin is set). */
 const WELCOME=(()=>{
   const el=$q('#welcome');

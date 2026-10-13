@@ -8,6 +8,7 @@
    The site opens at the corridor entrance. Desktop: WASD / arrows + mouse drag.
    Touch: drag to look, tap floor to walk, tap a chair (or a door) to walk there. */
 const HALL=(()=>{
+  const DUA='أسأل الله لنا ولكم التوفيق والسداد';  /* under the department name on the first corridor sign */
   const cv=$q('#hallCanvas'),tip=$q('#tip'),prompt=$q('#prompt'),hint=$q('#hallHint');
   const coarse=matchMedia('(pointer:coarse)').matches;
   const P={x:0,z:6.6,y:1.65,yaw:0,pitch:-0.06};
@@ -171,8 +172,9 @@ const HALL=(()=>{
     for(let z=-6;z>-dG;z-=9){const pl=new THREE.PointLight(0xfff6e8,0.25,11,2);pl.position.set(0,3.0,z);scene.add(pl)}
     for(let z=-2;z>-dG;z-=3.4){const l=new THREE.Mesh(new THREE.PlaneGeometry(1.2,0.45),new THREE.MeshBasicMaterial({color:0xffffff}));l.rotation.x=Math.PI/2;l.position.set(0,3.29,z);scene.add(l)}
     /* department banner near the entrance */
-    const ban=tex(1400,330,(g,Wt,Ht)=>{g.fillStyle='#fbfcfc';g.fillRect(0,0,Wt,Ht);g.fillStyle='#2c7a6b';g.fillRect(0,0,Wt,22);g.textAlign='center';g.direction='rtl';g.fillStyle='#1e2a28';g.font=`700 88px ${AR}`;g.fillText('قسم الهندسة الكهربائية',Wt/2,140);
-      g.direction='ltr';g.font=`500 46px ${MO}`;g.fillStyle='#2c7a6b';g.fillText('Electrical Engineering Department',Wt/2,218);g.font=`500 34px ${MO}`;g.fillStyle='#5d6b67';g.fillText('College of Engineering · King Saud University',Wt/2,290)});
+    const ban=tex(1400,330,(g,Wt,Ht)=>{g.fillStyle='#fbfcfc';g.fillRect(0,0,Wt,Ht);g.fillStyle='#2c7a6b';g.fillRect(0,0,Wt,22);g.textAlign='center';g.direction='rtl';g.fillStyle='#1e2a28';g.font=`700 84px ${AR}`;g.fillText('قسم الهندسة الكهربائية',Wt/2,118);
+      /* the du'a: a small line under the department name */g.font=`500 34px ${AR}`;g.fillStyle='#6b7a76';g.fillText(DUA,Wt/2,170);
+      g.direction='ltr';g.font=`500 42px ${MO}`;g.fillStyle='#2c7a6b';g.fillText('Electrical Engineering Department',Wt/2,238);g.font=`500 30px ${MO}`;g.fillStyle='#5d6b67';g.fillText('College of Engineering · King Saud University',Wt/2,298)});
     const bm=new THREE.Mesh(new THREE.PlaneGeometry(2.6,0.61),new THREE.MeshBasicMaterial({map:ban}));bm.position.set(0,2.92,-4.0);scene.add(bm);
     /* level signs and their doors */
     let li=0;plan.forEach(it=>{if(it.v){/* alternate sides: seen from the entrance the level signs never stack */hangSign((li++%2?1:-1)*1.18,-it.d,2.0,0.5,2.52,it.v.ar,it.v.en);return}
@@ -376,5 +378,5 @@ const HALL=(()=>{
     ok=true;bindInput();resize();addEventListener('resize',()=>{if(!$q('#hall').hidden)resize()});$q('#hallLoading').hidden=true;loop0();
   }
   function fail(){$q('#hallLoading').hidden=true;$q('#fallback').hidden=false;$q('#hallHint').hidden=true;$q('#quickBtn').hidden=true}
-  return {init,goTo,goLab,resume,pause:()=>{running=false},standUp:()=>{if(ok)standUp();else{$q('#hall').hidden=false;$q('#seatModal').hidden=true}},debug:{P,lockClick,locked,benches:()=>benches,doors:()=>doors,cur:()=>({...CUR}),show,planTo,blocked,goDoor,court:()=>COURT,START}};
+  return {dua:DUA,init,goTo,goLab,resume,pause:()=>{running=false},standUp:()=>{if(ok)standUp();else{$q('#hall').hidden=false;$q('#seatModal').hidden=true}},debug:{P,lockClick,locked,benches:()=>benches,doors:()=>doors,cur:()=>({...CUR}),show,planTo,blocked,goDoor,court:()=>COURT,START}};
 })();

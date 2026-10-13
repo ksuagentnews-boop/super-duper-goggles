@@ -3,8 +3,8 @@ export async function run(page, vp, ok) {
   console.log(`[${vp}] hall + quick access`);
   // welcome card: title, du'a line, ابدأ; no credit while SITE.author is empty; ⓘ reopens it
   await page.click('#infoBtn');
-  const wl = await page.evaluate(() => ({ open: !document.getElementById('welcome').hidden, t: document.getElementById('wlTitle').textContent, d: document.querySelector('.wl-dua').textContent, go: document.getElementById('wlStart').textContent, credit: !document.getElementById('wlCredit').hidden, author: SITE.author }));
-  ok(wl.open && wl.t === 'أهلاً بك في محاكي معامل الهندسة الكهربائية' && wl.d === 'سائلاً المولى لنا ولكم التوفيق والسداد' && wl.go === 'ابدأ', 'ⓘ opens the welcome card (title, du\'a line, ابدأ)');
+  const wl = await page.evaluate(() => ({ open: !document.getElementById('welcome').hidden, t: document.getElementById('wlTitle').textContent, d: document.querySelector('.wl-note').textContent, dua: document.getElementById('welcome').textContent.includes('التوفيق'), sign: HALL.dua, go: document.getElementById('wlStart').textContent, credit: !document.getElementById('wlCredit').hidden, author: SITE.author }));
+  ok(wl.open && wl.t === 'أهلاً بك في محاكي معامل الهندسة الكهربائية' && wl.d === 'هذه المعامل مصممة لمحاكاة المعمل الأصلي، والأخطاء فيها واردة؛ فلا تعتمد عليها بشكل كامل، وإنما هي للتدريب فقط.' && !wl.dua && wl.sign === 'أسأل الله لنا ولكم التوفيق والسداد' && wl.go === 'ابدأ', 'ⓘ opens the welcome card (title, small disclaimer, ابدأ); the du\'a is on the department sign, not on the card');
   ok(!wl.credit && wl.author === '', 'no credit line while SITE.author is empty');
   await page.click('#wlStart'); ok(await page.$eval('#welcome', e => e.hidden), 'ابدأ closes it');
   ok(await page.evaluate(() => STATS.on === false), 'statistics off (no GoatCounter code, test host)');
