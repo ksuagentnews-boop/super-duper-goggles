@@ -30,7 +30,7 @@ function genSVG(){const g=RT.S.gen;let s=`<g transform="translate(${G0.x} ${G0.y
   s+=`<rect x="224" y="168" width="44" height="24" rx="5" fill="${g.pwr&&g.out?'#3cd070':'#c7d0d4'}" stroke="#9fb0b6" data-k="g:CH1" style="cursor:pointer"/>`+T(246,184,'CH1',{size:10.5,a:'middle',w:600});
   s+=`<rect x="20" y="186" width="44" height="22" rx="5" fill="#2d3438" data-k="g:PWR" style="cursor:pointer"/>`+T(42,201,'POWER',{size:8.5,fill:'#e8eef0',a:'middle'})+`<circle cx="72" cy="197" r="4" fill="${g.pwr?'#46e070':'#555'}"/>`;
   // rotary knob and cursor keys
-  s+=`<circle cx="410" cy="62" r="21" fill="#e9eef0" stroke="#7d8c92" stroke-width="3"/><circle cx="410" cy="62" r="13" fill="#d3dadd"/><line x1="410" y1="62" x2="${410+Math.sin((g.kang||0))*17}" y2="${62-Math.cos((g.kang||0))*17}" stroke="#55646a" stroke-width="2.5" pointer-events="none"/>`;
+  s+=`<circle cx="410" cy="62" r="30" fill="transparent" data-k="knob:g:KN" data-knob="g:KN"/><circle cx="410" cy="62" r="21" fill="#e9eef0" stroke="#7d8c92" stroke-width="3" data-k="knob:g:KN" data-knob="g:KN"/><circle cx="410" cy="62" r="13" fill="#d3dadd"/><line x1="410" y1="62" x2="${410+Math.sin((g.kang||0))*17}" y2="${62-Math.cos((g.kang||0))*17}" stroke="#55646a" stroke-width="2.5" pointer-events="none"/>`;
   s+=`<path d="M383 62 l8 -7 v14 z" fill="#55646a"/><rect x="380" y="50" width="14" height="24" fill="transparent" data-k="g:KN-" style="cursor:pointer"/><path d="M437 62 l-8 -7 v14 z" fill="#55646a"/><rect x="426" y="50" width="14" height="24" fill="transparent" data-k="g:KN+" style="cursor:pointer"/>`;
   s+=`<rect x="388" y="96" width="20" height="16" rx="3" fill="#eef2f3" stroke="#9fb0b6" data-k="g:CL" style="cursor:pointer"/>`+T(398,108,'◄',{size:9,a:'middle'})+`<rect x="412" y="96" width="20" height="16" rx="3" fill="#eef2f3" stroke="#9fb0b6" data-k="g:CR" style="cursor:pointer"/>`+T(422,108,'►',{size:9,a:'middle'});
   s+=`<circle cx="330" cy="182" r="15" fill="#2c3438" stroke="#7d8c92" stroke-width="3"/><circle cx="330" cy="182" r="5" fill="#c8a24a"/>`+T(330,160,'CH1 OUT',{size:9.5,fill:'#3b4a50',a:'middle'});
@@ -66,7 +66,7 @@ function genKey(k){const g=RT.S.gen;if(!g.dig)g.dig={f:0,a:-1,o:-1};if(k==='PWR'
   if(a>20){a=20;genErr('Ampl limit 20Vpp')}if(Math.abs(o)+a/2>10){o=Math.sign(o)*(10-a/2);genErr('Out of range')}
   g.freq=f;g.amp=+a.toPrecision(6);g.off=+o.toPrecision(6);g.edit=null;RT.dirty=true}
 function fresh(){return Object.assign({pwr:false,out:false,wave:'Square',freq:1000,amp:4,off:0.5,edit:null,buf:'',sel:'a',dig:{f:0,a:-1,o:-1},kang:0},opt.prev||{})}
-return {key:'gen',prefix:'g',size:[440*G0.s,220*G0.s],fresh,svg:genSVG,keyFn:genKey,wheel:['KN'],wv,
+return {key:'gen',prefix:'g',size:[440*G0.s,220*G0.s],fresh,svg:genSVG,keyFn:genKey,wheel:['KN'],knobInfo:()=>{const g=RT.S.gen,p=g.sel||'a';return p==='f'?fmtFreq(g.freq):p==='o'?'Offset '+fmtLv(g.off):p==='h'?'Hi '+fmtLv(g.off+g.amp/2):p==='l'?'Lo '+fmtLv(g.off-g.amp/2):fmtAmp(g.amp)},wv,
   leads:[{k:'gr',label:'GEN OUT',from:{x:GEN_BNC.x-14,y:GEN_BNC.y},coax:true,grp:'gr',jat:GEN_BNC,tray:'GEN OUT',jn:'CH1 OUT'},{k:'gb',label:'GEN ⏚',from:{x:GEN_BNC.x+14,y:GEN_BNC.y},earth:true,coax:true,grp:'gr'}],
   cables:D=>D.coax(GEN_BNC,'gr','gb','GEN'),
   /* 50 Ω output referenced to earth (its black clip is earthed through the mains plug) */

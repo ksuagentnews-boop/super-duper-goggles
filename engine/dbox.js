@@ -18,7 +18,7 @@ function svg(){const D=RT.S.dbox;let s=`<g transform="translate(${B0.x} ${B0.y})
 function key(kk){const m=kk.match(/^([AB])([0-4])([+-])$/);if(!m)return;const d=RT.S.dbox[m[1].toLowerCase()];const j=+m[2];d[j]=clamp(d[j]+(m[3]==='+'?1:-1),0,9);RT.dirty=true}
 const LEADS=[];BOX.forEach((k,i)=>[0,1].forEach(j=>LEADS.push({k:'d'+k.toUpperCase()+(j+1),label:k.toUpperCase()+(j+1),t:post(i,j),box:k})));
 return {key:'dbox',prefix:'b',size:[W,H],fresh,svg,keyFn:key,
-  wheel:['A0','A1','A2','A3','A4','B0','B1','B2','B3','B4'],value:k=>value(RT.S.dbox[k]),
+  wheel:['A0','A1','A2','A3','A4','B0','B1','B2','B3','B4'],value:k=>value(RT.S.dbox[k]),knobInfo:b=>{const k=b[0].toLowerCase();return 'Box '+b[0]+': '+value(RT.S.dbox[k])+' Ω'},
   leads:LEADS.map(l=>({k:l.k,label:l.label,from:l.t,banana:true,circuit:true,pol:l.k.endsWith('2')?'-':'+',tray:`${l.label} lead`,jn:`box ${l.label}`})),
   cables:D=>LEADS.map(l=>D.banana(l.t,l.k)).join(''),
   stamp(ck){const L=RT.S.leads;BOX.forEach(k=>{const a=L['d'+k.toUpperCase()+'1'],b=L['d'+k.toUpperCase()+'2'];if(a.node==null||b.node==null)return;

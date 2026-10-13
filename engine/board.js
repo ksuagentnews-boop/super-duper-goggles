@@ -461,6 +461,7 @@ function render(light){
   if(!staticDone){$('Lstatic').innerHTML=staticSVG();staticDone=true}
   if(!light){if(RT.dirty){recompute();INST.forEach(i=>i.postSim&&i.postSim())}if(def.decorate)def.decorate(RT);$('Ldyn').innerHTML=INST.map(i=>`<g data-inst="${i.key}" transform="translate(${POS[i.key].x} ${POS[i.key].y})">${i.svg()}${handleSVG(i)}</g>`).join('');BENCH.onRender()}
   $('Lparts').innerHTML=partsSVG();$('Lcables').innerHTML=cablesSVG();if($('Lguide'))$('Lguide').innerHTML=guideSVG();$('Ldrag').innerHTML=toolbarSVG()+dragSVG();
+  knobPad();
   if(hlEl&&!document.body.contains(hlEl))hlEl=null;
 }
 function circuitChanged(){RT.dirty=true;INST.forEach(i=>i.onCircuitChange&&i.onCircuitChange())}
@@ -475,10 +476,28 @@ function nearControl(e){if(e.pointerType==='mouse'||!document.getElementById('be
   const g=$('Ldyn').querySelector(`[data-inst="${BENCH.view}"]`);if(!g)return null;let best=null,bd=22;
   g.querySelectorAll('[data-k]').forEach(el=>{if(el.dataset.k.startsWith('mv:'))return;const r=el.getBoundingClientRect();if(!r.width&&!r.height)return;
     const dx=Math.max(r.left-e.clientX,0,e.clientX-r.right),dy=Math.max(r.top-e.clientY,0,e.clientY-r.bottom),d=Math.hypot(dx,dy);if(d<bd){bd=d;best=el}});return best}
+/* which knob a control belongs to (its disk / ring, its push centre, or one of its ◀ ▶ arrows) */
+function knobOf(el){if(!el)return null;if(el.dataset.knob)return el.dataset.knob;const m=el.dataset.k.match(wheelRe);return m?m[1]:null}
+let KPAD=null;
+function tick(base){const c=svg.querySelector(`circle[data-knob="${base}"][stroke]`);if(!c)return;c.classList.remove('ktick');void c.getBBox();c.classList.add('ktick');try{navigator.vibrate&&navigator.vibrate(5)}catch(_){}}
+/* the knob pad: two large − / + buttons beside the active knob (press and hold repeats), its value, and ● for a push knob */
+function knobPad(){const el=document.getElementById('kpad');if(!el)return;const c=KPAD&&svg.querySelector(`circle[data-knob="${KPAD}"][stroke]`);if(!c){el.hidden=true;return}
+  const ins=byPrefix[KPAD.split(':')[0]],b=KPAD.slice(KPAD.indexOf(':')+1);const r=c.getBoundingClientRect(),st=document.getElementById('bstage').getBoundingClientRect();
+  const info=(ins.knobInfo&&ins.knobInfo(b))||'';const push=c.dataset.push;
+  if(el.dataset.k!==KPAD){el.dataset.k=KPAD;el.innerHTML=`<button class="kb" data-d="-" aria-label="−">◀</button><div class="kv"><span></span>${push?'<button class="kp" aria-label="push">●</button>':''}</div><button class="kb" data-d="+" aria-label="+">▶</button>`;
+    el.querySelectorAll('.kb').forEach(btn=>{let t=null;const step=()=>{ins.keyFn(b+btn.dataset.d);render();knobPad()};
+      btn.onpointerdown=ev=>{ev.preventDefault();step();clearTimeout(t);t=setTimeout(function rep(){step();t=setTimeout(rep,80)},380)};
+      btn.onpointerup=btn.onpointercancel=btn.onpointerleave=()=>clearTimeout(t)});
+    const pb=el.querySelector('.kp');if(pb)pb.onclick=()=>{ins.keyFn(b+'c');render()}}
+  el.querySelector('.kv span').textContent=info;
+  const w=el.offsetWidth||170,h=el.offsetHeight||52;let x=r.left+r.width/2-st.left-w/2,y=r.top-st.top-h-8;if(y<4)y=r.bottom-st.top+8;
+  el.style.left=clamp(x,4,st.width-w-4)+'px';el.style.top=clamp(y,4,st.height-h-4)+'px';el.hidden=false}
+RT.knobPad=()=>knobPad();
 function targetOf(e){let t=e.target;if(t&&t.closest&&t.closest('[data-cab]')){const under=document.elementsFromPoint(e.clientX,e.clientY).find(el=>svg.contains(el)&&!el.closest('[data-cab]'));if(under)t=under}const el=t&&t.closest?t.closest('[data-k]'):null;return el||(e.type==='pointerdown'?nearControl(e):null)}
 let rep=null;const stopRep=()=>{clearTimeout(rep);clearInterval(rep);rep=null};
 let press=null;
 svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;closeMenu();let el=targetOf(e);const p=pt(e);
+  if(KPAD&&!(el&&knobOf(el)===KPAD)){KPAD=null;knobPad()}
   /* overview: controls, leads, parts and placing work right here; only a tap on a device body (or an idle node) zooms */
   /* empty desk (or an idle node in the overview): a drag pans, a tap does what it did (zoom onto the device under it) */
   if(BENCH.view==='ov'&&!S.armed&&!S.wireMode&&(!el||el.dataset.k.startsWith('node:'))){BENCH.panStart(e,()=>BENCH.ovClick(p));return}
@@ -501,6 +520,13 @@ svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;close
   if(k==='tb:del'){S.parts=S.parts.filter(q=>q.id!==S.sel);S.wires=S.wires.filter(w=>w.id!==S.sel);S.sel=null;circuitChanged();render();return}
   if(k.startsWith('node:')){const n=+k.slice(5);if(S.wireMode){if(S.wireStart==null)S.wireStart=n;else if(S.wireStart!==n){const pr=[0,2,6,8,4,1,3,5,7];const ha=freeHole(S.wireStart,pr),hb=freeHole(n,pr);if(ha!=null&&hb!=null){S.wires.push({id:RT.uid++,a:S.wireStart,b:n,ha,hb});circuitChanged()}S.wireStart=null}render();return}
     if(S.sel){S.sel=null;render(true)}return}
+  /* knobs on touch: drag on the knob (or its ring / arrows) to turn it one detent per ≈14 px; a tap on the knob shows big
+     ◀ ▶ buttons beside it with the value; the small arrows still step at once */
+  {const kb=knobOf(el);if(kb&&e.pointerType!=='mouse'){const tapKnob=k.startsWith('knob:')||(el.dataset.knob&&k.endsWith('c'));
+      if(!tapKnob){const ins=byPrefix[kb.split(':')[0]];ins.keyFn(k.slice(k.indexOf(':')+1));render()}
+      drag={kind:'knob',base:kb,x:p.x,y:p.y,sx:e.clientX,sy:e.clientY,acc:0,active:false,tap:tapKnob,push:k.endsWith('c')?k:null};svg.setPointerCapture(e.pointerId);return}
+    if(k.startsWith('knob:')){/* mouse on the knob body: nothing (the wheel and the arrows turn it) */return}}
+  if(k.startsWith('knob:'))return;
   const inst=byPrefix[k.split(':')[0]];if(!inst)return;const kk=k.slice(k.indexOf(':')+1);inst.keyFn(kk);render();
   /* hold a knob arrow to keep turning */
   if(/[+-]$/.test(kk)){stopRep();rep=setTimeout(()=>{rep=setInterval(()=>{inst.keyFn(kk);render()},70)},380)}
@@ -510,8 +536,12 @@ svg.addEventListener('pointermove',e=>{if(press&&Math.hypot(e.clientX-press.x,e.
   const p=pt(e);drag.x=p.x;drag.y=p.y;if(!drag.active&&Math.hypot(p.x-drag.sx,p.y-drag.sy)>6){drag.active=true;if(drag.kind==='move')RT.S.sel=null}
   /* the head snaps into the nearest compatible free jack as it comes close */
   if(drag.active&&drag.kind==='head'){let best=null,bd=56;GROUPS.forEach(g=>{if(!fitsJ(drag.id,g)||!(jackFree(g)||plIn(g)===drag.id))return;const a=jackAt(g),d=Math.hypot(p.x-a.x,p.y-a.y);if(d<bd){bd=d;best=g}});drag.snap=best}
+  if(drag.kind==='knob'){const dx=e.clientX-drag.sx,dy=e.clientY-drag.sy;if(!drag.active&&Math.hypot(dx,dy)>8){drag.active=true;stopRep()}
+    if(drag.active){const d=Math.abs(dx)>=Math.abs(dy)?dx:-dy,n=Math.trunc(d/14)-drag.acc;if(n){const ins=byPrefix[drag.base.split(':')[0]],b=drag.base.slice(drag.base.indexOf(':')+1);
+      for(let i=0;i<Math.abs(n);i++)ins.keyFn(b+(n>0?'+':'-'));drag.acc+=n;tick(drag.base);render()}}return}
   if(drag.active&&drag.kind==='inst'){moveInst(drag.key,drag.ox+p.x-drag.sx,drag.oy+p.y-drag.sy);return}if(drag.active)render(true)});
 function endDrag(){stopRep();if(press){clearTimeout(press.t);press=null}const S=RT.S;if(!drag)return;if(drag.fromTray&&Math.hypot(drag.x-drag.sx,drag.y-drag.sy)<8){S.armed=drag.type;drag=null;BENCH.drawerSync();render(true);return}const d=drag;drag=null;svg.classList.remove('grabbing');
+  if(d.kind==='knob'){if(!d.active&&d.tap){KPAD=KPAD===d.base?null:d.base;render(true)}return}
   if(d.kind==='inst'){showHL(null);if(d.active){savePos();BENCH.layoutChanged(false,d.key)}return}
   if(d.kind==='new'||d.kind==='move'){
     if(d.kind==='move'&&!d.active){S.sel=S.sel===d.id?null:d.id;render(true);return}
@@ -536,7 +566,7 @@ svg.addEventListener('pointerleave',()=>{stopRep();if(!drag)showHL(null)});
 svg.addEventListener('contextmenu',e=>{e.preventDefault();const w=e.target.closest&&e.target.closest('[data-k^="wire:"]');if(w)openMenu(+w.dataset.k.slice(5),e.clientX,e.clientY)});
 const WHEEL=INST.filter(i=>i.wheel&&i.wheel.length).map(i=>`${i.prefix}:(${i.wheel.join('|')})`);
 const wheelRe=new RegExp(`^(${WHEEL.join('|')})[c+-]?$`);
-svg.addEventListener('wheel',e=>{const el=targetOf(e);if(!el)return;const k=el.dataset.k;const m=k.match(wheelRe);if(!m)return;e.preventDefault();const base=m[1];const dir=e.deltaY<0?'+':'-';
+svg.addEventListener('wheel',e=>{const el=targetOf(e);if(!el)return;const k=el.dataset.k.startsWith('knob:')?el.dataset.k.slice(5):el.dataset.k;const m=k.match(wheelRe);if(!m)return;e.preventDefault();const base=m[1];const dir=e.deltaY<0?'+':'-';
   const inst=byPrefix[base.split(':')[0]];inst.keyFn(base.slice(base.indexOf(':')+1)+dir);render()},{passive:false});
 
 /* white outline on the control the pointer / finger is over */

@@ -89,7 +89,7 @@ function screenInner(){const sc=RT.S.sc;let s=`<rect x="12" y="26" width="336" h
     s+=T(156,244,'VARIABLE to move · Select to choose',{size:7.5,fill:'#9fd',a:'middle'})}
   if(sc.msg)s+=`<rect x="100" y="132" width="160" height="28" rx="5" fill="#1d3a40" stroke="${CH2}"/>`+T(180,150,sc.msg,{size:10,fill:'#fff',a:'middle',w:600});
   return s}
-function sKnob(cx,cy,r,col,key,label,val,center){let s=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="#c9d1d5" stroke="${col}" stroke-width="3" ${center?`data-k="${key}c" style="cursor:pointer"`:''}/><line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy-r+3}" stroke="#55646a" stroke-width="2" pointer-events="none"/>`;
+function sKnob(cx,cy,r,col,key,label,val,center){let s=`<circle cx="${cx}" cy="${cy}" r="${r*1.7}" fill="transparent" data-k="knob:${key}" data-knob="${key}"${center?' data-push="1"':''}/><circle cx="${cx}" cy="${cy}" r="${r}" fill="#c9d1d5" stroke="${col}" stroke-width="3" ${center?`data-k="${key}c" style="cursor:pointer"`:`data-k="knob:${key}"`} data-knob="${key}"${center?' data-push="1"':''}/><line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy-r+3}" stroke="#55646a" stroke-width="2" pointer-events="none"/>`;
   s+=`<path d="M${cx-r-14} ${cy} l9 -7 v14 z" fill="#55646a"/><rect x="${cx-r-18}" y="${cy-11}" width="16" height="22" fill="transparent" data-k="${key}-" style="cursor:pointer"/>`;
   s+=`<path d="M${cx+r+14} ${cy} l-9 -7 v14 z" fill="#55646a"/><rect x="${cx+r+2}" y="${cy-11}" width="16" height="22" fill="transparent" data-k="${key}+" style="cursor:pointer"/>`;
   s+=T(cx,cy+r+11,label,{size:7.5,fill:'#3b4a50',a:'middle'});if(val)s+=T(cx,cy+r+21,val,{size:8.5,fill:'#1d2a2e',a:'middle',w:600});return s}
@@ -195,6 +195,11 @@ return {key:'sc',prefix:'s',bnc:SC_BNC,size:[W,H],
     (sd||[]).forEach((l,i)=>{if(l)items.push({label:one(l),key:'S'+i,side:true})});(b||[]).forEach((l,i)=>{if(l)items.push({label:one(l),key:'B'+i})});
     items.push({label:'✕ Menu Off',key:'MOFF'});const nm={measure:'Measure',acquire:'Acquire',display:'Display',cursor:'Cursor',trig:'Trigger',utility:'Utility'}[sc.menu]||(sc.menu||'').toUpperCase();
     return {rect:scr,title:nm+(sc.side?' · '+{add:'Add Measurement',rem:'Remove Measurement',xy:'XY'}[sc.side]:''),items}},
+  /* the value shown beside a knob that is being turned on touch */
+  knobInfo(b){const sc=RT.S.sc;if(!sc.pwr)return 'OFF';let m;
+    if(b==='VAR'){if(sc.list){const it=listItems();return it[sc.list.idx]||''}return 'VARIABLE'}
+    if((m=b.match(/^V([1-4])$/)))return `CH${m[1]} ${fmtV(sc.ch[m[1]-1].vd)}/div`;if((m=b.match(/^P([1-4])P$/)))return `CH${m[1]} pos ${fmtV(sc.ch[m[1]-1].pos*sc.ch[m[1]-1].vd)}`;
+    if(b==='H')return fmtTd(sc.td)+'/div';if(b==='HP')return 'H pos';if(b==='LV')return 'Level '+fmtV(sc.trig.level);return b},
   fresh,scNew,chNew,svg:scopeSVG,screenInner,dsig,chVDS,flash,autoset,keyFn:scKey,
   wheel:['P1P','P2P','P3P','P4P','V1','V2','V3','V4','HP','H','VAR','LV']};
 };

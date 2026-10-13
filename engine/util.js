@@ -18,7 +18,7 @@ const ENGINE={};
 const EXP_DEFS={};
 const BOOT={};
 /* knob drawn as in the approved prototype: ◂ ▸ arrows (tap / hold / mouse wheel) around a dial */
-ENGINE.knob=function(cx,cy,r,col,key,label,val,o={}){const ang=o.ang||0;let s=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${o.fill||'#c9d1d5'}" stroke="${col}" stroke-width="3"/><line x1="${cx}" y1="${cy}" x2="${cx+Math.sin(ang)*(r-3)}" y2="${cy-Math.cos(ang)*(r-3)}" stroke="#55646a" stroke-width="2" pointer-events="none"/>`;
+ENGINE.knob=function(cx,cy,r,col,key,label,val,o={}){const ang=o.ang||0;let s=`<circle cx="${cx}" cy="${cy}" r="${r*1.7}" fill="transparent" data-k="knob:${key}" data-knob="${key}"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="${o.fill||'#c9d1d5'}" stroke="${col}" stroke-width="3" data-k="knob:${key}" data-knob="${key}"/><line x1="${cx}" y1="${cy}" x2="${cx+Math.sin(ang)*(r-3)}" y2="${cy-Math.cos(ang)*(r-3)}" stroke="#55646a" stroke-width="2" pointer-events="none"/>`;
   s+=`<path d="M${cx-r-14} ${cy} l9 -7 v14 z" fill="#55646a"/><rect x="${cx-r-18}" y="${cy-11}" width="16" height="22" fill="transparent" data-k="${key}-" style="cursor:pointer"/>`;
   s+=`<path d="M${cx+r+14} ${cy} l-9 -7 v14 z" fill="#55646a"/><rect x="${cx+r+2}" y="${cy-11}" width="16" height="22" fill="transparent" data-k="${key}+" style="cursor:pointer"/>`;
   if(label)s+=T(cx,cy+r+12,label,{size:8,fill:o.lc||'#3b4a50',a:'middle'});if(val!=null)s+=T(cx,cy+r+23,val,{size:9,fill:'#1d2a2e',a:'middle',w:600});return s};

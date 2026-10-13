@@ -118,6 +118,12 @@ Updated after every finished item (commit + push each time).
   - Pinch still goes closer.
   - Tests: gestures (near-tap, list rows, picking), instruments (zoom fill > 95 %), full phone regression.
 
+- **P2b · Knobs on touch** (the owner's correction: VARIABLE and every rotary knob)
+  - A finger drag on a knob (or the grab ring around it, or its arrows) turns it one detent per 14 px: right / up = +. A tick flash shows each detent.
+  - A tap on a knob shows two big ◀ ▶ buttons beside it (48×44 px, press-and-hold repeats) with the live value («L 5.50 V», «CH1 200mV/div», the list item under VARIABLE…), and ● for push knobs. A tap elsewhere hides them.
+  - This works in the overview, in device zoom and while pinch-zoomed. On desktop the wheel also turns a knob from its body.
+  - Covers the scope (VARIABLE, VOLTS/DIV, TIME/DIV, POSITION, LEVEL), the generator knob, the supply COARSE / FINE / CURRENT knobs and the decade boxes.
+
 ## In progress
 - P3 · Moved instrument on top, settles off the board / tray, bigger ✥ on phones.
 

@@ -413,3 +413,12 @@ bdi{unicode-bidi:isolate}
 .tmenu button{min-height:44px;border:1px solid #2c5560;background:#16303a;color:#eaf8f9;border-radius:9px;font:600 14px/1.2 var(--f-mono),monospace;text-align:left;padding:8px 12px;cursor:pointer}
 .tmenu button.sd{border-color:#3fd3d8}.tmenu button.on{background:#3fd3d8;color:#05202a}
 #benchView.devzoom #Ldyn [data-k^="mv:"]{display:none}
+
+/* knob pad on touch: two big − / + buttons beside the active knob, its value between them */
+.kpad{position:absolute;z-index:9;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.97);border:1px solid var(--line);border-radius:14px;padding:5px;box-shadow:0 8px 24px rgba(20,30,28,.22);touch-action:none;user-select:none;-webkit-user-select:none}
+.kpad[hidden]{display:none}
+.kpad .kb{width:48px;height:44px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-size:18px;cursor:pointer;touch-action:none}
+.kpad .kb:active{filter:brightness(.9)}
+.kpad .kv{display:flex;align-items:center;gap:6px;min-width:64px;justify-content:center;font:600 13px var(--f-mono),monospace;color:var(--ink);white-space:nowrap;padding:0 4px}
+.kpad .kp{width:40px;height:40px;border-radius:50%;border:2px solid var(--accent);background:#fff;color:var(--accent);font-size:16px;cursor:pointer}
+#bench circle.ktick{stroke:#2c7a6b!important;stroke-width:5!important;transition:stroke-width .12s}

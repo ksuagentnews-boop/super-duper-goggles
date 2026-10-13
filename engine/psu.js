@@ -52,6 +52,7 @@ function key(k){const d=RT.S.psu;
 const LEADS=[{k:'Lm',label:'L −',t:TERM[0].m},{k:'Lp',label:'L +',t:TERM[0].p},{k:'Rm',label:'R −',t:TERM[1].m},{k:'Rp',label:'R +',t:TERM[1].p}];
 return {key:'psu',prefix:'p',size:[W,H],fresh,svg,keyFn:key,
   wheel:['LVC','LVF','LI','RVC','RVF','RI'],
+  knobInfo:b=>{const U=RT.S.psu.u[b[0]==='L'?0:1];return (b[0]==='L'?'L ':'R ')+(b.endsWith('I')?U.ilim.toFixed(3)+' A':U.v.toFixed(2)+' V')},
   leads:LEADS.map(l=>({k:l.k,label:l.label,from:abs(l.t),banana:true,pol:l.k.endsWith('m')?'-':'+',tray:`DC ${l.k.endsWith('m')?'−':'+'} (${l.k[0]})`,jn:l.label})),
   cables:D=>LEADS.map(l=>D.banana(abs(l.t),l.k)).join(''),
   /* each unit is a floating source between its + and − terminals (output resistance 20 mΩ) */

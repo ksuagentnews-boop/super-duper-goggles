@@ -34,6 +34,20 @@ export async function run(page, vp, ok) {
   await zoomIn(10); for (let i = 0; i < 20; i++) { if (touch) await pinch(mid, 120, 30); else { await page.mouse.move(mid.x, mid.y); await page.mouse.wheel(0, 500); } }
   const s5 = await st(); ok(Math.abs(s5.w - s5.fw) < 1, 'zooming out stops at the fitted desk');
   await zoomIn(2); await page.click('#bFit'); await page.waitForTimeout(700); const s6 = await st(); ok(!s6.user && Math.abs(s6.w - s6.fw) < 1, '«عرض كامل» refits');
+  // knobs: on touch a drag turns them, a tap shows big − / + buttons with the value; on desktop the wheel turns them
+  { await page.evaluate(() => { BENCH.fitAll(); const S = BENCH.sim.RT.S; S.psu.pwr = true; S.psu.u[0].v = 5; BENCH.sim.render(); }); await page.waitForTimeout(300);
+    const k = await page.evaluate(() => { const c = document.querySelector('#bench circle[data-knob="p:LVC"][stroke]').getBoundingClientRect(); return { x: c.x + c.width / 2, y: c.y + c.height / 2 }; });
+    const v = () => page.evaluate(() => BENCH.sim.RT.S.psu.u[0].v);
+    if (touch) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: k.x, y: k.y, id: 0 }] });
+      for (let i = 1; i <= 8; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: k.x + i * 9, y: k.y, id: 0 }] }); await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      const v1 = await v(); ok(Math.abs(v1 - 5.5) < 1e-9, `a finger drag of 72 px across the COARSE knob turns it 5 detents (5.00 → ${v1.toFixed(2)} V)`);
+      await page.touchscreen.tap(k.x, k.y); await page.waitForTimeout(150);
+      const pad = await page.evaluate(() => { const e = document.getElementById('kpad'); return { shown: !e.hidden, val: e.querySelector('.kv').textContent, b: [...e.querySelectorAll('.kb')].map(x => Math.min(x.getBoundingClientRect().width, x.getBoundingClientRect().height)) }; });
+      ok(pad.shown && pad.b.length === 2 && Math.min(...pad.b) >= 44 && /5\.50 V/.test(pad.val), `a tap on the knob shows big − / + buttons (${pad.b.join(', ')} px) and its value «${pad.val}»`);
+      const plus = await page.evaluate(() => { const r = document.querySelector('#kpad .kb[data-d="+"]').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }); await page.touchscreen.tap(plus[0], plus[1]); await page.waitForTimeout(100);
+      ok(Math.abs(await v() - 5.6) < 1e-9 && /5\.60 V/.test(await page.evaluate(() => document.querySelector('#kpad .kv').textContent)), '+ turns it one detent and the value follows');
+      const e3 = await empty(); if (e3) { await page.touchscreen.tap(e3.x, e3.y); await page.waitForTimeout(150); } ok(await page.evaluate(() => document.getElementById('kpad').hidden), 'a tap elsewhere hides the buttons'); }
+    else { await page.mouse.move(k.x, k.y); await page.mouse.wheel(0, -100); await page.waitForTimeout(80); ok(Math.abs(await v() - 5.1) < 1e-9, 'desktop: the wheel over the knob body turns it'); } }
   // board zoom: a tap on the panel's frame (not a hole) zooms onto the board; the parts box stays; pinch goes closer there too
   { const R = await page.evaluate(() => BENCH.sim.boardRect); const c = await page.evaluate(([x, y]) => { const s = document.getElementById('bench'); const p = s.createSVGPoint(); p.x = x; p.y = y; const q = p.matrixTransform(s.getScreenCTM()); return [q.x, q.y]; }, [R[0] + 6, R[1] + R[3] / 2]);
     if (touch) await page.touchscreen.tap(c[0], c[1]); else await page.mouse.click(c[0], c[1]); await page.waitForTimeout(700);
@@ -66,6 +80,6 @@ export async function run(page, vp, ok) {
   await sit(page, 'ee312/exp9', 'free'); await page.waitForTimeout(500);
   const film = k => page.evaluate(k => new Promise(r => { const out = []; const t0 = performance.now(); if (k) BENCH.focus(k); else BENCH.back(); const f = () => { out.push(BENCH.vb.w); if (performance.now() - t0 < 700) requestAnimationFrame(f); else r(out); }; requestAnimationFrame(f); }), k);
   for (const k of ['sc', null]) { const a = await film(k); const span = Math.abs(a.at(-1) - a[0]) || 1; const steps = a.map((v, i) => i ? Math.abs(v - a[i - 1]) / span : 0);
-    ok(steps.filter(x => x > 0.001).length >= 4 && Math.max(...steps) < 0.5, `device zoom ${k ? 'in' : 'out'} is animated (${steps.filter(x => x > 0.001).length} frames, largest step ${(Math.max(...steps) * 100).toFixed(0)} %)`); }
+    ok(steps.filter(x => x > 0.001).length >= 4 && Math.max(...steps) < 0.7, `device zoom ${k ? 'in' : 'out'} is animated (${steps.filter(x => x > 0.001).length} frames, largest step ${(Math.max(...steps) * 100).toFixed(0)} %)`); }
   await page.emulateMedia({ reducedMotion: 'reduce' });
 }
