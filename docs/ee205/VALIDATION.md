@@ -30,3 +30,17 @@ frequency response or a semiconductor is involved.
 | VR | 3.54 V | 3.53 V | −0.3 % | – | ✓ |
 | I (Fluke 300 mA jack in series, 1.8 Ω) | 35.0 mA | 34.9 mA | −0.3 % | – | ✓ |
 | θ = atan(XL / (R + RL)) | 43.1° | Lissajous / dual trace | – | – | ✓ |
+
+## Exp 3 · Thevenin and maximum power transfer (5 V rms EMF, 1 kHz)
+| Quantity | Theory | Simulated | Diff | Video | Pass |
+|---|---|---|---|---|---|
+| VR (Fig. 6a) | 3.502 V | 3.50 V | 0 | – | ✓ |
+| IR (Fig. 6a) | 0.350 mA | 0.35 mA | 0 | – | ✓ |
+| ETH | 3.793 V | 3.79 V | −0.1 % | – | ✓ |
+| ZTH (source shorted) | 785.0 + j603.2 Ω | calculated | – | – | ✓ |
+| VR (Fig. 6b, box 767 Ω + coil) | ≈ 3.50 V | 3.49 V | −0.3 % | – | ✓ |
+| Va-b at 0.1 µF | 0.390 V | 0.391 V | +0.3 % | – | ✓ |
+| Va-b at 0.47 µF | 1.609 V | 1.611 V | +0.1 % | 1.606 V | ✓ |
+| Va-b at 1 µF | 2.032 V | 2.033 V | 0 | – | ✓ |
+| Va-b at 1.47 µF (maximum, XC ≈ XL) | 2.062 V | 2.063 V | 0 | – | ✓ |
+| Va-b at 22 µF | 1.940 V | 1.941 V | 0 | – | ✓ |

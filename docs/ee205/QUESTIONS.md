@@ -20,3 +20,10 @@ Small gaps resolved while building (the manual always wins; videos only for look
 - The current of Procedure III is measured by putting the Fluke (A~, 300 mA jack) in place of a bridging plug between the generator and the coil.
 - The decade box of the equipment list stands on the table; no step of the procedures uses it.
 - On the HM 203-7, DUAL and ADD pressed together give CHOP; the ADD step asks to release DUAL first.
+
+## Exp 3
+- "5 V" is 5 V rms of the generator (AMPL = 14.14 Vpp): with it Va-b at 0.47 µF is 1.61 V, the video's 1.606 V.
+- ZTH "by shorting the supply" is calculated; the generator's 50 Ω may be included or not (both graded right).
+- Fig. 6b's ZTH is built as the decade box (real part − RL ≈ 767 Ω) in series with the same iron-core coil.
+- The 4.7 µF and 22 µF capacitors are treated as non-polar (ac across them).
+- Two yellow-holster Fluke 77s as on the table photo: M1 voltmeter, M2 ammeter (A~, 300 mA jack in place of a plug).
