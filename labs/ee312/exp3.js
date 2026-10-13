@@ -21,7 +21,7 @@ const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
   <div>${H.row('VZ used =',H.num('q5z','0.01'),'V')}${H.row('VD used =',H.num('q5d','0.01'),'V')}</div></li>
 <li class="plq">Procedure B: equivalent circuit for V<sub>O−</sub>.
   <div>${H.sel('q6',[['a','D1 forward (VD1) in series with D2 in breakdown (VZ2); VO− = −(VD1 + VZ2)'],['b','D1 in breakdown, D2 forward; VO− = −(VZ1 + VD2)'],['c','VO− = −VZ2 only'],['d','VO− = −(VD1 + VD2)']])}</div></li></ol>`;
-return {
+return {procs:[{id:'A',title:'Antiparallel-diode double limiter: Fig. 3.4a'},{id:'B',title:'Double-anode Zener limiter: Fig. 3.4b'}],
 sheet:`<div class="paper" id="paper">
 <h2>Experiment 3 · Limiting Circuits</h2>
 <div class="figbox" style="padding:8px"><img class="figimg" src="labs/ee312/fig/fig3-4.png" alt="Fig. 3.4"></div>
@@ -86,12 +86,12 @@ setup(RT){
     if(!c.a(amp))pr.push(`السعة لازم ${amp} Vpp`);if(!c.vd(vd))pr.push(`SCALE القناتين ${vd>=1?vd+' V':vd*1000+' mV'}/div`);if(c.xy!==xy)pr.push(xy?'لازم Triggered XY':'لازم YT');if(!c.probe1)pr.push('Probe 1X و Coupling DC');if(!c.fit)pr.push('الموجة مو واضحة على الشاشة');
     return [!pr.length,pr.join('، ')]};
   $('submit').addEventListener('click',()=>{const g=G.grader(),v=G.v;
-    g.add(G.near(v('a_vop'),L.A15.max,0.03),'A · VO+ (1.5 Vpp)',`≈ ${L.A15.max.toFixed(2)} V`);g.add(G.near(v('a_vom'),L.A4.min,0.03),'A · VO− (4 Vpp)',`≈ ${L.A4.min.toFixed(2)} V`);
-    [['f36a','A',4,0.5,false,'Fig. 3.6a'],['f36b','A',4,0.5,true,'Fig. 3.6b'],['f37a','B',15,2,false,'Fig. 3.7a'],['f37b','B',15,2,true,'Fig. 3.7b']].forEach(([id,k,a,vd,xy,t])=>{const [ok,w]=capOK(id,k,a,vd,xy);g.add(ok,t,w)});
-    g.add(G.near(v('b_vop'),L.B15.max,0.05),'B · VO+ (15 Vpp)',`≈ ${L.B15.max.toFixed(2)} V`);g.add(G.near(v('b_vom'),L.B15.min,0.05),'B · VO− (15 Vpp)',`≈ ${L.B15.min.toFixed(2)} V`);
-    g.add(G.s('q1')==='a','PLQ 1','no diode conducts at ±0.25 V');g.add(G.s('q2')==='a','PLQ 2 circuit','D1 ON, VO+ = VD1');g.add(G.near(v('q2v'),v('a_vop'),0.06),'PLQ 2 VD1','≈ your VO+');
+    g.proc('A');g.add(G.near(v('a_vop'),L.A15.max,0.03),'A · VO+ (1.5 Vpp)',`≈ ${L.A15.max.toFixed(2)} V`);g.add(G.near(v('a_vom'),L.A4.min,0.03),'A · VO− (4 Vpp)',`≈ ${L.A4.min.toFixed(2)} V`);
+    [['f36a','A',4,0.5,false,'Fig. 3.6a'],['f36b','A',4,0.5,true,'Fig. 3.6b'],['f37a','B',15,2,false,'Fig. 3.7a'],['f37b','B',15,2,true,'Fig. 3.7b']].forEach(([id,k,a,vd,xy,t])=>{const [ok,w]=capOK(id,k,a,vd,xy);g.proc(k);g.add(ok,t,w)});
+    g.proc('B');g.add(G.near(v('b_vop'),L.B15.max,0.05),'B · VO+ (15 Vpp)',`≈ ${L.B15.max.toFixed(2)} V`);g.add(G.near(v('b_vom'),L.B15.min,0.05),'B · VO− (15 Vpp)',`≈ ${L.B15.min.toFixed(2)} V`);
+    g.proc('A');g.add(G.s('q1')==='a','PLQ 1','no diode conducts at ±0.25 V');g.add(G.s('q2')==='a','PLQ 2 circuit','D1 ON, VO+ = VD1');g.add(G.near(v('q2v'),v('a_vop'),0.06),'PLQ 2 VD1','≈ your VO+');
     g.add(G.s('q3')==='a','PLQ 3 circuit','VO− = −(VD2 + VD3)');g.add(G.near(v('q3v'),Math.abs(v('a_vom'))/2,0.06),'PLQ 3 VD','≈ |VO−| / 2');
-    g.add(G.s('q4')==='a','PLQ 4','±2 V < VZ + VD');g.add(G.s('q5')==='a','PLQ 5 circuit','VO+ = VZ1 + VD2');g.add(G.near(v('q5z')+v('q5d'),v('b_vop'),0.08)&&v('q5z')>4.5&&v('q5z')<5.3,'PLQ 5 VZ + VD','VZ ≈ 4.8–5 V, VD ≈ 0.65 V, sum ≈ your VO+');
+    g.proc('B');g.add(G.s('q4')==='a','PLQ 4','±2 V < VZ + VD');g.add(G.s('q5')==='a','PLQ 5 circuit','VO+ = VZ1 + VD2');g.add(G.near(v('q5z')+v('q5d'),v('b_vop'),0.08)&&v('q5z')>4.5&&v('q5z')<5.3,'PLQ 5 VZ + VD','VZ ≈ 4.8–5 V, VD ≈ 0.65 V, sum ≈ your VO+');
     g.add(G.s('q6')==='a','PLQ 6 circuit','VO− = −(VD1 + VZ2)');
     g.show($('result'))});
   return {status,

@@ -18,19 +18,19 @@ const t72=`<table class="tbl"><caption>Table 7.2 · V<sub>GS</sub> = V<sub>GS(TH
 <tr><th>I<sub>D</sub> = V<sub>RD</sub>/R<sub>D</sub> (mA)</th>${RDS.map((_,i)=>`<td>${H.num('c_id'+i,'0.001')}</td>`).join('')}</tr>
 <tr><th>V<sub>DS</sub> (V)</th>${RDS.map((_,i)=>`<td>${H.num('c_vds'+i,'0.001')}</td>`).join('')}</tr></table>`;
 const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
-<li class="plq">Plot i<sub>D</sub> (mA) vs. v<sub>DS</sub> (V) for each v<sub>GS</sub> (your Table 7.1). <button class="t" id="plotBtn" type="button">ارسم من جدولك</button><div id="ivplot"></div>
+<li class="plq" data-proc="B">Plot i<sub>D</sub> (mA) vs. v<sub>DS</sub> (V) for each v<sub>GS</sub> (your Table 7.1). <button class="t" id="plotBtn" type="button">ارسم من جدولك</button><div id="ivplot"></div>
   <div>${H.row('iii. Voltage-controlled current source region:',H.sel('q1c',[['sat','Saturation'],['tri','Triode'],['cut','Cutoff']]))}${H.row('iv. Voltage-controlled resistance region:',H.sel('q1d',[['sat','Saturation'],['tri','Triode'],['cut','Cutoff']]))}</div></li>
-<li class="plq">r<sub>o</sub> = Δv<sub>DS</sub>/Δi<sub>D</sub> between V<sub>DS1</sub> = 1.5 V and V<sub>DS2</sub> = 3 V, for each curve.
+<li class="plq" data-proc="B">r<sub>o</sub> = Δv<sub>DS</sub>/Δi<sub>D</sub> between V<sub>DS1</sub> = 1.5 V and V<sub>DS2</sub> = 3 V, for each curve.
   <div>${[1,2,3].map(k=>H.row(`r<sub>o</sub> (V<sub>GS${k}</sub>) =`,H.num('q2_'+k,'0.01'),'kΩ')).join('')}</div></li>
-<li class="plq">r<sub>DS</sub> = Δv<sub>DS</sub>/Δi<sub>D</sub> between V<sub>DS1</sub> = 0 V and V<sub>DS2</sub> = 0.05 V, for each curve.
+<li class="plq" data-proc="B">r<sub>DS</sub> = Δv<sub>DS</sub>/Δi<sub>D</sub> between V<sub>DS1</sub> = 0 V and V<sub>DS2</sub> = 0.05 V, for each curve.
   <div>${[1,2,3].map(k=>H.row(`r<sub>DS</sub> (V<sub>GS${k}</sub>) =`,H.num('q3_'+k,'0.1'),'Ω')).join('')}</div></li>
-<li class="plq">How do r<sub>o</sub> and r<sub>DS</sub> change with V<sub>OV</sub>?
+<li class="plq" data-proc="B">How do r<sub>o</sub> and r<sub>DS</sub> change with V<sub>OV</sub>?
   <div>${H.sel('q4',[['a','Both decrease as VOV increases (ro = 1/λID with a larger ID; rDS = 1/(kn′(W/L)VOV))'],['b','Both increase as VOV increases'],['c','ro increases, rDS decreases'],['d','Neither depends on VOV']])}</div></li>
 <li class="plq">Procedure C:
   <div>${H.row('i. Why does i<sub>D</sub> stay almost constant?',H.sel('q5a',[['a','In saturation iD is set by vGS (current source); vDS has only a weak effect through λ'],['b','The supply is in constant-current (CC) mode'],['c','RD is too small to matter'],['d','The MOSFET is cut off']]))}
   ${H.row('ii. R<sub>D(max)</sub> = (V<sub>DD</sub> − V<sub>OV</sub>) / I<sub>D</sub> =',H.num('q5b','1'),'Ω')}
   ${H.row('iii. Region beyond R<sub>D(max)</sub>:',H.sel('q5c',[['tri','Triode'],['sat','Saturation'],['cut','Cutoff']]))}</div></li></ol>`;
-return {
+return {procs:[{id:'A',title:'Threshold voltage V<sub>GS(TH)</sub>: Fig. 7.1a'},{id:'B',title:'i<sub>D</sub>–v<sub>DS</sub> curves: Fig. 7.1b (Table 7.1)'},{id:'C',title:'The MOSFET as a current source: Fig. 7.1c (Table 7.2)'}],
 sheet:`<div class="paper" id="paper">
 <h2>Experiment 7 · Terminal Characteristics of Enhancement N-MOSFET</h2>
 <div class="figbox" style="padding:8px"><img class="figimg" src="labs/ee312/fig/fig7-1.png" alt="Fig. 7.1"></div>
@@ -38,8 +38,8 @@ sheet:`<div class="paper" id="paper">
 <div class="check manual-only" id="live"></div>
 <div class="manual-only">
 <p class="exam-note">جهاز DMM واحد: انقل أطرافه بين R<sub>D</sub> (V<sub>RD</sub>) و D–S (V<sub>DS</sub>) و G–S (V<sub>GS</sub>). V<sub>GS</sub> في Procedure B و C تنحسب من V<sub>GS(TH)</sub> اللي قسته أنت.</p>
-${H.row('V<sub>GS(TH)</sub> =',H.num('a_vth','0.001'),'V')}
-${t71}${t72}${plq}
+<div data-proc="A">${H.row('V<sub>GS(TH)</sub> =',H.num('a_vth','0.001'),'V')}</div>
+<div data-proc="B">${t71}</div><div data-proc="C">${t72}</div>${plq}
 <div class="row" style="margin-top:12px"><button class="t on" id="submit">صحّح إجاباتي</button></div><div id="result"></div>
 </div></div>`,
 params:()=>({}),
@@ -90,17 +90,17 @@ setup(RT){
     $('ivplot').innerHTML=s+'</svg>'}
   $('plotBtn').addEventListener('click',plot);
   $('submit').addEventListener('click',()=>{const g=G.grader(),v=G.v;const tl=e=>Math.max(0.004,A(e)*0.004);
-    g.add(G.near(v('a_vth'),vthRef,0.01)&&ST.vth!=null&&G.near(v('a_vth'),ST.vth,0.004),'VGS(TH)',`≈ ${vthRef.toFixed(3)} V at VRD = 0.25 V`);
-    [1,2,3].forEach(k=>{const bad=[];VDS.forEach((vd,j)=>{const e=ST.b[k]&&ST.b[k][j];if(e==null){bad.push(`${vd} V: ما انقاس`);return}const x=A(v(`b${k}_${j}`));
+    g.proc('A');g.add(G.near(v('a_vth'),vthRef,0.01)&&ST.vth!=null&&G.near(v('a_vth'),ST.vth,0.004),'VGS(TH)',`≈ ${vthRef.toFixed(3)} V at VRD = 0.25 V`);
+    g.proc('B');[1,2,3].forEach(k=>{const bad=[];VDS.forEach((vd,j)=>{const e=ST.b[k]&&ST.b[k][j];if(e==null){bad.push(`${vd} V: ما انقاس`);return}const x=A(v(`b${k}_${j}`));
       /* with DMM 1 left on R_D, every reading seen while V_DS sat in this row's window counts */if(!(x>=e.lo-tl(e.lo)&&x<=e.hi+tl(e.hi)))bad.push(`${vd} V ≈ ${((e.lo+e.hi)/2).toFixed(3)}`)});
       g.add(!bad.length,`Table 7.1 · VGS${k}`,bad.slice(0,3).join('، ')+(bad.length>3?` … (+${bad.length-3})`:''))});
-    RDS.forEach(([,R],i)=>{const e=ST.c[i]||{};const ok=e.vrd!=null&&e.vds!=null&&G.near(v('c_vrd'+i),e.vrd,tl(e.vrd))&&G.near(v('c_vds'+i),e.vds,tl(e.vds))&&G.near(v('c_id'+i),v('c_vrd'+i)/R*1e3,Math.max(0.004,A(v('c_vrd'+i)/R*1e3)*0.004));
+    g.proc('C');RDS.forEach(([,R],i)=>{const e=ST.c[i]||{};const ok=e.vrd!=null&&e.vds!=null&&G.near(v('c_vrd'+i),e.vrd,tl(e.vrd))&&G.near(v('c_vds'+i),e.vds,tl(e.vds))&&G.near(v('c_id'+i),v('c_vrd'+i)/R*1e3,Math.max(0.004,A(v('c_vrd'+i)/R*1e3)*0.004));
       g.add(ok,`Table 7.2 · RD = ${R} Ω`,e.vrd!=null?`VRD ≈ ${e.vrd.toFixed(3)}, ID = VRD/RD, VDS ≈ ${e.vds!=null?e.vds.toFixed(3):'?'}`:'ما انقاس')});
-    g.add(G.s('q1c')==='sat'&&G.s('q1d')==='tri','PLQ 1','saturation = current source, triode = resistance');
+    g.proc('B');g.add(G.s('q1c')==='sat'&&G.s('q1d')==='tri','PLQ 1','saturation = current source, triode = resistance');
     [1,2,3].forEach(k=>{const id=j=>v(`b${k}_${j}`);const ro=(3-1.5)/(id(7)-id(6));const rds=0.05/(id(0)*1e-3);
       g.add(isFinite(ro)&&ro>0&&G.near(v('q2_'+k),ro,ro*0.03),`PLQ 2 ro (VGS${k})`,`= 1.5 V / (ID(3 V) − ID(1.5 V)) ≈ ${isFinite(ro)?ro.toFixed(2):'?'} kΩ`);
       g.add(isFinite(rds)&&G.near(v('q3_'+k),rds,rds*0.03),`PLQ 3 rDS (VGS${k})`,`= 0.05 V / ID(0.05 V) ≈ ${isFinite(rds)?rds.toFixed(1):'?'} Ω`)});
-    g.add(G.s('q4')==='a','PLQ 4');g.add(G.s('q5a')==='a','PLQ 5 i');
+    g.add(G.s('q4')==='a','PLQ 4');g.proc('C');g.add(G.s('q5a')==='a','PLQ 5 i');
     const idc=v('c_id0')*1e-3,rmax=(10-0.3)/idc;g.add(isFinite(rmax)&&G.near(v('q5b'),rmax,rmax*0.03),'PLQ 5 ii',`= (10 − 0.3) / ID ≈ ${isFinite(rmax)?rmax.toFixed(0):'?'} Ω`);
     g.add(G.s('q5c')==='tri','PLQ 5 iii','triode');
     g.show($('result'))});

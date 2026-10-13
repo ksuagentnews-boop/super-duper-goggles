@@ -25,7 +25,7 @@ const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
   <div>${H.sel('q5',[['a','v2 > v1 → the op amp saturates high (v6 ≈ VCC − 2 V while it sources current through 1 kΩ); D1 and the Zener D2 conduct, so vO ≈ VD1 + VZ2 ≈ 0.7 + 4.9 V'],['b','v6 = +15 V exactly and vO = +15 V'],['c','vO = VD3 + VD4 ≈ 1.4 V'],['d','vO = VZ2 only']])}</div></li>
 <li class="plq">Procedure B: justify the lower limiting levels of v<sub>6</sub>(t) and v<sub>O</sub>(t).
   <div>${H.sel('q6',[['a','v1 > v2 → the op amp saturates low (v6 ≈ VEE + 2.5 V while it sinks current); D3 and D4 conduct, so vO ≈ −(VD3 + VD4) ≈ −1.3 V'],['b','vO = −(0.7 + VZ2)'],['c','v6 = −15 V exactly and vO = −15 V'],['d','vO = 0 V because the diodes block']])}</div></li></ol>`;
-return {
+return {procs:[{id:'A',title:'Non-inverting amplifier: Fig. 5.4a'},{id:'B',title:'Comparator with limited output: Fig. 5.4b'}],
 sheet:`<div class="paper" id="paper">
 <h2>Experiment 5 · The Operational Amplifier as an Amplifier and a Comparator</h2>
 <div class="figbox" style="padding:8px"><img class="figimg" src="labs/ee312/fig/fig5-1.png" alt="Fig. 5.1" style="max-width:60%"></div>
@@ -35,16 +35,16 @@ sheet:`<div class="paper" id="paper">
 <div class="check manual-only" id="live"></div>
 <div class="manual-only">
 <p class="exam-note">⚠️ ±15 V: وحدة اليسار + و وحدة اليمين − على الأرضي، و R + على pin 7، و L − على pin 4. شغّل المصدر قبل الجنريتر، وطفّ الجنريتر قبل المصدر.</p>
-${H.cap('f55','Fig. 5.5')}
+<div data-proc="A">${H.cap('f55','Fig. 5.5')}
 <table class="tbl"><caption>Figure 5.5 (R<sub>2</sub> = 10 kΩ)</caption><tr><th>v<sub>I(pp)</sub></th><td>${H.num('a_vi','0.01')} V</td><th>G</th><td>${H.num('a_g','0.01')}</td></tr>
 <tr><th>v<sub>O(pp)</sub></th><td>${H.num('a_vo','0.01')} V</td><th></th><td></td></tr>
 <tr><th>BW</th><td>${H.num('a_bw','0.1')} kHz</td><th>G × BW</th><td>${H.num('a_gbw','0.1')} kHz</td></tr></table>
 ${H.cap('f56','Fig. 5.6')}
 <table class="tbl"><caption>Figure 5.6 (R<sub>2</sub> = 100 kΩ)</caption><tr><th></th><th>v<sub>I</sub></th><th>v<sub>O</sub></th></tr>
 <tr><th>Max.</th><td>${H.num('b_vix','0.01')} V</td><td>${H.num('b_vox','0.01')} V</td></tr><tr><th>Min.</th><td>${H.num('b_vin','0.01')} V</td><td>${H.num('b_von','0.01')} V</td></tr></table>
-${H.cap('f57','Fig. 5.7')}
+</div><div data-proc="B">${H.cap('f57','Fig. 5.7')}
 <table class="tbl"><caption>Figure 5.7</caption><tr><th></th><th>v<sub>6</sub></th><th>v<sub>O</sub></th></tr>
-<tr><th>Max.</th><td>${H.num('c_v6x','0.01')} V</td><td>${H.num('c_vox','0.01')} V</td></tr><tr><th>Min.</th><td>${H.num('c_v6n','0.01')} V</td><td>${H.num('c_von','0.01')} V</td></tr></table>
+<tr><th>Max.</th><td>${H.num('c_v6x','0.01')} V</td><td>${H.num('c_vox','0.01')} V</td></tr><tr><th>Min.</th><td>${H.num('c_v6n','0.01')} V</td><td>${H.num('c_von','0.01')} V</td></tr></table></div>
 ${plq}
 <div class="row" style="margin-top:12px"><button class="t on" id="submit">صحّح إجاباتي</button></div><div id="result"></div>
 </div></div>`,
@@ -115,18 +115,18 @@ setup(RT){
     if(!c.probe1)pr.push('Probe 1X، Invert OFF، Coupling DC');if(c.xy)pr.push('لازم YT');if(!(three?c.fit3:c.fit2))pr.push('الموجة مو واضحة/عدد الدورات مو مناسب');
     return [!pr.length,pr.join('، ')]};
   $('submit').addEventListener('click',()=>{const g=G.grader(),v=G.v;const R=refs();
-    [['f55','A10',[0.1,0.5],false,'Fig. 5.5'],['f56','A100',[0.1,5],false,'Fig. 5.6'],['f57','B',[null,null,2],true,'Fig. 5.7']].forEach(([id,k,vd,t3,t])=>{const [ok,w]=capOK(id,k,vd,t3);g.add(ok,t,w)});
-    g.add(G.near(v('a_vi'),0.4,0.01),'Fig. 5.5 vI(pp)','= 400 mV');g.add(G.near(v('a_vo'),R.a10.pp,0.04),'Fig. 5.5 vO(pp)',`≈ ${R.a10.pp.toFixed(2)} V`);
+    [['f55','A10',[0.1,0.5],false,'Fig. 5.5'],['f56','A100',[0.1,5],false,'Fig. 5.6'],['f57','B',[null,null,2],true,'Fig. 5.7']].forEach(([id,k,vd,t3,t])=>{const [ok,w]=capOK(id,k,vd,t3);g.proc(k==='B'?'B':'A');g.add(ok,t,w)});
+    g.proc('A');g.add(G.near(v('a_vi'),0.4,0.01),'Fig. 5.5 vI(pp)','= 400 mV');g.add(G.near(v('a_vo'),R.a10.pp,0.04),'Fig. 5.5 vO(pp)',`≈ ${R.a10.pp.toFixed(2)} V`);
     g.add(G.near(v('a_g'),v('a_vo')/v('a_vi'),0.06)&&G.near(v('a_g'),11,0.3),'Fig. 5.5 G','= vO(pp) / vI(pp) ≈ 11');
     g.add(G.near(v('a_bw'),R.bw/1e3,R.bw/1e3*0.08),'Fig. 5.5 BW',`≈ ${(R.bw/1e3).toFixed(1)} kHz (vO(pp) = 0.7 × its 1 kHz value)`);
     g.add(G.near(v('a_gbw'),v('a_g')*v('a_bw'),Math.abs(v('a_g')*v('a_bw'))*0.02+0.1),'Fig. 5.5 G × BW','= G × BW');
     g.add(G.near(v('b_vix'),0.2,0.01)&&G.near(v('b_vin'),-0.2,0.01),'Fig. 5.6 vI Max / Min','= ±0.2 V');
     g.add(G.near(v('b_vox'),R.a100.max,0.06)&&G.near(v('b_von'),R.a100.min,0.06),'Fig. 5.6 VO+ / VO−',`≈ ${R.a100.max.toFixed(2)} / ${R.a100.min.toFixed(2)} V`);
-    g.add(G.near(v('c_v6x'),R.v6.max,0.08)&&G.near(v('c_v6n'),R.v6.min,0.08),'Fig. 5.7 v6 Max / Min',`≈ ${R.v6.max.toFixed(2)} / ${R.v6.min.toFixed(2)} V`);
+    g.proc('B');g.add(G.near(v('c_v6x'),R.v6.max,0.08)&&G.near(v('c_v6n'),R.v6.min,0.08),'Fig. 5.7 v6 Max / Min',`≈ ${R.v6.max.toFixed(2)} / ${R.v6.min.toFixed(2)} V`);
     g.add(G.near(v('c_vox'),R.vo.max,0.05)&&G.near(v('c_von'),R.vo.min,0.05),'Fig. 5.7 vO Max / Min',`≈ ${R.vo.max.toFixed(2)} / ${R.vo.min.toFixed(2)} V`);
-    g.add(G.near(v('q1g'),11,0.01)&&G.s('q1c')==='a','PLQ 1','G = 1 + 10k/1k = 11; finite A');
+    g.proc('A');g.add(G.near(v('q1g'),11,0.01)&&G.s('q1c')==='a','PLQ 1','G = 1 + 10k/1k = 11; finite A');
     g.add(G.near(v('q2'),v('a_gbw'),Math.abs(v('a_gbw'))*0.02+0.1)&&v('q2')>0,'PLQ 2','= G × BW of Fig. 5.5');
-    g.add(G.s('q3a')==='a'&&G.s('q3b')==='a','PLQ 3','saturation ≈ 1 V inside the rails');g.add(G.s('q4')==='a','PLQ 4');g.add(G.s('q5')==='a','PLQ 5');g.add(G.s('q6')==='a','PLQ 6');
+    g.add(G.s('q3a')==='a'&&G.s('q3b')==='a','PLQ 3','saturation ≈ 1 V inside the rails');g.add(G.s('q4')==='a','PLQ 4');g.proc('B');g.add(G.s('q5')==='a','PLQ 5');g.add(G.s('q6')==='a','PLQ 6');
     g.show($('result'))});
   const vdIs=(s,k,v)=>Math.abs(s.vd[k]-v)<1e-9;
   return {status,

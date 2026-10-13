@@ -43,7 +43,7 @@ const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
   <div><img class="figimg" src="labs/ee312/fig/fig1-4.png" alt="Fig. 1.4" style="max-width:360px"></div>
   <div>${H.row('i. Number of series diodes =',H.num('q5n','1',70))}${H.row('Number of 1.5 V cells used =',H.num('q5b','1',70))}${H.row('ii. R<sub>S</sub> =',H.num('q5r','0.1'),'Ω')}
   ${H.row('iii. Final circuit:',H.sel('q5c',[['a','Cells in series → RS → node + ; the diodes in series from node + to ground, the load in parallel with the diodes'],['b','Diodes in series with the load, RS in parallel'],['c','RS in parallel with the load, diodes in series with the cells']]))}</div></li></ol>`;
-return {
+return {procs:[{id:'A',title:'Testing junction diodes with the DMM (Table 1.1)'},{id:'B',title:'The diode in a circuit: Fig. 1.3 (Table 1.2)'}],
 sheet:`<div class="paper" id="paper">
 <h2>Experiment 1 · Exploring and Testing Junction Diodes</h2>
 <div class="figbox" style="padding:10px;text-align:center"><img class="figimg" src="labs/ee312/fig/fig1-2.jpg" alt="Fig. 1.2" style="max-width:260px"></div>
@@ -108,9 +108,9 @@ setup(RT){
     st.ST=ST;return st}
   const G=ENGINE.sheet;
   $('submit').addEventListener('click',()=>{const g=G.grader(),v=G.v;
-    g.add(G.s('a_open')==='ovl','Table 1.1 open circuit','OVL.D');g.add(G.s('a_rev')==='ovl','Table 1.1 reverse-biased','OVL.D');
+    g.proc('A');g.add(G.s('a_open')==='ovl','Table 1.1 open circuit','OVL.D');g.add(G.s('a_rev')==='ovl','Table 1.1 reverse-biased','OVL.D');
     [['a_si','si','Rectifier'],['a_z','zener','Zener'],['a_led','led','LED'],['a_ge','ge','Germanium']].forEach(([id,m,t])=>g.add(G.near(v(id),EXP[m],0.006),`VF ${t}`,`≈ ${EXP[m].toFixed(3)} V`));
-    g.add(G.near(v('b_voc'),REF.voc,0.01),'VOC',`≈ ${REF.voc.toFixed(3)} V`);g.add(G.near(v('b_vrev'),REF.voc,0.01),'Vrev',`≈ ${REF.voc.toFixed(3)} V`);
+    g.proc('B');g.add(G.near(v('b_voc'),REF.voc,0.01),'VOC',`≈ ${REF.voc.toFixed(3)} V`);g.add(G.near(v('b_vrev'),REF.voc,0.01),'Vrev',`≈ ${REF.voc.toFixed(3)} V`);
     [['b_vd1','vd1','1'],['b_vd10','vd10','10'],['b_vd20','vd20','20']].forEach(([id,k,ma])=>g.add(G.near(v(id),REF[k],0.008),`VD @ ${ma} mA`,`≈ ${REF[k].toFixed(3)} V`));
     const d1=v('b_vd10')-v('b_vd1'),d2=v('b_vd20')-v('b_vd10');
     g.add(G.near(v('b_d1'),d1,0.002)&&G.near(v('b_d1'),REF.vd10-REF.vd1,0.015),'ΔVD 7→8',`= VD(10 mA) − VD(1 mA) ≈ ${(REF.vd10-REF.vd1).toFixed(3)} V`);
@@ -118,12 +118,12 @@ setup(RT){
     g.add(G.near(v('b_vdn'),REF.vd20,0.008),'VD no load',`= VD at 20 mA ≈ ${REF.vd20.toFixed(3)} V`);g.add(G.near(v('b_vdl'),REF.vdl,0.008),"VD′ with RL",`≈ ${REF.vdl.toFixed(3)} V`);
     const dv=v('b_vdl')-v('b_vdn');g.add(G.near(v('b_dvl'),dv,0.002)&&dv<0,'ΔVD (load)',`= VD′ − VD ≈ ${(REF.vdl-REF.vd20).toFixed(3)} V`);
     g.add(G.near(v('b_pct'),dv/v('b_vdn')*100,0.1),'% change',`≈ ${((REF.vdl-REF.vd20)/REF.vd20*100).toFixed(2)} %`);
-    g.add(G.s('q1')==='b','PLQ 1','Germanium < Rectifier < LED');g.add(G.s('q2')==='a','PLQ 2','VOC = Vrev = VDD');
+    g.proc('A');g.add(G.s('q1')==='b','PLQ 1','Germanium < Rectifier < LED');g.proc('B');g.add(G.s('q2')==='a','PLQ 2','VOC = Vrev = VDD');
     g.add(G.near(v('q3a'),d1,0.003),'PLQ 3 ΔVD 10→100 mA','one decade more current ≈ the same ΔVD as 1→10 mA');
     g.add(G.near(v('q3b'),d2,0.003),'PLQ 3 ΔVD 100→200 mA','doubling the current ≈ the same ΔVD as 10→20 mA');
     g.add(G.near(v('q3c'),v('b_vd10')+d1+d2,0.004),'PLQ 3 VD @ 200 mA','= VD(10 mA) + ΔVD(10→100) + ΔVD(100→200)');
     g.add(G.s('q4')==='a','PLQ 4','a forward-biased diode keeps its voltage nearly constant (a few % change)');
-    g.add(v('q5n')===3,'PLQ 5 i','3 diodes × 0.67 V ≈ 2 V');g.add(v('q5b')===2,'PLQ 5 cells','2 × 1.5 V = 3 V (the smallest battery above 2 V)');
+    g.proc(null);g.add(v('q5n')===3,'PLQ 5 i','3 diodes × 0.67 V ≈ 2 V');g.add(v('q5b')===2,'PLQ 5 cells','2 × 1.5 V = 3 V (the smallest battery above 2 V)');
     g.add(G.near(v('q5r'),(3-3*0.67)/0.02,1.5),'PLQ 5 ii RS','RS = (3 − 2.01) / (10 mA load + 10 mA diodes) ≈ 49.5 Ω');g.add(G.s('q5c')==='a','PLQ 5 iii');
     g.show($('result'))});
   return {status,

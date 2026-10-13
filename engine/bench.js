@@ -57,7 +57,7 @@ const BENCH={
     requestAnimationFrame(()=>{this.refit(false)});
   },
   leave(toHall){STATS.endSeat();this.setDrawer(false,true);this.el.view.hidden=true;if(toHall)HALL.resume();else HALL.standUp()},
-  register(sim){this.sim=sim;this.calcOv();
+  register(sim){this.sim=sim;this.procInit();this.calcOv();
     const bag=this.el.bag;bag.innerHTML='';
     sim.tray.forEach(({t,l})=>{const b=document.createElement('button');b.className='bag-item';b.dataset.t=t;b.innerHTML=sim.icon(t)+`<small>${l}</small>`;
       b.addEventListener('pointerdown',e=>{e.preventDefault();sim.trayDown(t,e)});b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sim.trayDown(t,{clientX:0,clientY:0,pointerId:0});}});bag.appendChild(b)});
@@ -126,6 +126,30 @@ const BENCH={
     const r=this.sim.regions[k],n=this.sim.names[k];const w=Math.max(n[0].length*9.2+40,150);
     this.hl.innerHTML=`<rect x="${r[0]}" y="${r[1]}" width="${r[2]}" height="${r[3]}" rx="16" fill="rgba(255,255,255,.14)" stroke="#fff" stroke-width="4" filter="url(#hlGlow)"/><rect x="${r[0]+r[2]/2-w/2}" y="${r[1]+r[3]-44}" width="${w}" height="34" rx="17" fill="#fff" stroke="#c9d3d0"/><text x="${r[0]+r[2]/2}" y="${r[1]+r[3]-21.5}" text-anchor="middle" font-size="16" font-weight="600" fill="#1e2a28">${n[0]} 🔍</text>`},
   say(m){const t=this.el.toast;t.textContent=m;t.classList.add('on');clearTimeout(this._tt);this._tt=setTimeout(()=>t.classList.remove('on'),1800)},
+  /* ---- procedures: every step belongs to the procedure named at its start ("Procedure A: …") until the next one;
+     Manual mode asks which procedures this term runs (all ticked); steps, sheet sections ([data-proc]) and grading
+     rows (grader.proc) of the others are left out ---- */
+  procInit(){const sim=this.sim,def=EXP_DEFS[this.exp]||{};const raw=sim.rawSteps||sim.steps;let cur=null;
+    raw.forEach(s=>{const m=/^\s*(?:<[^>]+>\s*)*Procedure\s+([A-Z]|[IVX]+)\b/.exec(s.t||'');if(m)cur=m[1];if(!s.proc)s.proc=cur});
+    const ids=[...new Set(raw.map(s=>s.proc).filter(Boolean))];
+    /* sheet: tables whose caption names a procedure and PLQs that start with "Procedure X" belong to it; PLQ numbers stay fixed */
+    const ph=this.el.paperHost;ph.querySelectorAll('ol').forEach(ol=>[...ol.children].forEach((li,i)=>{if(li.tagName==='LI'&&!li.hasAttribute('value'))li.value=i+1}));
+    ph.querySelectorAll('h3').forEach(h=>{const m=/^Procedure\s+([A-Z])\b/.exec(h.textContent.trim());if(!m||!ids.includes(m[1])||h.dataset.proc)return;h.dataset.proc=m[1];
+      for(let e=h.nextElementSibling;e&&!/^H[23]$/.test(e.tagName)&&!e.querySelector('#submit');e=e.nextElementSibling)if(!e.dataset.proc)e.dataset.proc=m[1]});
+    ph.querySelectorAll('table,li.plq').forEach(e=>{if(e.dataset.proc||e.closest('[data-proc]'))return;const t=(e.tagName==='TABLE'?(e.caption?e.caption.textContent:''):e.textContent.trim().slice(0,24))||'';
+      const m=(e.tagName==='TABLE'?/\bProcedure\s+([A-Z])\b/:/^Procedure\s+([A-Z])\b/).exec(t);if(m&&ids.includes(m[1]))e.dataset.proc=m[1]});
+    this.procs=ids.map(id=>({id,title:((def.procs||[]).find(p=>p.id===id)||{}).title||''}));this.rawSteps=raw;this.procSel=new Set(ids);this.applyProcs();
+    const pp=$q('#procPick');pp.hidden=true;if(this.mode==='manual'&&ids.length>1)this.showProcPick()},
+  applyProcs(){const sim=this.sim,sel=this.procSel;const keep=this.rawSteps.filter(s=>!s.proc||sel.has(s.proc)).map(s=>({...s,lines:s.lines&&s.lines.slice()}));
+    sim.steps=sim.prep?sim.prep(keep):keep;this.done=[];
+    this.el.paperHost.querySelectorAll('[data-proc]').forEach(e=>e.classList.toggle('proc-off',!sel.has(e.dataset.proc)))},
+  showProcPick(){const pp=$q('#procPick'),list=$q('#ppList');
+    list.innerHTML=this.procs.map(p=>`<label class="pp-i"><input type="checkbox" value="${p.id}" ${this.procSel.has(p.id)?'checked':''}><b>Procedure&nbsp;${p.id}</b>${p.title?` <span dir="ltr">${p.title}</span>`:''}</label>`).join('');
+    BIDI.fix(list);const go=$q('#ppGo');const sync=()=>{go.disabled=!list.querySelector('input:checked')};list.onchange=sync;sync();
+    go.onclick=()=>{const sel=new Set([...list.querySelectorAll('input:checked')].map(i=>i.value));if(!sel.size)return;this.procSel=sel;pp.hidden=true;this.applyProcs();this.drawSteps();this.drawStepCard();this.onRender()};
+    pp.hidden=false},
+  procNext(a,b){const el=$q('#procNext');el.innerHTML=`<b>خلصت Procedure ${a}</b> ← ننتقل لـ Procedure ${b}`;BIDI.fix(el);el.hidden=false;el.classList.remove('on');void el.offsetWidth;el.classList.add('on');
+    clearTimeout(this._pn);this._pn=setTimeout(()=>{el.hidden=true},2600);el.onclick=()=>{el.hidden=true}},
   /* ---- practice stepper ---- */
   onRender(){if(!this.sim)return;this.drawerSync();if(this.mode!=='manual')return;
     const st=this.sim.status(),S=this.sim.steps;let just=-1;
@@ -133,11 +157,11 @@ const BENCH={
         /* a build step that ticks with one of its lines not matching the board means the lines are wrong (tests read this) */
         if(S[i].lines){const miss=S[i].lines.filter(l=>!this.sim.lineDone(l)).map(l=>l.t);if(miss.length)this.lineLog.push({step:i+1,miss})}}else break}
     this.drawSteps();this.drawStepCard();
-    if(just>=0){const all=this.done.filter(Boolean).length===S.length;if(all)STATS.done(this.exp);this.say(all?'🎉 خلصت كل خطوات التجربة':'✓ تمت الخطوة '+(just+1));const c=this.el.card;c.classList.remove('flash');void c.offsetWidth;c.classList.add('flash')}},
+    if(just>=0){const nx=S[this.cur()];if(nx&&S[just].proc&&nx.proc&&nx.proc!==S[just].proc)this.procNext(S[just].proc,nx.proc);const all=this.done.filter(Boolean).length===S.length;if(all)STATS.done(this.exp);this.say(all?'🎉 خلصت كل خطوات التجربة':'✓ تمت الخطوة '+(just+1));const c=this.el.card;c.classList.remove('flash');void c.offsetWidth;c.classList.add('flash')}},
   cur(){const S=this.sim.steps;for(let i=0;i<S.length;i++)if(!this.done[i])return i;return S.length},
   drawSteps(){const el=document.getElementById('live');if(!el)return;const S=this.sim.steps,c=this.cur(),n=this.done.filter(Boolean).length;
     el.innerHTML=`<div class="sh"><b>خطوات التجربة</b><span dir="ltr">${n} / ${S.length}</span></div><div class="prog"><i style="width:${n/S.length*100}%"></i></div>`+
-      S.map((s,i)=>`<div class="step ${this.done[i]?'done':i===c?'cur':'todo'}"><span class="m">${this.done[i]?'✓':i+1}</span><span class="x">${s.t}</span>${i===c?`<button class="eye" data-dev="${s.dev}">وريني</button>`:''}</div>`).join('');
+      S.map((s,i)=>(s.proc&&this.procs.length>1&&(i===0||S[i-1].proc!==s.proc)?`<div class="ph">Procedure ${s.proc}${((this.procs.find(p=>p.id===s.proc)||{}).title)?' · '+this.procs.find(p=>p.id===s.proc).title:''}</div>`:'')+`<div class="step ${this.done[i]?'done':i===c?'cur':'todo'}"><span class="m">${this.done[i]?'✓':i+1}</span><span class="x">${s.t}</span>${i===c?`<button class="eye" data-dev="${s.dev}">وريني</button>`:''}</div>`).join('');
     el.querySelectorAll('.eye').forEach(b=>b.onclick=()=>{this.focus(b.dataset.dev);if(BENCH.sheetOverlay())this.togglePanel(false)})},
   /* step card: header, text, for build steps one connection per line (ticks itself, the current one glows on the
      board), the manual figure beside it (tap → full screen); folded to one line by default on small screens */
@@ -152,7 +176,8 @@ const BENCH={
     const lines=L?`<ol class="wl">${L.map((l,j)=>`<li class="${done[j]?'ok':j===cur?'cur':''}"><span class="n">${CN[j]||j+1}</span><span class="lt"><bdi dir="ltr">${l.t}</bdi>${l.note?` <span class="nt">(${l.note})</span>`:''}</span>${done[j]?'<span class="tk">✓</span>':''}</li>`).join('')}</ol>`:'';
     const fig=s.fig?`<div class="sfig"><img class="figimg" src="${s.fig}" alt="${s.figCap||'Figure'}"><span>🔍</span></div>`:'';
     c.classList.toggle('has-lines',!!L);const h0=c.offsetHeight;
-    c.innerHTML=`<div class="num">${i+1}</div><div class="body"><div class="k">الخطوة ${i+1} من ${S.length}</div><div class="t">${s.t}</div>${lines}<div class="acts"><button class="go" id="scGo">وريني وين</button><button id="scAll">كل الخطوات</button></div></div>${fig}<button class="mini" id="scMin" aria-label="${min?'توسيع':'تصغير'}">${min?'▴':'▾'}</button>`;
+    const PS=s.proc?S.filter(x=>x.proc===s.proc):S,pi=PS.indexOf(s)+1;
+    c.innerHTML=`<div class="num">${pi}</div><div class="body"><div class="k">${s.proc&&this.procs.length>1?`Procedure ${s.proc} · `:''}الخطوة ${pi} من ${PS.length}</div><div class="t">${s.t}</div>${lines}<div class="acts"><button class="go" id="scGo">وريني وين</button><button id="scAll">كل الخطوات</button></div></div>${fig}<button class="mini" id="scMin" aria-label="${min?'توسيع':'تصغير'}">${min?'▴':'▾'}</button>`;
     BIDI.fix(c);{const wl=c.querySelector('.wl'),cl=wl&&wl.querySelector('li.cur');if(cl)wl.scrollTop=Math.max(0,cl.offsetTop-wl.offsetTop-30)}if(Math.abs(c.offsetHeight-h0)>8&&this.view)requestAnimationFrame(()=>this.refit(true));
     const small=()=>innerHeight<=500||innerWidth<=600;
     c.querySelector('#scGo').onclick=()=>{if(small()&&!c.classList.contains('min')){c.classList.add('min');c.dataset.key='';this.drawStepCard()}if(L){if(!here)this.focus('board');if(cur>=0)setTimeout(()=>this.sim.setGuide({...this.sim.lineSpots(L[cur]),flash:true}),reduceMotion?0:420)}else this.focus(s.dev)};

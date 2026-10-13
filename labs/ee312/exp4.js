@@ -9,12 +9,12 @@ EXP_DEFS['ee312/exp4']=(()=>{const H=ENGINE.sheet;
 /* Appendix D rectifier diodes (part, VRRM, IF(avg)) */
 const APPD=[['1N4001',50,1],['1N4002',100,1],['1N4003',200,1],['1N4004',400,1],['1S310',50,0.5],['1S311',100,0.5],['ERA3804',400,0.5],['1N5391',50,1.5],['1N5392',100,1.5],['1N5393',200,1.5],['BY296',100,2],['BY297',200,2],['BYV27-50',50,2],['BYV27-100',100,2],['1N5400',50,3],['1N5401',100,3],['1N5402',200,3],['1N4719',50,3],['1N4720',100,3],['1N4721',200,3],['MUR405',50,4],['MUR410',100,4],['MUR420',200,4],['1N3879',50,6],['1N3880',100,6],['1N3881',200,6],['1N3882',300,6],['MUR805',50,8],['MUR810',100,8],['1N1200',100,12],['1N1202',200,12],['1N1204',400,12]];
 const t41=`<table class="tbl"><caption>Table 4.1</caption><tr><th>Step</th><th colspan="2">Case</th><th>Output Voltage Ripple V<sub>r(pp)</sub></th></tr>
-<tr><td>17</td><td rowspan="3">No Voltage Regulator<br>Procedure A</td><td>C = 470 µF, R<sub>L</sub> = 4.7 kΩ</td><td>${H.num('r1','0.1')} mV</td></tr>
-<tr><td>18</td><td>C = 470 µF, R<sub>L</sub> = 270 Ω</td><td>${H.num('r2','0.1')} mV</td></tr>
-<tr><td>19</td><td>ΔV<sub>r(pp)</sub> =</td><td>${H.num('r3','0.1')} mV</td></tr>
-<tr><td>8</td><td rowspan="3">With Voltage Regulator<br>Procedure B</td><td>C = 470 µF, R<sub>L</sub> = 4.7 kΩ</td><td>${H.num('r4','0.1')} mV</td></tr>
-<tr><td>9</td><td>C = 470 µF, R<sub>L</sub> = 270 Ω</td><td>${H.num('r5','0.1')} mV</td></tr>
-<tr><td>10</td><td>ΔV<sub>r(pp)</sub> =</td><td>${H.num('r6','0.1')} mV</td></tr></table>`;
+<tr data-proc="A"><td>17</td><td rowspan="3">No Voltage Regulator<br>Procedure A</td><td>C = 470 µF, R<sub>L</sub> = 4.7 kΩ</td><td>${H.num('r1','0.1')} mV</td></tr>
+<tr data-proc="A"><td>18</td><td>C = 470 µF, R<sub>L</sub> = 270 Ω</td><td>${H.num('r2','0.1')} mV</td></tr>
+<tr data-proc="A"><td>19</td><td>ΔV<sub>r(pp)</sub> =</td><td>${H.num('r3','0.1')} mV</td></tr>
+<tr data-proc="B"><td>8</td><td rowspan="3">With Voltage Regulator<br>Procedure B</td><td>C = 470 µF, R<sub>L</sub> = 4.7 kΩ</td><td>${H.num('r4','0.1')} mV</td></tr>
+<tr data-proc="B"><td>9</td><td>C = 470 µF, R<sub>L</sub> = 270 Ω</td><td>${H.num('r5','0.1')} mV</td></tr>
+<tr data-proc="B"><td>10</td><td>ΔV<sub>r(pp)</sub> =</td><td>${H.num('r6','0.1')} mV</td></tr></table>`;
 const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
 <li class="plq">Procedure A: effect of removing D2? Name of the new circuit?
   <div>${H.sel('q1',[['a','vO keeps only one half-cycle of vS: a half-wave rectifier'],['b','vO becomes a pure dc: a voltage regulator'],['c','vO doubles: a voltage doubler'],['d','No change: still a full-wave rectifier']])}</div></li>
@@ -28,7 +28,7 @@ const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
   <div>${H.row('Your table number TN =',H.num('q5tn','1',60))}${H.row('a. V<sub>SM</sub> =',H.num('q5a','0.01'),'V')}${H.row('b. C (V<sub>r(pp)</sub> = 0.075 V<sub>SM</sub>) =',H.num('q5b','0.1'),'µF')}
   ${H.row('c. V<sub>RRM</sub> ≅ 4 V<sub>S(rms)</sub> =',H.num('q5c','0.1'),'V')}${H.row('d. I<sub>F(avg)</sub> = 1.5 i<sub>Dav</sub> =',H.num('q5d','0.001'),'A')}
   ${H.row('e. Diode from Appendix D:',H.sel('q5e',APPD.map(([p,v,i])=>[p,`${p} · ${v} V ${i} A`])))}</div></li></ol>`;
-return {
+return {procs:[{id:'A',title:'Center-tapped full-wave rectifier: Fig. 4.2'},{id:'B',title:'Zener shunt regulator: Fig. 4.3'}],
 sheet:`<div class="paper" id="paper">
 <h2>Experiment 4 · Rectifiers and Voltage Regulation</h2>
 <div class="figbox" style="padding:8px"><img class="figimg" src="labs/ee312/fig/fig4-2.png" alt="Fig. 4.2"></div>
@@ -38,7 +38,7 @@ sheet:`<div class="paper" id="paper">
 <div class="check manual-only" id="live"></div>
 <div class="manual-only">
 <p class="exam-note">⚠️ لا توصّل المحوّل بالكهرباء قبل ما يشيك المعيد على الدائرة. صوّر الشاشات في مكانها، وسجّل الـ ripple من قياس Pk-Pk لـ CH2 (AC).</p>
-${H.cap('f44','Fig. 4.4')}${H.cap('f45','Fig. 4.5')}${H.cap('f46','Fig. 4.6')}${H.cap('f47','Fig. 4.7')}${H.cap('f48','Fig. 4.8')}
+<div data-proc="A">${H.cap('f44','Fig. 4.4')}${H.cap('f45','Fig. 4.5')}${H.cap('f46','Fig. 4.6')}${H.cap('f47','Fig. 4.7')}</div><div data-proc="B">${H.cap('f48','Fig. 4.8')}</div>
 ${t41}${plq}
 <div class="row" style="margin-top:12px"><button class="t on" id="submit">صحّح إجاباتي</button></div><div id="result"></div>
 </div></div>`,
@@ -87,12 +87,12 @@ setup(RT){
     if(!c.probe)pr.push('Probe 1X و Invert OFF');if(c.cpl1!=='DC'||c.cpl2!==cpl2)pr.push(`Coupling: CH1 DC و CH2 ${cpl2}`);if(c.xy!==xy)pr.push(xy?'لازم XY':'لازم YT');if(v5&&!c.v5)pr.push('SCALE 5 V/div للقناتين');if(!c.fit)pr.push('الموجة مو واضحة/طالعة برا الشاشة');
     return [!pr.length,pr.join('، ')]};
   $('submit').addEventListener('click',()=>{const g=G.grader(),v=G.v;const R=refs();
-    [['f44',['fw'],false,true,'Fig. 4.4 full-wave'],['f45',['fw'],true,true,'Fig. 4.5 VTC'],['f46',['c10'],false,true,'Fig. 4.6 C = 10 µF'],['f47',['c470'],false,true,'Fig. 4.7 C = 470 µF'],['f48',['reg47'],false,false,'Fig. 4.8 regulator']].forEach(([id,c,xy,v5,t])=>{const [ok,w]=capOK(id,c,xy,v5);g.add(ok,t,w)});
+    [['f44',['fw'],false,true,'Fig. 4.4 full-wave'],['f45',['fw'],true,true,'Fig. 4.5 VTC'],['f46',['c10'],false,true,'Fig. 4.6 C = 10 µF'],['f47',['c470'],false,true,'Fig. 4.7 C = 470 µF'],['f48',['reg47'],false,false,'Fig. 4.8 regulator']].forEach(([id,c,xy,v5,t])=>{const [ok,w]=capOK(id,c,xy,v5);g.proc(id==='f48'?'B':'A');g.add(ok,t,w)});
     const rr={r1:ripple(R.c470),r2:ripple(R.c470b),r4:ripple(R.reg47),r5:ripple(R.reg270)};rr.r3=rr.r2-rr.r1;rr.r6=rr.r5-rr.r4;
-    [['r1','Vr(pp) 470 µF, 4.7 kΩ'],['r2','Vr(pp) 470 µF, 270 Ω'],['r4','Vr(pp) regulator, 4.7 kΩ'],['r5','Vr(pp) regulator, 270 Ω']].forEach(([id,t])=>g.add(G.near(v(id),rr[id],Math.max(0.6,rr[id]*0.06)),t,`≈ ${rr[id].toFixed(1)} mV`));
-    g.add(G.near(v('r3'),v('r2')-v('r1'),0.15),'ΔVr(pp) A','= Vr(270 Ω) − Vr(4.7 kΩ)');g.add(G.near(v('r6'),v('r5')-v('r4'),0.15),'ΔVr(pp) B','= Vr(270 Ω) − Vr(4.7 kΩ)');
-    g.add(G.s('q1')==='a','PLQ 1','half-wave rectifier');g.add(G.s('q2a')==='dec'&&G.s('q2b')==='inc','PLQ 2','bigger C → less ripple; smaller RL → more ripple');
-    g.add(G.s('q3')==='a','PLQ 3');g.add(G.s('q4')==='a','PLQ 4');
+    [['r1','Vr(pp) 470 µF, 4.7 kΩ'],['r2','Vr(pp) 470 µF, 270 Ω'],['r4','Vr(pp) regulator, 4.7 kΩ'],['r5','Vr(pp) regulator, 270 Ω']].forEach(([id,t])=>g.proc(id<'r4'?'A':'B').add(G.near(v(id),rr[id],Math.max(0.6,rr[id]*0.06)),t,`≈ ${rr[id].toFixed(1)} mV`));
+    g.proc('A').add(G.near(v('r3'),v('r2')-v('r1'),0.15),'ΔVr(pp) A','= Vr(270 Ω) − Vr(4.7 kΩ)');g.proc('B').add(G.near(v('r6'),v('r5')-v('r4'),0.15),'ΔVr(pp) B','= Vr(270 Ω) − Vr(4.7 kΩ)');
+    g.proc('A');g.add(G.s('q1')==='a','PLQ 1','half-wave rectifier');g.add(G.s('q2a')==='dec'&&G.s('q2b')==='inc','PLQ 2','bigger C → less ripple; smaller RL → more ripple');
+    g.proc('B');g.add(G.s('q3')==='a','PLQ 3');g.proc(null);g.add(G.s('q4')==='a','PLQ 4');
     const tn=v('q5tn'),IL=0.02*tn,VSM=15*Math.SQRT2,Vr=0.075*VSM,C=IL/(120*Vr)*1e6,iD=IL*(1+Math.PI*Math.sqrt(VSM/(2*Vr))),IF=1.5*iD,VRRM=60;
     g.add(tn>=1&&tn<=10&&Number.isInteger(tn),'PLQ 5 TN','your table number (1–10)');
     g.add(G.near(v('q5a'),VSM,0.02),'PLQ 5a VSM','= √2 × 15 ≈ 21.21 V');g.add(G.near(v('q5b'),C,C*0.02),'PLQ 5b C',`= IL / (120 · 0.075 VSM) ≈ ${C.toFixed(1)} µF`);

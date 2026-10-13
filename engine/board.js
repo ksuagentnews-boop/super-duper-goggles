@@ -522,7 +522,7 @@ BENCH.register({
   tray:def.tray.map(([t,l])=>({t,l})),
   icon:t=>t==='W'?'<svg viewBox="-34 -18 68 36"><path d="M-24 8 q24 -26 48 0" fill="none" stroke="#e0b000" stroke-width="5" stroke-linecap="round"/></svg>':`<svg viewBox="-36 -18 72 36">${partBody(t,40,false)}</svg>`,
   trayDown,isWire:()=>RT.S.wireMode,armed:()=>RT.S&&RT.S.armed,
-  status:X.status||(()=>({})),P:PX,steps:jackLines(X.steps||[]),
+  status:X.status||(()=>({})),P:PX,rawSteps:X.steps||[],steps:jackLines((X.steps||[]).map(s=>({...s,lines:s.lines&&s.lines.slice()}))),prep:jackLines,
   reset(){fresh();X.onReset&&X.onReset();render()},
   render:()=>render(),RT,resetLayout,isDefault,crossings,lineDone,lineSpots,setGuide
 });

@@ -32,6 +32,8 @@
 <!-- quick access: labs → experiments (shared by the hall and the bench) -->
 <div class="quick" id="quick" hidden role="menu"></div>
 
+<div id="procPick" hidden dir="rtl"><div class="pp-card"><h3>وش الـ Procedures المطلوبة منك؟</h3><p class="pp-note">بعض الـ Procedures ممكن تكون محذوفة في ترمك، تأكد من دكتور المعمل واختر اللي مطلوبة منك</p><div id="ppList"></div><button class="tb primary" id="ppGo">ابدأ</button></div></div>
+<div id="procNext" hidden dir="rtl"></div>
 <div id="seatModal" hidden>
   <div class="sm-card" role="dialog" aria-modal="true" aria-labelledby="smTitle">
     <div class="sm-kicker" id="smKicker">EE312 · EXPERIMENT 3</div>
@@ -133,6 +135,6 @@
 <script src="engine/registry.js"></script>
 <script src="engine/fig.js"></script>
 <script src="engine/welcome.js"></script>
-<script>BENCH.init();HALL.init();WELCOME.init();['#stepCard','#paperHost','#toast','#prompt','#tip','#seatModal','#hallHint','#zoomUI','#dHint'].forEach(s=>BIDI.watch($q(s)));</script>
+<script>BENCH.init();HALL.init();WELCOME.init();['#stepCard','#paperHost','#toast','#prompt','#tip','#seatModal','#hallHint','#zoomUI','#dHint','#procPick','#procNext'].forEach(s=>BIDI.watch($q(s)));</script>
 </body>
 </html>

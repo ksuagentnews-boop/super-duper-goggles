@@ -77,9 +77,13 @@ export function bench(page) {
   };
   return H;
 }
-export async function sit(page, id, mode) {
+export async function sit(page, id, mode, procs) {
   await page.click('#quickBtn'); await page.click('#quick [data-level="6"]'); await page.click('#quick [data-lab="ee312"]'); await page.click(`#quick [data-exp="${id}"]`);
   await page.waitForSelector('#seatModal:not([hidden])', { timeout: 8000 });
   await page.click(`#seatModal button[data-mode="${mode}"]`);
   await page.waitForFunction(() => !document.querySelector('#benchView').hidden && BENCH.sim, null, { timeout: 8000 }); await page.waitForTimeout(400);
+  /* Manual: the procedure picker opens with every procedure ticked; procs = the ones to keep (default all) */
+  if (await page.evaluate(() => !document.getElementById('procPick').hidden)) {
+    if (procs) await page.evaluate(p => document.querySelectorAll('#ppList input').forEach(i => { i.checked = p.includes(i.value); }), procs);
+    await page.click('#ppGo'); await page.waitForTimeout(200); }
 }

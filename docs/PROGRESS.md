@@ -34,8 +34,19 @@ Updated after every finished item (commit + push each time).
   - The card shows the title, the small light disclaimer «هذه المعامل مصممة لمحاكاة المعمل الأصلي…» and «ابدأ».
   - The du'a «أسأل الله لنا ولكم التوفيق والسداد» is a small line under «قسم الهندسة الكهربائية» on the corridor's first sign.
 
+- **5 · Procedure picker (Manual mode)**
+  - After choosing Manual, a card lists the experiment's procedures (all ticked) with the note about procedures dropped this term. «ابدأ» stays disabled while nothing is ticked.
+  - Each step belongs to the procedure named at its start ("Procedure A: …") until the next one.
+  - Only the picked procedures' steps run. The card counts per procedure («Procedure B · الخطوة 1 من 7»), and «خلصت Procedure A ← ننتقل لـ Procedure B» shows when one procedure ends.
+  - Plug-in lines are rebuilt for the picked procedures, so a lead's first use always gets its line.
+  - Sheet sections are tagged with `data-proc`. Tables whose caption names a procedure, "Procedure X" PLQs and "Procedure X" headings are tagged automatically. Unpicked sections are hidden, and PLQ numbers stay fixed.
+  - Grading uses `grader.proc(p)`: rows of unpicked procedures are left out of the score.
+  - Each experiment file now has `procs` (titles), and sections and rows tagged by hand where they mix procedures.
+  - Test `tests/exp/procs.mjs`.
+  - Not needed for EE312, and not built yet: a different instrument list per procedure (EE205).
+
 ## In progress
-- 6 · noindex meta + robots.txt (5 · Procedure picker follows).
+- 6 · noindex meta + robots.txt.
 
 ## Next
 - 5 · Procedure picker in Manual mode; sheet and grading cover only the selected procedures.

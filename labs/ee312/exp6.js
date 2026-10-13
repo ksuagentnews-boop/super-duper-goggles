@@ -14,7 +14,7 @@ const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
   <div>${H.row('Branch A (upper level):',H.sel('q1a',[['a','one Si diode in series with the Zener (reverse-biased): 0.7 + 4.7 = 5.4 V'],['b','two Si diodes in series'],['c','the Zener alone'],['d','three Si diodes']]))}
   ${H.row('Branch B (lower level):',H.sel('q1b',[['a','two Si diodes in series, opposite direction: −(0.7 + 0.7) = −1.4 V'],['b','one Si diode'],['c','the Zener forward-biased alone'],['d','a Si diode and the Zener']]))}</div></li>
 <li class="plq">Q1b–d and Q2 (LTspice transient of your limiter, AC analysis of Fig. 6.6) go in your report.</li></ol>`;
-return {pc:true,
+return {pc:true,procs:[{id:'A',title:'Unregulated bridge supply: Fig. 6.1'},{id:'B',title:'Zener regulator: Fig. 6.2'},{id:'C',title:'Comparator with a limiter: Fig. 6.4'}],
 sheet:`<div class="paper" id="paper">
 <h2>Experiment 6 · SPICE Simulation I</h2>
 <div class="figbox" style="padding:8px"><img class="figimg" src="labs/ee312/fig/fig6-1.png" alt="Fig. 6.1"></div><div class="hint" style="text-align:center">Fig. 6.1 · Bridge rectifier circuit</div>
@@ -90,16 +90,16 @@ D4 0 n 1N4148
   const avg=(R,e,from)=>{const v=RT.evalOn(R,e)[0],xs=R.runs[0].xs;let sm=0,t=0;for(let k=1;k<xs.length;k++)if(xs[k-1]>=from){const dt=xs[k]-xs[k-1];sm+=(v[k]+v[k-1])/2*dt;t+=dt}return sm/t};
   $('submit').addEventListener('click',()=>{const g=G.grader(),v=G.v;const r0=ref('A0'),r470=ref('A470'),rb47=ref('B47'),rb270=ref('B270'),rc=ref('C'),rz=ref('CZ');
     const vsm=pk(r0,'V(s1,s2)'),piv=-pk(r0,'V(s1,out)',0,true),surge=pk(r470,'I(D1)'),iav=avg(r470,'I(D1)',0.1)*1e3,vb47=avg(rb47,'V(out)',0.1),vb270=avg(rb270,'V(out)',0.1);
-    g.add(G.near(v('a_vsm'),vsm,vsm*0.02)&&!!ST.seen.A0,'A9 VSM',`≈ ${vsm.toFixed(2)} V`);g.add(G.near(v('a_piv'),piv,piv*0.02),'A10 PIV',`≈ ${piv.toFixed(2)} V`);g.add(G.s('a_pivok')==='y','A10 PIV vs VRRM','PIV ≈ 16 V ≪ 75 V');
+    g.proc('A');g.add(G.near(v('a_vsm'),vsm,vsm*0.02)&&!!ST.seen.A0,'A9 VSM',`≈ ${vsm.toFixed(2)} V`);g.add(G.near(v('a_piv'),piv,piv*0.02),'A10 PIV',`≈ ${piv.toFixed(2)} V`);g.add(G.s('a_pivok')==='y','A10 PIV vs VRRM','PIV ≈ 16 V ≪ 75 V');
     g.add(G.s('a_rip')==='a'&&ST.seen.A470&&ST.seen.A10,'A11 ripple','470 µF → smaller ripple (and you must run both)');
     g.add(G.near(v('a_surge'),surge,surge*0.1),'A12 surge',`≈ ${surge.toFixed(2)} A`);g.add(G.s('a_surgeok')==='y','A12 IFSM','2 A ≥ 1.5 × surge');
     g.add(G.near(v('a_iavg'),iav,iav*0.1),'A13 average I(D1)',`≈ ${iav.toFixed(2)} mA`);g.add(G.s('a_iavgok')==='y','A13 IF(AV)');
     g.add(G.s('a_270')==='a'&&(ST.seen.A270||ST.seen.A270b),'A16 load 270 Ω','ripple increases');
-    g.add(G.near(v('b_v47'),vb47,0.02)&&ST.seen.B47,'B1 Vout(dc) 4.7 kΩ',`≈ ${vb47.toFixed(3)} V`);g.add(G.near(v('b_v270'),vb270,0.02)&&ST.seen.B270,'B2 Vout(dc) 270 Ω',`≈ ${vb270.toFixed(3)} V`);
-    g.add(G.near(v('c_max'),pk(rc,'V(out)'),0.03)&&G.near(v('c_min'),pk(rc,'V(out)',0,true),0.03),'C6 limits (1N4148)',`≈ ${pk(rc,'V(out)').toFixed(2)} / ${pk(rc,'V(out)',0,true).toFixed(2)} V`);
+    g.proc('B');g.add(G.near(v('b_v47'),vb47,0.02)&&ST.seen.B47,'B1 Vout(dc) 4.7 kΩ',`≈ ${vb47.toFixed(3)} V`);g.add(G.near(v('b_v270'),vb270,0.02)&&ST.seen.B270,'B2 Vout(dc) 270 Ω',`≈ ${vb270.toFixed(3)} V`);
+    g.proc('C');g.add(G.near(v('c_max'),pk(rc,'V(out)'),0.03)&&G.near(v('c_min'),pk(rc,'V(out)',0,true),0.03),'C6 limits (1N4148)',`≈ ${pk(rc,'V(out)').toFixed(2)} / ${pk(rc,'V(out)',0,true).toFixed(2)} V`);
     g.add(G.near(v('c_zmax'),pk(rz,'V(out)'),0.03)&&G.near(v('c_zmin'),pk(rz,'V(out)',0,true),0.03)&&ST.seen.CZ,'C8 limits (1N750)',`≈ ${pk(rz,'V(out)').toFixed(2)} / ${pk(rz,'V(out)',0,true).toFixed(2)} V`);
     g.add(G.s('c_cmp')==='a','C8 comparison');const im=pk(rz,'I(R1)')*1e3;g.add(G.near(v('c_imax'),im,im*0.05)&&G.s('c_iok')==='y','C9 I(R1) max',`≈ ${im.toFixed(2)} mA (< 20 mA)`);
-    g.add(G.s('q1a')==='a'&&G.s('q1b')==='a','PLQ Q1a');
+    g.proc(null);g.add(G.s('q1a')==='a'&&G.s('q1b')==='a','PLQ Q1a');
     g.show($('result'))});
   return {status,
     steps:[

@@ -20,17 +20,17 @@ ${H.row('3. R<sub>B</sub> = (V<sub>Control,Hi</sub> − 0.7) / I<sub>B</sub> =',
 ${H.row('Nearest standard R<sub>C</sub> (Appendix F) =',H.num('d_rcs','0.1'),'Ω')}${H.row('Nearest standard R<sub>B</sub> =',H.num('d_rbs','1'),'Ω')}
 ${H.row('Why is the switching not noticeable at 60 Hz?',H.sel('d_60',[['a','The eye cannot follow 60 on/off cycles per second (persistence of vision): the LED looks steadily lit'],['b','The BJT cannot switch at 60 Hz'],['c','The LED is off at 60 Hz'],['d','The generator cannot give a square wave at 60 Hz']]))}</div>`;
 const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
-<li class="plq">Complete the calculations in Table 9.2 (graded with the table).</li>
-<li class="plq">Plot v<sub>O</sub> vs. v<sub>I</sub> and label the three modes. <button class="t" id="plotBtn" type="button">ارسم من جدولك</button><div id="ivplot"></div></li>
-<li class="plq">Which mode can be used for voltage amplification (slope magnitude)?
+<li class="plq" data-proc="A">Complete the calculations in Table 9.2 (graded with the table).</li>
+<li class="plq" data-proc="A">Plot v<sub>O</sub> vs. v<sub>I</sub> and label the three modes. <button class="t" id="plotBtn" type="button">ارسم من جدولك</button><div id="ivplot"></div></li>
+<li class="plq" data-proc="A">Which mode can be used for voltage amplification (slope magnitude)?
   <div>${H.sel('q3',[['act','Active: |ΔvO/ΔvI| is large there'],['sat','Saturation: the slope is largest'],['cut','Cutoff: vO is constant']])}</div></li>
-<li class="plq">From Table 9.2, when v<sub>O</sub> changes from 3.5 to 3.4 V:
+<li class="plq" data-proc="A">From Table 9.2, when v<sub>O</sub> changes from 3.5 to 3.4 V:
   <div>${H.row('G<sub>V</sub> = Δv<sub>O</sub>/Δv<sub>I</sub> =',H.num('q4g','0.01'))}${H.row('A<sub>V</sub> = Δv<sub>O</sub>/Δv<sub>BE</sub> =',H.num('q4a','0.1'))}</div></li>
-<li class="plq">Why is |G<sub>V</sub>| usually less than |A<sub>V</sub>|?
+<li class="plq" data-proc="A">Why is |G<sub>V</sub>| usually less than |A<sub>V</sub>|?
   <div>${H.sel('q5',[['a','Only part of ΔvI appears across the base-emitter junction: most of it drops on RB (ΔvBE = ΔvI · rπ/(RB + rπ))'],['b','Because the collector current is larger than the base current'],['c','Because RC is smaller than RB'],['d','They are always equal']])}</div></li>
-<li class="plq">Blue LED (3.4 V at 30 mA), β<sub>forced</sub> = 10: required R<sub>C</sub> and R<sub>B</sub>, and the nearest standard values (Appendix F).
+<li class="plq" data-proc="B">Blue LED (3.4 V at 30 mA), β<sub>forced</sub> = 10: required R<sub>C</sub> and R<sub>B</sub>, and the nearest standard values (Appendix F).
   <div>${H.row('R<sub>C</sub> =',H.num('q6rc','0.01'),'Ω')}${H.row('R<sub>B</sub> =',H.num('q6rb','0.1'),'Ω')}${H.row('Standard R<sub>C</sub> =',H.num('q6rcs','0.1'),'Ω')}${H.row('Standard R<sub>B</sub> =',H.num('q6rbs','1'),'Ω')}</div></li></ol>`;
-return {
+return {procs:[{id:'A',title:'VTC of the CE circuit: Fig. 9.2a (Table 9.2)'},{id:'B',title:'The BJT as an LED switch: Fig. 9.2b'}],
 sheet:`<div class="paper" id="paper">
 <h2>Experiment 9 · The BJT CE Circuit with Emphasis on Switching</h2>
 <div class="figbox" style="padding:8px"><img class="figimg" src="labs/ee312/fig/fig9-2.png" alt="Fig. 9.2"></div>
@@ -38,7 +38,7 @@ sheet:`<div class="paper" id="paper">
 <div class="check manual-only" id="live"></div>
 <div class="manual-only">
 <p class="exam-note">Procedure A: وحدة V<sub>CC</sub> = 5 V ووحدة V<sub>I</sub>، والسالب للوحدتين على الـ emitter. حرّك V<sub>I</sub> (FINE) لين الـ DMM على C–E يقرأ V<sub>O</sub> المطلوب، وبعدها انقل الأطراف وقِس V<sub>BE</sub> و V<sub>I</sub>.</p>
-${t92}${design}${plq}
+<div data-proc="A">${t92}</div>${design}${plq}
 <div class="row" style="margin-top:12px"><button class="t on" id="submit">صحّح إجاباتي</button></div><div id="result"></div>
 </div></div>`,
 params:()=>({}),
@@ -96,21 +96,21 @@ setup(RT){
     s+=`<text x="${X(0.15)}" y="${Y(4.7)}" fill="#2c7a6b">cutoff</text><text x="${X(0.66)}" y="${Y(2.6)}" fill="#2c7a6b">active</text><text x="${X(xm*0.8)}" y="${Y(0.4)}" fill="#2c7a6b">saturation</text></svg>`;$('ivplot').innerHTML=s}
   $('plotBtn').addEventListener('click',plot);$('paper').addEventListener('change',()=>BENCH.onRender());
   $('submit').addEventListener('click',()=>{const g=G.grader(),v=G.v;const tl=(e,f=0.003)=>Math.max(0.002,A(e)*f);
-    VO.forEach((vo,j)=>{const bad=[];const eb=ST.vbe[j],ei=ST.vi[j];if(eb==null||ei==null){g.add(false,`Table 9.2 · VO = ${vo}`,'ما انقاس');return}
+    g.proc('A');VO.forEach((vo,j)=>{const bad=[];const eb=ST.vbe[j],ei=ST.vi[j];if(eb==null||ei==null){g.add(false,`Table 9.2 · VO = ${vo}`,'ما انقاس');return}
       if(!G.near(v('vbe'+j),eb,tl(eb)))bad.push(`VBE ≈ ${eb.toFixed(3)}`);if(!G.near(v('vi'+j),ei,tl(ei)))bad.push(`VI ≈ ${ei.toFixed(3)}`);
       const vbc=v('vbe'+j)-vo;if(!G.near(v('vbc'+j),vbc,0.002))bad.push(`VBC = VBE − VO ≈ ${vbc.toFixed(3)}`);
       const md=v('vbe'+j)<0.5?'cut':vbc>=0.4?'sat':'act';if(G.s('md'+j)!==md)bad.push(`mode: ${MODES.find(m=>m[0]===md)[1]} (Table 9.1)`);
       const ib=(v('vi'+j)-v('vbe'+j))/27,ic=(5-vo)/2.7;if(!G.near(v('ib'+j),ib,tl(ib,0.01)))bad.push(`IB ≈ ${ib.toFixed(3)} mA`);if(!G.near(v('ic'+j),ic,tl(ic)))bad.push(`IC ≈ ${ic.toFixed(3)} mA`);
       if(!G.near(v('ie'+j),v('ib'+j)+v('ic'+j),0.002))bad.push('IE = IB + IC');g.add(!bad.length,`Table 9.2 · VO = ${vo.toFixed(3)} V`,bad.join('، '))});
-    g.add(G.near(v('d_rc'),280,1),'B1 RC','= (5 − 2 − 0.2) / 10 mA = 280 Ω');g.add(G.near(v('d_ib'),1,0.01),'B2 IB','= 10 mA / 10 = 1 mA');g.add(G.near(v('d_rb'),4300,10),'B3 RB','= (5 − 0.7) / 1 mA = 4.3 kΩ');
+    g.proc('B');g.add(G.near(v('d_rc'),280,1),'B1 RC','= (5 − 2 − 0.2) / 10 mA = 280 Ω');g.add(G.near(v('d_ib'),1,0.01),'B2 IB','= 10 mA / 10 = 1 mA');g.add(G.near(v('d_rb'),4300,10),'B3 RB','= (5 − 0.7) / 1 mA = 4.3 kΩ');
     g.add(G.near(v('d_is'),1,0.05),'B current of the controlling source','≈ IB ≈ 1 mA');
     g.add([270,280].some(x=>G.near(v('d_rcs'),x,0.5))&&[4300,4320].some(x=>G.near(v('d_rbs'),x,1)),'B standard values','RC: 280 (E96) or 270 (E24); RB: 4.32 k (E96) or 4.3 k (E24)');
     g.add(G.s('d_60')==='a','B 60 Hz');g.add(!!ST.f02&&!!ST.f2&&!!ST.f60,'B circuit tested at 0.2, 2 and 60 Hz');
-    g.add(G.s('q3')==='act','PLQ 3','active');
+    g.proc('A');g.add(G.s('q3')==='act','PLQ 3','active');
     const i35=VO.indexOf(3.5),i34=VO.indexOf(3.4);const gv=-0.1/(v('vi'+i34)-v('vi'+i35)),av=-0.1/(v('vbe'+i34)-v('vbe'+i35));
     g.add(isFinite(gv)&&G.near(v('q4g'),gv,A(gv)*0.03),'PLQ 4 GV',`= −0.1 / ΔVI ≈ ${isFinite(gv)?gv.toFixed(2):'?'}`);g.add(isFinite(av)&&G.near(v('q4a'),av,A(av)*0.03),'PLQ 4 AV',`= −0.1 / ΔVBE ≈ ${isFinite(av)?av.toFixed(1):'?'}`);
     g.add(G.s('q5')==='a','PLQ 5');
-    g.add(G.near(v('q6rc'),140/3,0.1)&&G.near(v('q6rb'),4300/3,1),'PLQ 6 RC, RB','RC = (5 − 3.4 − 0.2)/30 mA ≈ 46.67 Ω; RB = (5 − 0.7)/3 mA ≈ 1433.3 Ω');
+    g.proc('B');g.add(G.near(v('q6rc'),140/3,0.1)&&G.near(v('q6rb'),4300/3,1),'PLQ 6 RC, RB','RC = (5 − 3.4 − 0.2)/30 mA ≈ 46.67 Ω; RB = (5 − 0.7)/3 mA ≈ 1433.3 Ω');
     g.add([46.4,47].some(x=>G.near(v('q6rcs'),x,0.05))&&[1430,1500].some(x=>G.near(v('q6rbs'),x,1)),'PLQ 6 standard','RC: 46.4 Ω (E96) or 47 Ω (E24); RB: 1.43 kΩ (E96) or 1.5 kΩ (E24)');
     g.show($('result'))});
   return {status,

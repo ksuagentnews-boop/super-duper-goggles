@@ -14,7 +14,7 @@ const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
 <li class="plq">Three advantages of the CMOS inverter (Fig. 8.6) over the resistive-load inverter (Fig. 8.5):
   <div>${H.sel('q2',[['a','(1) almost zero static power (no dc path in either logic state), (2) rail-to-rail output (VOL = 0, VOH = VDD), (3) sharper VTC with larger noise margins and fast, low-resistance pull-up'],['b','It needs fewer transistors, has a resistor pull-up and draws a constant current'],['c','It only works for analog signals'],['d','Its output low level is set by RD']])}</div></li>
 <li class="plq">PLQs 3–5 (cascaded inverters of Fig. 8.7, tPHL / tPLH) go in your report.</li></ol>`;
-return {pc:true,
+return {pc:true,procs:[{id:'A',title:'Resistive-load inverter: Fig. 8.5'},{id:'B',title:'CMOS inverter: Fig. 8.6'}],
 sheet:`<div class="paper" id="paper">
 <h2>Experiment 8 · SPICE Simulation II · MOS Switching Circuits</h2>
 <div style="display:flex;gap:8px;flex-wrap:wrap"><div class="figbox" style="padding:8px;flex:1;min-width:200px"><img class="figimg" src="labs/ee312/fig/fig8-5.png" alt="Fig. 8.5"></div><div class="figbox" style="padding:8px;flex:1;min-width:200px"><img class="figimg" src="labs/ee312/fig/fig8-6.png" alt="Fig. 8.6"></div></div>
@@ -71,10 +71,10 @@ M2 out in vdd vdd P_1u`;
   function tplh(){const R=ref('INVtran');const vi=RT.evalOn(R,'V(in)')[0],vo=RT.evalOn(R,'V(out)')[0],xs=R.runs[0].xs;const cross=(v,up,t0)=>{for(let k=1;k<xs.length;k++){if(xs[k]<t0)continue;if(up?(v[k-1]<2.5&&v[k]>=2.5):(v[k-1]>2.5&&v[k]<=2.5))return xs[k-1]+(2.5-v[k-1])/(v[k]-v[k-1])*(xs[k]-xs[k-1])}return NaN};
     const ti=cross(vi,false,5e-9);return (cross(vo,true,ti)-ti)*1e12}
   $('submit').addEventListener('click',()=>{const g=G.grader(),v=G.v;
-    g.add(G.s('a_slope')==='inc'&&!!ST.seen.CSdc,'A9 slope vs RD','larger RD → steeper (and you must run the .dc)');g.add(G.s('a_vol')==='dec','A9 VOL vs RD','larger RD → lower VOL');
+    g.proc('A');g.add(G.s('a_slope')==='inc'&&!!ST.seen.CSdc,'A9 slope vs RD','larger RD → steeper (and you must run the .dc)');g.add(G.s('a_vol')==='dec','A9 VOL vs RD','larger RD → lower VOL');
     g.add(G.s('a_gate')==='not'&&!!ST.seen.CStran,'A13 gate','NOT');g.add(G.s('a_rd')==='110','A14 largest delay','RD = 110 kΩ');
-    g.add(G.s('b_gate')==='not'&&!!ST.seen.INVtran,'B12 gate','NOT');const t=tplh();g.add(G.near(v('b_tplh'),t,t*0.25),'B13 tPLH',`≈ ${t.toFixed(1)} ps`);
-    g.add(G.s('q1')==='a','PLQ 1');g.add(G.s('q2')==='a','PLQ 2');
+    g.proc('B');g.add(G.s('b_gate')==='not'&&!!ST.seen.INVtran,'B12 gate','NOT');const t=tplh();g.add(G.near(v('b_tplh'),t,t*0.25),'B13 tPLH',`≈ ${t.toFixed(1)} ps`);
+    g.proc('A');g.add(G.s('q1')==='a','PLQ 1');g.proc(null);g.add(G.s('q2')==='a','PLQ 2');
     g.show($('result'))});
   return {status,
     steps:[

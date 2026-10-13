@@ -8,25 +8,25 @@
    and the emitter (their dc potentials); a reversed electrolytic with more than 1 V across it bursts. */
 EXP_DEFS['ee312/exp10']=(()=>{const H=ENGINE.sheet;
 const t101=`<table class="tbl"><caption>Table 10.1</caption>
-<tr><th>R<sub>C</sub></th><td>${H.num('t_rc','0.001',80)} kΩ</td><th>R<sub>E</sub></th><td>${H.num('t_re','0.001',80)} kΩ</td><th>R<sub>1</sub></th><td>${H.num('t_r1','0.001',80)} kΩ</td><th>R<sub>2</sub></th><td>${H.num('t_r2','0.001',80)} kΩ</td></tr>
-<tr><th>I<sub>C</sub></th><td>${H.num('t_ic','0.0001',80)} mA</td><th>I<sub>E</sub></th><td>${H.num('t_ie','0.0001',80)} mA</td><th>I<sub>R1</sub></th><td>${H.num('t_i1','0.0001',80)} mA</td><th>I<sub>R2</sub></th><td>${H.num('t_i2','0.0001',80)} mA</td></tr>
-<tr><th>I<sub>B</sub></th><td colspan="3">${H.num('t_ib','0.0001',80)} mA</td><th>β ≡ I<sub>C</sub>/I<sub>B</sub></th><td>${H.num('t_beta','0.1',80)}</td><th>α ≡ β/(β+1)</th><td>${H.num('t_alpha','0.0001',80)}</td></tr>
-<tr><th colspan="2">A<sub>v</sub> = −I<sub>C</sub>R<sub>C</sub>/V<sub>T</sub> =</th><td colspan="2">${H.num('t_avt','0.1',80)}</td><th colspan="2">A<sub>v</sub> = V<sub>o(pp)</sub>/V<sub>i(pp)</sub> =</th><td colspan="2">${H.num('t_avm','0.1',80)}</td></tr>
-<tr><td colspan="8">Verify that (V<sub>BE</sub> ≥ 0.5) and (V<sub>BC</sub> &lt; 0.4) (active mode): ${H.sel('t_act',[['y','Yes: VBE ≥ 0.5 V and VBC < 0.4 V → active mode'],['n','No: the BJT is saturated'],['c','No: the BJT is cut off']])}</td></tr></table>`;
+<tr data-proc="A"><th>R<sub>C</sub></th><td>${H.num('t_rc','0.001',80)} kΩ</td><th>R<sub>E</sub></th><td>${H.num('t_re','0.001',80)} kΩ</td><th>R<sub>1</sub></th><td>${H.num('t_r1','0.001',80)} kΩ</td><th>R<sub>2</sub></th><td>${H.num('t_r2','0.001',80)} kΩ</td></tr>
+<tr data-proc="A"><th>I<sub>C</sub></th><td>${H.num('t_ic','0.0001',80)} mA</td><th>I<sub>E</sub></th><td>${H.num('t_ie','0.0001',80)} mA</td><th>I<sub>R1</sub></th><td>${H.num('t_i1','0.0001',80)} mA</td><th>I<sub>R2</sub></th><td>${H.num('t_i2','0.0001',80)} mA</td></tr>
+<tr data-proc="A"><th>I<sub>B</sub></th><td colspan="3">${H.num('t_ib','0.0001',80)} mA</td><th>β ≡ I<sub>C</sub>/I<sub>B</sub></th><td>${H.num('t_beta','0.1',80)}</td><th>α ≡ β/(β+1)</th><td>${H.num('t_alpha','0.0001',80)}</td></tr>
+<tr><th colspan="2" data-proc="A">A<sub>v</sub> = −I<sub>C</sub>R<sub>C</sub>/V<sub>T</sub> =</th><td colspan="2" data-proc="A">${H.num('t_avt','0.1',80)}</td><th colspan="2" data-proc="B">A<sub>v</sub> = V<sub>o(pp)</sub>/V<sub>i(pp)</sub> =</th><td colspan="2" data-proc="B">${H.num('t_avm','0.1',80)}</td></tr>
+<tr data-proc="A"><td colspan="8">Verify that (V<sub>BE</sub> ≥ 0.5) and (V<sub>BC</sub> &lt; 0.4) (active mode): ${H.sel('t_act',[['y','Yes: VBE ≥ 0.5 V and VBC < 0.4 V → active mode'],['n','No: the BJT is saturated'],['c','No: the BJT is cut off']])}</td></tr></table>`;
 const f103=`<table class="tbl"><caption>Fig. 10.3 · measured dc voltages</caption><tr>${['V<sub>BE</sub>','V<sub>BC</sub>','V<sub>CE</sub>','V<sub>R1</sub>','V<sub>R2</sub>','V<sub>RC</sub>','V<sub>RE</sub>'].map(x=>`<th>${x}</th>`).join('')}</tr>
 <tr>${['be','bc','ce','r1','r2','rc','re'].map(k=>`<td>${H.num('v_'+k,'0.001',72)}</td>`).join('')}</tr></table>`;
 const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
-<li class="plq">Complete all the calculations in Table 10.1 (graded with the table).</li>
-<li class="plq">Verify from Fig. 10.3:
+<li class="plq" data-proc="A">Complete all the calculations in Table 10.1 (graded with the table).</li>
+<li class="plq" data-proc="A">Verify from Fig. 10.3:
   <div>${H.row('i. V<sub>R1</sub> + V<sub>R2</sub> =',H.num('q2a','0.001'),'V')}${H.row('ii. V<sub>RC</sub> + V<sub>CE</sub> + V<sub>RE</sub> =',H.num('q2b','0.001'),'V')}${H.row('iii. V<sub>BE</sub> − V<sub>BC</sub> =',H.num('q2c','0.001'),'V (= V<sub>CE</sub>)')}</div></li>
-<li class="plq">Effect of increasing the input amplitude (200 mVpp) on v<sub>O</sub>(t); is the BJT linear?
+<li class="plq" data-proc="B">Effect of increasing the input amplitude (200 mVpp) on v<sub>O</sub>(t); is the BJT linear?
   <div>${H.sel('q3',[['a','vO is distorted (unequal half-cycles, flattened near cutoff / saturation): the small-signal condition vbe ≪ VT is violated, so the BJT is not linear'],['b','vO is a larger undistorted sine: the BJT stays linear'],['c','vO becomes zero'],['d','Only the phase changes']])}</div></li>
 <li class="plq">Bias design (Appendix H.5, Fig. 10.6a: V<sub>CC</sub> = 15 V, V<sub>BE(on)</sub> = 0.7 V) for I<sub>E</sub> = TN mA, E96 resistors:
   <div>${H.row('Your table number TN =',H.num('q4tn','1',60))}${H.row('R<sub>E</sub> =',H.num('q4re','1'),'Ω')}${H.row('R<sub>C</sub> =',H.num('q4rc','1'),'Ω')}${H.row('I<sub>R2</sub> (0.1 I<sub>E</sub> … 0.3 I<sub>E</sub>) =',H.num('q4i2','0.001'),'mA')}${H.row('R<sub>2</sub> =',H.num('q4r2','1'),'Ω')}${H.row('R<sub>1</sub> =',H.num('q4r1','1'),'Ω')}</div></li>
 <li class="plq">PLQs 5–6 (LTspice .op and .tran of your design with a 2N2222) go in your report.</li></ol>`;
 const E96=[100,102,105,107,110,113,115,118,121,124,127,130,133,137,140,143,147,150,154,158,162,165,169,174,178,182,187,191,196,200,205,210,215,221,226,232,237,243,249,255,261,267,274,280,287,294,301,309,316,324,332,340,348,357,365,374,383,392,402,412,422,432,442,453,464,475,487,499,511,523,536,549,562,576,590,604,619,634,649,665,681,698,715,732,750,768,787,806,825,845,866,887,909,931,953,976];
 const nearE96=x=>{const e=Math.floor(Math.log10(x))-2;let best=null;[e-1,e,e+1].forEach(k=>E96.forEach(m=>{const v=m*Math.pow(10,k);if(best==null||Math.abs(Math.log(v/x))<Math.abs(Math.log(best/x)))best=v}));return best};
-return {
+return {procs:[{id:'A',title:'dc bias point: Fig. 10.1 (Fig. 10.3, Table 10.1)'},{id:'B',title:'The CE amplifier: Fig. 10.2 (Figs 10.4–10.5)'}],
 sheet:`<div class="paper" id="paper">
 <h2>Experiment 10 · The Common Emitter Amplifier</h2>
 <div style="display:flex;gap:8px;flex-wrap:wrap"><div class="figbox" style="padding:8px;flex:1;min-width:200px"><img class="figimg" src="labs/ee312/fig/fig10-1.png" alt="Fig. 10.1"></div><div class="figbox" style="padding:8px;flex:1;min-width:200px"><img class="figimg" src="labs/ee312/fig/fig10-2.png" alt="Fig. 10.2"></div></div>
@@ -34,9 +34,9 @@ sheet:`<div class="paper" id="paper">
 <div class="check manual-only" id="live"></div>
 <div class="manual-only">
 <p class="exam-note">قِس كل مقاومة بالـ DMM (Ω) وهي لحالها قبل التركيب. انتبه لقطبية المكثفات الكيميائية: الطرف + جهة الـ base والـ collector والـ emitter.</p>
-${f103}${t101}
-${H.cap('f104','Fig. 10.4')}${H.row('Phase difference between v<sub>i</sub> and v<sub>o</sub>:',H.sel('ph',[['180','180° (inverting)'],['0','0°'],['90','90°']]))}
-${H.cap('f105','Fig. 10.5')}
+<div data-proc="A">${f103}</div>${t101}
+<div data-proc="B">${H.cap('f104','Fig. 10.4')}${H.row('Phase difference between v<sub>i</sub> and v<sub>o</sub>:',H.sel('ph',[['180','180° (inverting)'],['0','0°'],['90','90°']]))}
+${H.cap('f105','Fig. 10.5')}</div>
 ${plq}
 <div class="row" style="margin-top:12px"><button class="t on" id="submit">صحّح إجاباتي</button></div><div id="result"></div>
 </div></div>`,
@@ -97,7 +97,7 @@ setup(RT){
   const capOK=(id,amp)=>{const c=CAPS[id];if(!c)return [false,'ما سجّلت الشاشة'];const pr=[];if(c.kind!=='AC'||!c.on)pr.push('الدائرة لازم Fig. 10.2 و VCC = 12 V شغّال');if(!c.sig||A(c.amp-amp)>5e-4)pr.push(`الجنريتر: Sine، 1 kHz، ${amp*1000} mVpp`);
     if(!c.probes)pr.push('CH1 على v<sub>i</sub> و CH2 على v<sub>o</sub>');if(!c.chs||!c.fit||!c.probe1)pr.push('الموجتين لازم تبان واضحة على الشاشة');return [!pr.length,pr.join('، ')]};
   $('submit').addEventListener('click',()=>{const g=G.grader(),v=G.v;const tl=(e,f=0.003)=>Math.max(0.002,A(e)*f);
-    const rk={t_rc:'R5k6',t_re:'R4k7',t_r1:'R47k',t_r2:'R27k'};g.add(Object.entries(rk).every(([id,t])=>ST.r[t]!=null&&G.near(v(id),ST.r[t]/1e3,tl(ST.r[t]/1e3,0.002))),'Table 10.1 resistors (DMM)',Object.entries(rk).map(([id,t])=>`${t}: ${ST.r[t]!=null?(ST.r[t]/1e3).toFixed(3)+' kΩ':'ما انقاس'}`).join('، '));
+    g.proc('A');const rk={t_rc:'R5k6',t_re:'R4k7',t_r1:'R47k',t_r2:'R27k'};g.add(Object.entries(rk).every(([id,t])=>ST.r[t]!=null&&G.near(v(id),ST.r[t]/1e3,tl(ST.r[t]/1e3,0.002))),'Table 10.1 resistors (DMM)',Object.entries(rk).map(([id,t])=>`${t}: ${ST.r[t]!=null?(ST.r[t]/1e3).toFixed(3)+' kΩ':'ما انقاس'}`).join('، '));
     const vk=['be','bc','ce','r1','r2','rc','re'];const inR=(x,e)=>e!=null&&x>=e.lo-tl(e.lo)&&x<=e.hi+tl(e.hi),mid=e=>(e.lo+e.hi)/2;
     g.add(vk.every(k=>inR(v('v_'+k),ST.v[k])),'Fig. 10.3 dc voltages',vk.map(k=>`V${k.toUpperCase()} ≈ ${ST.v[k]!=null?mid(ST.v[k]).toFixed(3):'?'}`).join('، '));
     const ic=v('v_rc')/v('t_rc'),ie=v('v_re')/v('t_re'),i1=v('v_r1')/v('t_r1'),i2=v('v_r2')/v('t_r2'),ib=v('t_i1')-v('t_i2');
@@ -105,11 +105,11 @@ setup(RT){
     g.add(G.near(v('t_ib'),ib,Math.max(0.0002,A(ib)*0.01)),'Table 10.1 IB','= IR1 − IR2 (KCL)');
     const beta=v('t_ic')/v('t_ib');g.add(G.near(v('t_beta'),beta,A(beta)*0.01+0.1)&&G.near(v('t_alpha'),v('t_beta')/(v('t_beta')+1),0.0005),'Table 10.1 β, α','β = IC/IB, α = β/(β+1)');
     const avt=-v('t_ic')*v('t_rc')/0.0259;g.add(G.near(A(v('t_avt')),A(avt),A(avt)*0.04),'Av (eq. 10.5)',`= −IC·RC/VT ≈ ${avt.toFixed(1)}`);
-    const c4=CAPS.f104;const avm=c4?c4.pp[1]/c4.pp[0]:NaN;g.add(isFinite(avm)&&avm>10&&G.near(A(v('t_avm')),avm,avm*0.03),'Av measured',`= Vo(pp)/Vi(pp) ≈ ${isFinite(avm)?avm.toFixed(1):'?'} (Fig. 10.4)`);
-    g.add(G.s('t_act')==='y'&&v('v_be')>=0.5&&v('v_bc')<0.4,'Active mode check');
-    [['f104',0.02,'Fig. 10.4'],['f105',0.2,'Fig. 10.5']].forEach(([id,a,t])=>{const [ok,w]=capOK(id,a);g.add(ok,t,w)});g.add(G.s('ph')==='180','Phase','180°');
-    g.add(G.near(v('q2a'),v('v_r1')+v('v_r2'),0.002)&&G.near(v('q2b'),v('v_rc')+v('v_ce')+v('v_re'),0.002)&&G.near(v('q2c'),v('v_be')-v('v_bc'),0.002)&&G.near(v('q2a'),12,0.15)&&G.near(v('q2b'),12,0.15)&&G.near(v('q2c'),v('v_ce'),0.02),'PLQ 2','sums ≈ VCC = 12 V and VBE − VBC ≈ VCE');
-    g.add(G.s('q3')==='a','PLQ 3');
+    const c4=CAPS.f104;const avm=c4?c4.pp[1]/c4.pp[0]:NaN;g.proc('B').add(isFinite(avm)&&avm>10&&G.near(A(v('t_avm')),avm,avm*0.03),'Av measured',`= Vo(pp)/Vi(pp) ≈ ${isFinite(avm)?avm.toFixed(1):'?'} (Fig. 10.4)`);
+    g.proc('A').add(G.s('t_act')==='y'&&v('v_be')>=0.5&&v('v_bc')<0.4,'Active mode check');
+    g.proc('B');[['f104',0.02,'Fig. 10.4'],['f105',0.2,'Fig. 10.5']].forEach(([id,a,t])=>{const [ok,w]=capOK(id,a);g.add(ok,t,w)});g.add(G.s('ph')==='180','Phase','180°');
+    g.proc('A');g.add(G.near(v('q2a'),v('v_r1')+v('v_r2'),0.002)&&G.near(v('q2b'),v('v_rc')+v('v_ce')+v('v_re'),0.002)&&G.near(v('q2c'),v('v_be')-v('v_bc'),0.002)&&G.near(v('q2a'),12,0.15)&&G.near(v('q2b'),12,0.15)&&G.near(v('q2c'),v('v_ce'),0.02),'PLQ 2','sums ≈ VCC = 12 V and VBE − VBC ≈ VCE');
+    g.proc('B');g.add(G.s('q3')==='a','PLQ 3');g.proc(null);
     const tn=v('q4tn'),IE=tn*1e-3,re=5/IE,i2d=v('q4i2')*1e-3,r2=5.7/i2d,r1=9.3/i2d;const e96=(x,ref)=>isFinite(x)&&A(x-nearE96(ref))<=0.5;
     g.add(Number.isInteger(tn)&&tn>=1&&tn<=10,'PLQ 4 TN','your table number');
     g.add(e96(v('q4re'),re)&&e96(v('q4rc'),re),'PLQ 4 RE = RC',`VE = VCC/3 = 5 V → RE = 5 V / ${tn} mA ≈ ${re.toFixed(0)} Ω → E96 ${nearE96(re)} Ω`);

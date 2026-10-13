@@ -368,3 +368,18 @@ bdi{unicode-bidi:isolate}
 /* close device zoom: only the device (and the leads plugged into it) */
 #benchView.devzoom #drawer,#benchView.devzoom .ovhint,#benchView.devzoom .btools,#benchView.devzoom #Lstatic,#benchView.devzoom #Lparts,#benchView.devzoom #Lguide,#benchView.devzoom #Ldrag,#benchView.devzoom #bagBtn{display:none!important}
 #benchView.devzoom #stepCard .wl,#benchView.devzoom #stepCard .sfig{display:none}
+
+/* procedure picker (Manual mode) and the short card between procedures */
+#procPick{position:fixed;inset:0;z-index:31;display:grid;place-items:center;padding:16px;background:rgba(30,42,40,.32);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);direction:rtl}
+#procPick[hidden],#procNext[hidden]{display:none}
+.pp-card{background:#fff;border-radius:16px;box-shadow:0 18px 50px rgba(20,30,28,.25);padding:20px 22px;width:min(440px,100%);max-height:90%;overflow:auto}
+.pp-card h3{margin:0 0 6px;font-size:17px}.pp-note{margin:0 0 12px;font-size:12.5px;line-height:1.7;color:var(--muted)}
+.pp-i{display:flex;align-items:baseline;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px;cursor:pointer;font-size:14px}
+.pp-i input{width:18px;height:18px;accent-color:#2c7a6b;flex:none;transform:translateY(3px)}.pp-i span{color:var(--muted);font-size:12.5px}
+#ppGo{margin-top:8px;width:100%;justify-content:center}#ppGo:disabled{opacity:.45}
+#procNext{pointer-events:none;position:fixed;left:50%;top:22%;transform:translateX(-50%);z-index:32;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 20px;box-shadow:0 14px 40px rgba(20,30,28,.22);font-size:15px;direction:rtl;white-space:nowrap}
+#procNext.on{animation:fadeIn .3s ease}
+@media (max-height:500px){.pp-card{padding:12px 16px}.pp-i{padding:6px 10px;margin-bottom:4px}}
+.proc-off{display:none!important}
+#live .ph{margin:10px 0 4px;font:700 12.5px var(--f-mono);color:#2c7a6b;direction:ltr;text-align:right}
+.pp-i span[dir]{unicode-bidi:isolate;text-align:right}

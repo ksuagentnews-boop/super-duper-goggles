@@ -10,25 +10,25 @@ const cells=(b,v)=>['D4001','Z4733'].map(t=>`<td>${H.num(key(t,b,v)+'_vd')}</td>
 const t22=`<table class="tbl"><caption>Table 2.2 Measured Data for plotting the i-v curve (Rounded Off to 3 Decimal Places)</caption>
 <tr><th rowspan="2">Bias Condition</th><th>dc Supply Voltage</th><th colspan="2">Rectifier Diode</th><th colspan="2">Zener Diode</th></tr>
 <tr><th>V<sub>BB</sub> (V)</th><th>V<sub>D</sub> (V)</th><th>I<sub>D</sub> (mA) = V<sub>RS</sub> (V)</th><th>V<sub>D</sub> (V)</th><th>I<sub>D</sub> (mA) = V<sub>RS</sub> (V)</th></tr>
-${REV.map((v,i)=>`<tr>${i?'':`<td rowspan="${REV.length+1}" style="writing-mode:vertical-rl;transform:rotate(180deg)">Reverse Biasing Case (Fig 2.3a)</td>`}<td>${v}</td>${cells('R',v)}</tr>`).join('')}
-<tr><td>2</td><td>-2</td><td>0.00</td><td>-2</td><td>0.00</td></tr>
+${REV.map((v,i)=>`<tr data-proc="A">${i?'':`<td rowspan="${REV.length+1}" style="writing-mode:vertical-rl;transform:rotate(180deg)">Reverse Biasing Case (Fig 2.3a)</td>`}<td>${v}</td>${cells('R',v)}</tr>`).join('')}
+<tr data-proc="A"><td>2</td><td>-2</td><td>0.00</td><td>-2</td><td>0.00</td></tr>
 <tr><td style="background:#ccd3d1"></td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
-<tr><th></th><th>V<sub>FF</sub> (V)</th><th>V<sub>D</sub> (V)</th><th>I<sub>D</sub> (mA) = V<sub>RS</sub> (V)</th><th>V<sub>D</sub> (V)</th><th>I<sub>D</sub> (mA) = V<sub>RS</sub> (V)</th></tr>
-${FWD.map((v,i)=>`<tr>${i?'':`<td rowspan="${FWD.length}" style="writing-mode:vertical-rl;transform:rotate(180deg)">Forward Biasing Case (Fig 2.3b)</td>`}<td>${v}</td>${cells('F',v)}</tr>`).join('')}</table>`;
+<tr data-proc="B"><th></th><th>V<sub>FF</sub> (V)</th><th>V<sub>D</sub> (V)</th><th>I<sub>D</sub> (mA) = V<sub>RS</sub> (V)</th><th>V<sub>D</sub> (V)</th><th>I<sub>D</sub> (mA) = V<sub>RS</sub> (V)</th></tr>
+${FWD.map((v,i)=>`<tr data-proc="B">${i?'':`<td rowspan="${FWD.length}" style="writing-mode:vertical-rl;transform:rotate(180deg)">Forward Biasing Case (Fig 2.3b)</td>`}<td>${v}</td>${cells('F',v)}</tr>`).join('')}</table>`;
 const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
 <li class="plq">Plot I<sub>D</sub> vs. V<sub>D</sub> for both diodes and label the three regions. Find the cut-in voltage of the rectifier diode.
   <div><button class="t" id="plotBtn">📈 ارسم I<sub>D</sub>–V<sub>D</sub> من جدولك</button></div><div id="ivplot"></div>
   <div>${H.row('Cut-in voltage of the rectifier ≈',H.num('q1c','0.01'),'V')}</div></li>
-<li class="plq">Use the forward measurements at V<sub>FF</sub> = 10.7 V and 1.7 V and Eq. (2.2) to calculate n for the rectifier diode; then use Eq. (2.1) to calculate I<sub>S</sub>.
+<li class="plq" data-proc="B">Use the forward measurements at V<sub>FF</sub> = 10.7 V and 1.7 V and Eq. (2.2) to calculate n for the rectifier diode; then use Eq. (2.1) to calculate I<sub>S</sub>.
   <div>${H.row('n =',H.num('q2n','0.001'))}${H.row('I<sub>S</sub> =',H.num('q2is','any',120),'nA')}</div></li>
-<li class="plq">Calculate r<sub>Z</sub> from the Zener readings at V<sub>BB</sub> = 15 V and 20 V (absolute values), then V<sub>Z0</sub> using the values at V<sub>BB</sub> = 20 V.
+<li class="plq" data-proc="A">Calculate r<sub>Z</sub> from the Zener readings at V<sub>BB</sub> = 15 V and 20 V (absolute values), then V<sub>Z0</sub> using the values at V<sub>BB</sub> = 20 V.
   <div>${H.row('r<sub>Z</sub> =',H.num('q3r','0.01'),'Ω')}${H.row('V<sub>Z0</sub> =',H.num('q3v'),'V')}</div></li>
-<li class="plq">Replace the Zener in Fig. 2.3a by its linearized model (r<sub>Z</sub>, V<sub>Z0</sub>). For V<sub>BB</sub> = 25 V calculate I<sub>Z</sub>, then V<sub>Z</sub> = V<sub>Z0</sub> + I<sub>Z</sub> × r<sub>Z</sub>.
+<li class="plq" data-proc="A">Replace the Zener in Fig. 2.3a by its linearized model (r<sub>Z</sub>, V<sub>Z0</sub>). For V<sub>BB</sub> = 25 V calculate I<sub>Z</sub>, then V<sub>Z</sub> = V<sub>Z0</sub> + I<sub>Z</sub> × r<sub>Z</sub>.
   <div>${H.row('I<sub>Z</sub> =',H.num('q4i'),'mA')}${H.row('V<sub>Z</sub> =',H.num('q4v'),'V')}</div></li>
-<li class="plq">Load line V<sub>FF</sub> = I<sub>D</sub> × R<sub>S</sub> + V<sub>D</sub> for V<sub>FF</sub> = 10.7 V on the rectifier's i-v curve: find the dc operating point (V<sub>DQ</sub>, I<sub>DQ</sub>) and compare it with your measurement.
+<li class="plq" data-proc="B">Load line V<sub>FF</sub> = I<sub>D</sub> × R<sub>S</sub> + V<sub>D</sub> for V<sub>FF</sub> = 10.7 V on the rectifier's i-v curve: find the dc operating point (V<sub>DQ</sub>, I<sub>DQ</sub>) and compare it with your measurement.
   <div>${H.row('V<sub>DQ</sub> =',H.num('q5v'),'V')}${H.row('I<sub>DQ</sub> =',H.num('q5i'),'mA')}
   ${H.row('Comparison:',H.sel('q5c',[['a','The operating point agrees with the measured VD and ID at VFF = 10.7 V'],['b','IDQ = 10.7 mA because the diode drop can be ignored'],['c','The load line never meets the curve']]))}</div></li></ol>`;
-return {
+return {procs:[{id:'A',title:'Reverse bias: Fig. 2.3a (Table 2.2)'},{id:'B',title:'Forward bias: Fig. 2.3b (Table 2.2)'}],
 sheet:`<div class="paper" id="paper">
 <h2>Experiment 2 · Terminal Characteristics of Junction Diodes</h2>
 <div class="figbox" style="padding:8px"><img class="figimg" src="labs/ee312/fig/fig2-3.png" alt="Fig. 2.3"></div>
@@ -90,19 +90,19 @@ setup(RT){
   $('plotBtn').addEventListener('click',plot);
   $('submit').addEventListener('click',()=>{const g=G.grader(),v=G.v,A=Math.abs;
     const tol=(e,w)=>w==='vd'?Math.max(0.006,A(e)*0.003):Math.max(0.006,A(e)*0.005);
-    [['D4001','R','Rectifier · reverse',REV],['Z4733','R','Zener · reverse',REV],['D4001','F','Rectifier · forward',FWD],['Z4733','F','Zener · forward',FWD]].forEach(([t,b,lab,list])=>{const bad=[];
+    [['D4001','R','Rectifier · reverse',REV],['Z4733','R','Zener · reverse',REV],['D4001','F','Rectifier · forward',FWD],['Z4733','F','Zener · forward',FWD]].forEach(([t,b,lab,list])=>{const bad=[];g.proc(b==='R'?'A':'B');
       list.forEach(V=>['vd','vrs'].forEach(w=>{const k=key(t,b,V)+'_'+w,e=EXPV[k],x=v(k);if(!(isFinite(x)&&A(A(x)-A(e))<=tol(e,w)))bad.push(`${V} V ${w==='vd'?'VD':'VRS'} ≈ ${e.toFixed(3)}`)}));
       g.add(!bad.length,`Table 2.2 ${lab}`,bad.slice(0,4).join('، ')+(bad.length>4?` … (+${bad.length-4})`:''))});
-    g.add(v('q1c')>=0.45&&v('q1c')<=0.7,'PLQ 1 cut-in voltage','≈ 0.5–0.65 V where the current starts to rise');
+    g.proc(null);g.add(v('q1c')>=0.45&&v('q1c')<=0.7,'PLQ 1 cut-in voltage','≈ 0.5–0.65 V where the current starts to rise');
     const k=x=>key('D4001','F',x);const V1=A(v(k(1.7)+'_vd')),I1=A(v(k(1.7)+'_vrs'))*1e-3,V2=A(v(k(10.7)+'_vd')),I2=A(v(k(10.7)+'_vrs'))*1e-3;
     const n=(V2-V1)/(0.026*Math.log(I2/I1)),Is=I2/Math.exp(V2/(n*0.026))*1e9;
-    g.add(G.near(v('q2n'),n,Math.max(0.02,n*0.02)),'PLQ 2 n',`= (VD2 − VD1) / (VT ln(ID2/ID1)) ≈ ${isFinite(n)?n.toFixed(3):'?'} from your table`);
+    g.proc('B');g.add(G.near(v('q2n'),n,Math.max(0.02,n*0.02)),'PLQ 2 n',`= (VD2 − VD1) / (VT ln(ID2/ID1)) ≈ ${isFinite(n)?n.toFixed(3):'?'} from your table`);
     g.add(isFinite(Is)&&G.near(v('q2is'),Is,Is*0.15),'PLQ 2 IS',`= ID / e^(VD/(n·VT)) ≈ ${isFinite(Is)?Is.toPrecision(3):'?'} nA`);
     const z=x=>key('Z4733','R',x);const Vz15=A(v(z(15)+'_vd')),Iz15=A(v(z(15)+'_vrs')),Vz20=A(v(z(20)+'_vd')),Iz20=A(v(z(20)+'_vrs'));
     const rz=(Vz20-Vz15)/((Iz20-Iz15)*1e-3),vz0=Vz20-Iz20*1e-3*rz;
-    g.add(G.near(v('q3r'),rz,Math.max(0.3,rz*0.05)),'PLQ 3 rZ',`= ΔVZ/ΔIZ ≈ ${rz.toFixed(2)} Ω`);g.add(G.near(v('q3v'),vz0,0.01),'PLQ 3 VZ0',`= VZ − IZ·rZ ≈ ${vz0.toFixed(3)} V`);
+    g.proc('A');g.add(G.near(v('q3r'),rz,Math.max(0.3,rz*0.05)),'PLQ 3 rZ',`= ΔVZ/ΔIZ ≈ ${rz.toFixed(2)} Ω`);g.add(G.near(v('q3v'),vz0,0.01),'PLQ 3 VZ0',`= VZ − IZ·rZ ≈ ${vz0.toFixed(3)} V`);
     const iz=(25-vz0)/(1000+rz)*1e3,vz=vz0+iz*1e-3*rz;g.add(G.near(v('q4i'),iz,0.05),'PLQ 4 IZ',`= (25 − VZ0)/(RS + rZ) ≈ ${iz.toFixed(3)} mA`);g.add(G.near(v('q4v'),vz,0.01),'PLQ 4 VZ',`≈ ${vz.toFixed(3)} V`);
-    g.add(G.near(v('q5v'),V2,0.03),'PLQ 5 VDQ',`≈ ${isFinite(V2)?V2.toFixed(3):'?'} V`);g.add(G.near(v('q5i'),(10.7-V2),0.1),'PLQ 5 IDQ',`= (10.7 − VDQ)/1 kΩ ≈ ${(10.7-V2).toFixed(2)} mA`);
+    g.proc('B');g.add(G.near(v('q5v'),V2,0.03),'PLQ 5 VDQ',`≈ ${isFinite(V2)?V2.toFixed(3):'?'} V`);g.add(G.near(v('q5i'),(10.7-V2),0.1),'PLQ 5 IDQ',`= (10.7 − VDQ)/1 kΩ ≈ ${(10.7-V2).toFixed(2)} mA`);
     g.add(G.s('q5c')==='a','PLQ 5 comparison');
     g.show($('result'))});
   return {status,
