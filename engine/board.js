@@ -261,10 +261,10 @@ function pkgBody(type,sel,icon){const d=PARTS[type];let s='';
     s+=`<rect x="${-bw/2}" y="${big?yt+16:yt}" width="${bw}" height="${yb-(big?yt+16:yt)}" rx="2.5" fill="#1f2224" stroke="#0c0d0e"/>`+T(0,yb-8,d.mark||'',{size:9,fill:'#d9dcde',a:'middle',w:600});
     s=`<g transform="translate(${P} 0)">${s}</g>`}
   return s}
-function partBody(type,L,sel,lit){const h=L/2,d=PARTS[type]||{t:type};const t=d.t;let s='';if(d.pins)return pkgBody(type,sel,true);
+function partBody(type,L,sel,lit,col){const h=L/2,d=PARTS[type]||{t:type};const t=d.t;let s='';if(d.pins)return pkgBody(type,sel,true);
   const legs=(a,b,col='#9aa3a8')=>`<line x1="${-h}" y1="0" x2="${a}" y2="0" stroke="${col}" stroke-width="2.2"/><line x1="${b}" y1="0" x2="${h}" y2="0" stroke="${col}" stroke-width="2.2"/>`;
   const glow=sel?`<rect x="${-h-8}" y="-15" width="${L+16}" height="30" rx="8" fill="none" stroke="${CH1}" stroke-width="2.5"/>`:'';
-  if(t==='BR')return `<rect x="${-h-6}" y="-8" width="${L+12}" height="16" rx="5" fill="#f4f6f6" stroke="${sel?CH1:'#9aa6aa'}" stroke-width="${sel?3:1.5}"/><rect x="${-h+4}" y="-4" width="${L-8}" height="8" rx="3" fill="#e2e7e8"/>`+pins();
+  if(t==='BR'){const c=SWATCH[col];return `<rect x="${-h-6}" y="-8" width="${L+12}" height="16" rx="5" fill="${c?c.c:'#f4f6f6'}" stroke="${sel?CH1:c?c.d:'#9aa6aa'}" stroke-width="${sel?3:1.5}"/><rect x="${-h+4}" y="-4" width="${L-8}" height="8" rx="3" fill="${c?c.d:'#e2e7e8'}" opacity="${c?.35:1}"/>`+pins()}
   if(t==='R'){const [a,b,m]=rBands(d.r||1/d.g);const mc=m>=0?BANDC[m]:m===-1?'#c9a227':'#c0c0c0';
     s+=legs(-14,14)+`<rect x="-15" y="-6" width="30" height="12" rx="5" fill="#e3c9a0" stroke="#a88a5c" stroke-width="1"/>`+[[-10,BANDC[a]],[-5,BANDC[b]],[0,mc],[8,'#c9a227']].map(([x,c])=>`<rect x="${x-1.6}" y="-6" width="3.2" height="12" fill="${c}"/>`).join('')}
   else if(t==='D'){s+=legs(-12,12)+`<rect x="-12" y="-5.5" width="24" height="11" rx="2.5" fill="#1c1d1f"/><rect x="6" y="-5.5" width="3.6" height="11" fill="#b9bec2"/>`}
@@ -288,11 +288,11 @@ function occupied(skip){const S=RT.S;const occ=new Set();S.parts.forEach(p=>{if(
 function freeHole(node,pref=[4,0,2,6,8,1,3,5,7]){const occ=occupied();for(const h of pref)if(!occ.has(node+':'+h))return h;return null}
 function partsSVG(){const S=RT.S;let s='';
   S.wires.forEach(w=>{const a=holeP(w.a,w.ha),b=holeP(w.b,w.hb);const mx=(a.x+b.x)/2,my=(a.y+b.y)/2-Math.min(40,Math.hypot(b.x-a.x,b.y-a.y)*0.25);const sel=S.sel===w.id;const d=`M${a.x} ${a.y} Q${mx} ${my} ${b.x} ${b.y}`;
-    const wc=wireCol(w);s+=`<path d="${d}" fill="none" stroke="${sel?'#fff2a8':wc.d}" stroke-width="7" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${wc.c}" stroke-width="4.5" stroke-linecap="round"/><path d="${d}" fill="none" stroke="transparent" stroke-width="16" data-k="wire:${w.id}" style="cursor:pointer"/>`});
+    const wc=wireCol(w);s+=`<path d="${d}" fill="none" stroke="${sel?'#fff2a8':wc.d}" stroke-width="7" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${wc.c}" stroke-width="4.5" stroke-linecap="round"/><path d="${d}" fill="none" stroke="transparent" ${BENCH.paint!=null?'stroke-width="26" vector-effect="non-scaling-stroke"':'stroke-width="16"'} data-k="wire:${w.id}" style="cursor:pointer"/>`});
   S.parts.forEach(p=>{if(drag&&drag.kind==='move'&&drag.id===p.id&&drag.active)return;
     if(MULTI(p.type)){const c=nodeC(p.n);s+=`<g transform="translate(${c.x} ${c.y})" data-k="part:${p.id}" style="cursor:grab">${pkgBody(p.type,S.sel===p.id)}</g>`;return}
     const a=holeP(p.a,dirHole(p.a,p.b)),b=holeP(p.b,dirHole(p.b,p.a));const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;const ang=Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI;const L=Math.hypot(b.x-a.x,b.y-a.y);
-    s+=`<g transform="translate(${mx} ${my}) rotate(${ang})" data-k="part:${p.id}" style="cursor:grab">${partBody(p.type,L,S.sel===p.id,litNow(p))}</g>`;
+    s+=`<g transform="translate(${mx} ${my}) rotate(${ang})" data-k="part:${p.id}" style="cursor:grab">${partBody(p.type,L,S.sel===p.id,litNow(p),S.wcol['p'+p.id])}</g>`;
     if(p.dead)s+=T(mx,my+5,'💥',{size:20,a:'middle'});
     const lab=PARTS[p.type].lab;if(lab){const vert=Math.abs(ang)>45;s+=T(vert?mx+20:mx,vert?my+4:my-17,lab,{size:9.5,fill:'#22302f',a:vert?'start':'middle',w:600})}});
   return s}
@@ -511,11 +511,16 @@ let rep=null;const stopRep=()=>{clearTimeout(rep);clearInterval(rep);rep=null};
 let press=null;
 svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;closeMenu();let el=targetOf(e);const p=pt(e);
   if(KPAD&&!(el&&knobOf(el)===KPAD)){KPAD=null;knobPad()}
+  if(BENCH.paint!==null&&!el&&e.target.closest&&e.target.closest('[data-cab],[data-cabof]')){BENCH.say('أسلاك الأجهزة ألوانها ثابتة: أحمر للإشارة و+، أسود للأرضي و−');return}
   /* overview: controls, leads, parts and placing work right here; only a tap on a device body (or an idle node) zooms */
   /* empty desk (or an idle node in the overview): a drag pans, a tap does what it did (zoom onto the device under it) */
   if(BENCH.view==='ov'&&!S.armed&&!S.wireMode&&(!el||el.dataset.k.startsWith('node:'))){BENCH.panStart(e,()=>BENCH.ovClick(p));return}
   showHL(el,true);
-  if(BENCH.paint!==null&&el&&el.dataset.k.startsWith('wire:')){const id=+el.dataset.k.slice(5);if(BENCH.paint){S.wcol[id]=BENCH.paint;render(true)}else BENCH.say('اختر لون من الشريط أول');return}
+  /* paint mode: a tap colours a board wire or a bridging plug; instrument leads keep their real colours */
+  if(BENCH.paint!==null&&el){const k=el.dataset.k;let w=null;
+    if(k.startsWith('wire:'))w=+k.slice(5);else if(k.startsWith('part:')){const pr=S.parts.find(q=>q.id===+k.slice(5));if(pr&&PARTS[pr.type].t==='BR')w='p'+pr.id}
+    if(w!=null){if(BENCH.paint){S.wcol[w]=BENCH.paint;render(true)}else BENCH.say('اختر لون من الشريط أول');return}
+    if(/^(head|clip|cab|pl):/.test(k)){BENCH.say('أسلاك الأجهزة ألوانها ثابتة: أحمر للإشارة و+، أسود للأرضي و−');return}}
   if(S.armed&&jackDrop(S.armed,p)){S.armed=null;BENCH.drawerSync();return}
   /* placing a wire or a part: a tap on a lead's clip sitting on a node is a tap on that node */
   if((S.armed||S.wireMode)&&el&&el.dataset.k.startsWith('clip:')){const [,id,j]=el.dataset.k.split(':');const c=S.pl[+id].clips[+j];if(c.bn!=null){if(S.armed){placeArmed(p);return}el={dataset:{k:'node:'+c.bn}}}}
@@ -531,7 +536,7 @@ svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;close
   if(k.startsWith('clip:')){const [,id,j]=k.split(':');drag={kind:'clip',id:+id,j:+j,x:p.x,y:p.y,sx:p.x,sy:p.y,active:false};svg.setPointerCapture(e.pointerId);return}
   if(k==='tb:flip'){const pr=S.parts.find(q=>q.id===S.sel);if(pr){const t=pr.a;pr.a=pr.b;pr.b=t;circuitChanged();render()}return}
   if(k==='tb:del'){S.parts=S.parts.filter(q=>q.id!==S.sel);S.wires=S.wires.filter(w=>w.id!==S.sel);S.sel=null;circuitChanged();render();return}
-  if(k.startsWith('node:')){const n=+k.slice(5);if(S.wireMode){if(S.wireStart==null)S.wireStart=n;else if(S.wireStart!==n){const pr=[0,2,6,8,4,1,3,5,7];const ha=freeHole(S.wireStart,pr),hb=freeHole(n,pr);if(ha!=null&&hb!=null){S.wires.push({id:RT.uid++,a:S.wireStart,b:n,ha,hb});circuitChanged()}S.wireStart=null}render();return}
+  if(k.startsWith('node:')){const n=+k.slice(5);if(S.wireMode){if(S.wireStart==null)S.wireStart=n;else if(S.wireStart!==n){const pr=[0,2,6,8,4,1,3,5,7];const ha=freeHole(S.wireStart,pr),hb=freeHole(n,pr);if(ha!=null&&hb!=null){S.wires.push({id:RT.uid,a:S.wireStart,b:n,ha,hb});if(BENCH.paint)S.wcol[RT.uid]=BENCH.paint;RT.uid++;circuitChanged()}S.wireStart=null}render();return}
     if(S.sel){S.sel=null;render(true)}return}
   /* knobs on touch: drag on the knob (or its ring / arrows) to turn it one detent per ≈14 px; a tap on the knob shows big
      ◀ ▶ buttons beside it with the value; the small arrows still step at once */
@@ -603,7 +608,7 @@ function jackDrop(t,p){if(!['D','Z','GE','LED'].includes((PARTS[t]||{}).t))retur
   return false}
 function placeArmed(p){const S=RT.S;if(MULTI(S.armed)){const n=nearestAnchor(S.armed,p.x,p.y,null,120);if(n!=null){S.parts.push({id:RT.uid++,type:S.armed,n});circuitChanged()}S.armed=null;BENCH.drawerSync();render();return}
   let best=null,bd=70;EDGES.forEach(e=>{const a=nodeC(e[0]),b=nodeC(e[1]);const d=Math.hypot((a.x+b.x)/2-p.x,(a.y+b.y)/2-p.y);if(d<bd){bd=d;best=e}});
-  if(best&&edgeFree(best)&&!S.parts.some(q=>(q.a===best[0]&&q.b===best[1])||(q.a===best[1]&&q.b===best[0]))){S.parts.push({id:RT.uid++,type:S.armed,a:best[0],b:best[1]});circuitChanged()}
+  if(best&&edgeFree(best)&&!S.parts.some(q=>(q.a===best[0]&&q.b===best[1])||(q.a===best[1]&&q.b===best[0]))){S.parts.push({id:RT.uid,type:S.armed,a:best[0],b:best[1]});if(BENCH.paint&&PARTS[S.armed].t==='BR')S.wcol['p'+RT.uid]=BENCH.paint;RT.uid++;circuitChanged()}
   S.armed=null;BENCH.drawerSync();render()}
 function trayDown(t,e){const S=RT.S;if(t==='W'){S.wireMode=!S.wireMode;S.wireStart=null;S.sel=null;S.armed=null;BENCH.drawerSync();render();return}
   S.wireMode=false;if(S.armed===t){S.armed=null;BENCH.drawerSync();return}S.armed=null;const p=pt(e);drag={kind:'new',type:t,x:p.x,y:p.y,sx:p.x,sy:p.y,active:true,fromTray:true};try{svg.setPointerCapture(e.pointerId)}catch(_){}BENCH.drawerSync();render(true)}

@@ -3,7 +3,7 @@
 import fs from 'fs'; import path from 'path';
 import { chromium, openPage, ROOT } from './lib.mjs';
 const VPS = (process.argv[2] || 'desktop,phone').split(',');
-const ORDER = ['hall', 'instruments', 'gestures', 'bidi', 'procs', ...Array.from({ length: 10 }, (_, i) => `ee312-exp${i + 1}`)];
+const ORDER = ['hall', 'instruments', 'gestures', 'paint', 'bidi', 'procs', ...Array.from({ length: 10 }, (_, i) => `ee312-exp${i + 1}`)];
 const avail = ORDER.filter(m => fs.existsSync(path.join(ROOT, 'tests/exp', m + '.mjs')));
 const MODS = process.argv[3] ? process.argv[3].split(',') : avail;
 const browser = await chromium.launch();

@@ -149,9 +149,10 @@ Updated after every finished item (commit + push each time).
 
 ## Batch 4 (owner's test, 13 Oct)
 - **9 · One coax kind:** a single generic `coax` lead (BNC → red + black clip) fits every BNC (scope CH1–4, generator OUT); a tap lights all free BNCs.
+- **5 · Wire colour tool works:** the bucket opens with a colour picked; real taps paint wires and bridging plugs (wide tap area while painting); new wires / plugs take the picked colour; a tap on an instrument lead gives the fixed-colours toast; hidden when the table has no wire or plug. Test `tests/exp/paint.mjs`.
 
 ## In progress
-- Batch 4: 5, 10, 6, 1, 7, 8, 2 (4 in a parallel worktree).
+- Batch 4: 10, 6, 1, 7, 8, 2 (4 in a parallel worktree).
 
 ## Next
 - Owner: open the site with `?debug=1` on the iPhone (Claude app + Safari) and send one screenshot of the Exp 9 overview and one of a device zoom, so the real numbers can be compared.
