@@ -167,7 +167,7 @@ function buildUser(force,opts){
     else if(d.pins){const R={};pinNodes(p).forEach((nd,k)=>{const r=d.pins[k].role;if(r)R[r]=idx(nd)});
       if(d.t==='OA')els.push(Object.assign({t:'OA',y:inner(),m:SOLVER.MODELS[d.model],pid:p.id},R));
       else if(d.stamp)d.stamp(els,R,inner,p)}});
-  const ck={n:0,els,p1:null,p2:null,dcs:[],idx,opts};
+  const ck={n:0,els,p1:null,p2:null,dcs:[],idx,opts,inner};
   INST.forEach(i=>i.stamp&&i.stamp(ck,force,opts));
   ck.n=map.size;return ck;
 }
@@ -263,6 +263,16 @@ function pkgBody(type,sel,icon){const d=PARTS[type];let s='';
     d.pins.forEach(q=>{const x=q.dx*P,top=q.dy===0;const yh=top?19:P-19;s+=`<rect x="${x-4}" y="${top?yh-2:y1}" width="8" height="${top?y0-yh+2:yh-y1+2}" fill="#b9bec2" stroke="#7d868b" stroke-width=".8"/><circle cx="${x}" cy="${yh}" r="3.6" fill="#9aa3a8"/>`+T(x+(top?-9:-9),top?yh+3:yh+3,q.n,{size:7.5,fill:'#5d6a6e',a:'middle'})});
     s+=`<rect x="${x0}" y="${y0}" width="${x1-x0}" height="${y1-y0}" rx="4" fill="#1f2224" stroke="#0c0d0e"/><path d="M${x0} ${(y0+y1)/2-7} a7 7 0 0 1 0 14" fill="#3a3f42"/><circle cx="${x0+12}" cy="${y1-8}" r="3" fill="#3a3f42"/>`;
     s+=T((x0+x1)/2,(y0+y1)/2-1,d.mark||'UA741CN',{size:11,fill:'#d9dcde',a:'middle',w:600})+T((x0+x1)/2,(y0+y1)/2+11,d.mark2||'',{size:7.5,fill:'#9aa1a5',a:'middle'})}
+  /* two coils on a U-core with its yoke (EE205 Exp 7): coil 1 over the left column of nodes, coil 2 over the right one; the
+     pins are the coils' sockets (coil 1: 1 · 2, coil 2: A · B) */
+  if(d.pkg==='UCORE'){const bob=(x,lab,col)=>`<rect x="${x-24}" y="10" width="48" height="${P-20}" rx="6" fill="#c9773a" stroke="#7a3e14"/>`+[0,1,2,3,4,5,6].map(i=>`<line x1="${x-24}" y1="${18+i*(P-36)/6}" x2="${x+24}" y2="${18+i*(P-36)/6}" stroke="#9a5422" stroke-width="1.1"/>`).join('')+
+      `<rect x="${x-30}" y="4" width="60" height="9" rx="2" fill="#1f2224"/><rect x="${x-30}" y="${P-13}" width="60" height="9" rx="2" fill="#1f2224"/><rect x="${x-17}" y="${P/2-9}" width="34" height="18" rx="3" fill="#f4f1ea" stroke="#7a3e14" stroke-width=".8"/>`+T(x,P/2+3.5,lab,{size:8,fill:'#2a1a08',a:'middle',w:700});
+    if(icon)return `<rect x="-30" y="-6" width="60" height="12" rx="2" fill="#8d969b"/><rect x="-26" y="-16" width="20" height="26" rx="3" fill="#c9773a" stroke="#7a3e14"/><rect x="6" y="-16" width="20" height="26" rx="3" fill="#c9773a" stroke="#7a3e14"/>`;
+    s+=sel?`<rect x="-46" y="-12" width="${P+92}" height="${P+24}" rx="10" fill="none" stroke="${CH1}" stroke-width="2.5"/>`:'';
+    s+=`<rect x="-38" y="${P/2-7}" width="${P+76}" height="14" rx="3" fill="#8d969b" stroke="#4f585c"/>`+bob(0,d.n1||'1000 Wdg')+bob(P,d.n2||'500 Wdg')+`<rect x="-38" y="${P/2-5}" width="14" height="10" fill="#8d969b"/><rect x="${P+24}" y="${P/2-5}" width="14" height="10" fill="#8d969b"/>`;
+    d.pins.forEach(q=>{const x=q.dx*P,y=q.dy*P;s+=`<circle cx="${x}" cy="${y}" r="6" fill="#d43a2c" stroke="#5a1414" stroke-width="1.5"/>`+T(x+(q.dx?14:-14),y+4,q.n,{size:10,fill:'#1f2224',a:'middle',w:700})});
+    if(d.dot)d.pins.filter(q=>d.dot.includes(q.role)).forEach(q=>{s+=`<circle cx="${q.dx*P+(q.dx?-12:12)}" cy="${q.dy*P+(q.dy?-12:12)}" r="4" fill="#111"/>`});
+    return s}
   if(d.pkg==='TO220'||d.pkg==='TO126'){const big=d.pkg==='TO220';const bw=big?60:46;
     if(icon)return `<rect x="${-bw/2}" y="-16" width="${bw}" height="${big?12:0}" rx="2" fill="#c3c8cc"/><rect x="${-bw/2}" y="${big?-6:-12}" width="${bw}" height="${big?16:22}" rx="2" fill="#1f2224"/>`+[-12,0,12].map(x=>`<rect x="${x-2}" y="10" width="4" height="8" fill="#b9bec2"/>`).join('')+T(0,big?6:2,d.mark||'',{size:7.5,fill:'#d9dcde',a:'middle',w:600});
     const yb=-24,yt=big?-66:-58;
@@ -317,7 +327,7 @@ function partSVG(p){const S=RT.S;let s='';
 /* selection toolbar (⇄ / ✕) and wire-start marker: drawn above the cables so a plug never hides them */
 function toolbarSVG(){const S=RT.S;let s='';
   const sp=S.parts.find(p=>p.id===S.sel),sw=S.wires.find(w=>w.id===S.sel);
-  if(sp||sw){let x,y;if(sp&&MULTI(sp.type)){const c=fpC(sp.type,sp.n);x=c.x;y=nodeC(sp.n).y-(PARTS[sp.type].pkg==='DIP8'?34:84)}else if(sp){const a=nodeC(sp.a),b=nodeC(sp.b);x=(a.x+b.x)/2;y=(a.y+b.y)/2-40}else{const a=holeP(sw.a,sw.ha),b=holeP(sw.b,sw.hb);x=(a.x+b.x)/2;y=(a.y+b.y)/2-44}
+  if(sp||sw){let x,y;if(sp&&MULTI(sp.type)){const c=fpC(sp.type,sp.n);x=c.x;y=nodeC(sp.n).y-({DIP8:34,UCORE:30}[PARTS[sp.type].pkg]||84)}else if(sp){const a=nodeC(sp.a),b=nodeC(sp.b);x=(a.x+b.x)/2;y=(a.y+b.y)/2-40}else{const a=holeP(sw.a,sw.ha),b=holeP(sw.b,sw.hb);x=(a.x+b.x)/2;y=(a.y+b.y)/2-44}
     const btn=(bx,lab,k,c)=>`<circle cx="${bx}" cy="${y}" r="15" fill="#141c20" stroke="${c}" stroke-width="2" data-k="${k}" style="cursor:pointer"/>`+T(bx,y+5,lab,{size:14,fill:c,a:'middle',w:600});
     s+=sp&&POLAR(sp.type)?btn(x-20,'⇄','tb:flip',CH2)+btn(x+20,'✕','tb:del',RED):btn(x,'✕','tb:del',RED)}
   /* tap-to-plug: every compatible free jack lights up; a tap plugs the picked lead there */
@@ -547,6 +557,8 @@ svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;close
   if(S.armed&&jackDrop(S.armed,p)){S.armed=null;BENCH.drawerSync();return}
   /* placing a wire or a part: a tap on a lead's clip sitting on a node is a tap on that node */
   if((S.armed||S.wireMode)&&el&&el.dataset.k.startsWith('clip:')){const [,id,j]=el.dataset.k.split(':');const c=S.pl[+id].clips[+j];if(c.bn!=null){if(S.armed){placeArmed(p);return}el={dataset:{k:'node:'+c.bn}}}}
+  /* wire mode: a tap on a part standing over a node (e.g. the U-core's coils) is a tap on that node */
+  if(S.wireMode&&el&&el.dataset.k.startsWith('part:')){const n=nearestNode(p.x,p.y);if(n!=null)el={dataset:{k:'node:'+n}}}
   /* a lead picked by a tap: a lit jack plugs it, anything else cancels */
   if(S.pick!=null&&!(el&&el.dataset.k.startsWith('head:'))){const id=S.pick;S.pick=null;if(el&&el.dataset.k.startsWith('pj:')){if(plug(id,el.dataset.k.slice(3)))leadsChanged();else render(true)}else render(true);return}
   if(S.armed&&(!el||el.dataset.k.startsWith('node:'))){placeArmed(p);return}

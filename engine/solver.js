@@ -12,6 +12,8 @@
      FET {d,g,s,m}           enhancement n-MOSFET, m.ids(vgs,vds) -> drain current (d -> s)
      L   {a,b,l}             inductor (backward Euler; a 1 mΩ short in the dc operating point); ctx.vprev holds its current
      XF  {pa,pb,sa,sb,n,j}   ideal transformer vs = n·vp (perfectly coupled inductors, SPICE K = 1); x[j] = secondary current
+     MC  {a,b,c,d,l1,l2,m,j1,j2}  two magnetically coupled coils (a-b: L1, c-d: L2, mutual M; dots on a and c);
+                             x[j1], x[j2] = their currents (a → b, c → d). A short in the dc point, L/M in ac steady state
      OA  {p,m_,o,vp,vn,y,m}  op amp macro-model (pins +, −, out, V+, V−; y = internal node of the gain stage; m = model) */
 const SOLVER=(()=>{
   const VT=0.02585;
@@ -82,7 +84,7 @@ const SOLVER=(()=>{
         else if(e.t==='D'){const [i,g]=e.f(V(e.a)-V(e.b));st(e.a,e.b,i,g)}
         else if(e.t==='VS'){const g=1/e.r;const i=g*(V(e.a)-ctx.vs);if(e.a>=0){F[e.a]+=i;A[e.a*n+e.a]+=g}}
         else if(e.t==='DC'){const u=dcs.indexOf(ei),cc=ctx.cc&&ctx.cc[u];if(cc)st(e.a,e.b,-cc,0);else{const g=1/e.r;st(e.a,e.b,g*(V(e.a)-V(e.b)-e.v),g)}}
-        else if(e.t==='XS'){const v=e.s*e.vp*Math.sin(2*Math.PI*e.f*ctx.t);const g=1/e.r;st(e.a,e.b,g*(V(e.a)-V(e.b)-v),g)}
+        else if(e.t==='XS'){const v=e.s*e.vp*Math.sin(2*Math.PI*e.f*ctx.t+(e.ph||0));const g=1/e.r;st(e.a,e.b,g*(V(e.a)-V(e.b)-v),g)}
         else if(e.t==='C'){if(ctx.dt){const g=e.c/ctx.dt;st(e.a,e.b,g*(V(e.a)-V(e.b)-ctx.vprev[ei]),g)}else if(ctx.leak)st(e.a,e.b,ctx.leak*(V(e.a)-V(e.b)),ctx.leak)}
         else if(e.t==='CCS'){const [i,g]=ccs(e,V(e.a)-V(e.b));st(e.a,e.b,-i,g)}
         else if(e.t==='OA')stampOA(e,V,F,A,n,st,ctx,ei);
@@ -90,6 +92,13 @@ const SOLVER=(()=>{
         else if(e.t==='XF'){const J=(r,c,g)=>{if(r>=0&&c>=0)A[r*n+c]+=g};const is=x[e.j];
           F[e.j]+=V(e.sa)-V(e.sb)-e.n*(V(e.pa)-V(e.pb));J(e.j,e.sa,1);J(e.j,e.sb,-1);J(e.j,e.pa,-e.n);J(e.j,e.pb,e.n);
           if(e.sa>=0){F[e.sa]-=is;J(e.sa,e.j,-1)}if(e.sb>=0){F[e.sb]+=is;J(e.sb,e.j,1)}if(e.pa>=0){F[e.pa]+=e.n*is;J(e.pa,e.j,e.n)}if(e.pb>=0){F[e.pb]-=e.n*is;J(e.pb,e.j,-e.n)}}
+        else if(e.t==='MC'){const J=(r,c,g)=>{if(r>=0&&c>=0)A[r*n+c]+=g};const i1=x[e.j1],i2=x[e.j2];
+          /* branch equations: v1 = r·i1 (+ (L1 Δi1 + M Δi2)/dt in transient), v2 likewise; KCL with the branch currents */
+          const dt=ctx.dt,p1=ctx.vprev?ctx.vprev[ei]:null;const k1=dt?e.l1/dt:0,k2=dt?e.l2/dt:0,km=dt?e.m/dt:0,r=1e-3;
+          const o1=dt&&p1?k1*p1[0]+km*p1[1]:0,o2=dt&&p1?k2*p1[1]+km*p1[0]:0;
+          F[e.j1]+=V(e.a)-V(e.b)-(r+k1)*i1-km*i2+o1;J(e.j1,e.a,1);J(e.j1,e.b,-1);A[e.j1*n+e.j1]-=(r+k1);A[e.j1*n+e.j2]-=km;
+          F[e.j2]+=V(e.c)-V(e.d)-(r+k2)*i2-km*i1+o2;J(e.j2,e.c,1);J(e.j2,e.d,-1);A[e.j2*n+e.j2]-=(r+k2);A[e.j2*n+e.j1]-=km;
+          if(e.a>=0){F[e.a]+=i1;J(e.a,e.j1,1)}if(e.b>=0){F[e.b]-=i1;J(e.b,e.j1,-1)}if(e.c>=0){F[e.c]+=i2;J(e.c,e.j2,1)}if(e.d>=0){F[e.d]-=i2;J(e.d,e.j2,-1)}}
         else if(e.t==='BJT'){const vb=V(e.b),vc=V(e.c),ve=V(e.e),h=1e-7;const [ic,ib]=e.m(vb-ve,vb-vc);
           const d1=e.m(vb-ve+h,vb-vc),d2=e.m(vb-ve,vb-vc+h);const J=(r,c,g)=>{if(r>=0&&c>=0)A[r*n+c]+=g};
           /* partial derivatives of iC, iB wrt vBE (x) and vBC (y); node voltages: vb → x,y; vc → −y; ve → −x */
@@ -147,9 +156,9 @@ const SOLVER=(()=>{
     /* start from the dc operating point at t = 0 (capacitors charged to it: the circuit has been powered for a while).
        Capacitors leak 10 MΩ here so a section with no dc path to earth takes its potential through them instead of
        sitting at an arbitrary level set by gmin */
-    {const r=solveCC(ck,{t:0,dt:0,vprev,leak:1e-7,vs:vsFn?vsFn(0):0},null,300,0.4,1e-9);x=r.x;ck.els.forEach((e,ei)=>{if(e.t==='C')vprev[ei]=V(e.a)-V(e.b);if(e.t==='L')vprev[ei]=1e3*(V(e.a)-V(e.b));if(e.t==='OA')vprev[ei]=V(e.y)})}
+    {const r=solveCC(ck,{t:0,dt:0,vprev,leak:1e-7,vs:vsFn?vsFn(0):0},null,300,0.4,1e-9);x=r.x;ck.els.forEach((e,ei)=>{if(e.t==='C')vprev[ei]=V(e.a)-V(e.b);if(e.t==='L')vprev[ei]=1e3*(V(e.a)-V(e.b));if(e.t==='MC')vprev[ei]=[x[e.j1],x[e.j2]];if(e.t==='OA')vprev[ei]=V(e.y)})}
     for(let c=0;c<cycles;c++)for(let k=0;k<NS;k++){let r;for(let q=1;q<=sub;q++){const t=((c*NS+k)*sub+q)*dt;r=solveCC(ck,{t,dt,vprev,vs:vsFn?vsFn(t):0},x,60,0.5,1e-8);x=r.x;
-      ck.els.forEach((e,ei)=>{if(e.t==='OA')vprev[ei]=V(e.y);if(e.t==='C'){const v=V(e.a)-V(e.b);vprev[ei]=v;if(c===cycles-1)capMin[e.pid]=Math.min(capMin[e.pid]??1e9,v)}if(e.t==='L')vprev[ei]=vprev[ei]+dt/e.l*(V(e.a)-V(e.b))})}const t=(c*NS+k+1)*sub*dt;
+      ck.els.forEach((e,ei)=>{if(e.t==='OA')vprev[ei]=V(e.y);if(e.t==='C'){const v=V(e.a)-V(e.b);vprev[ei]=v;if(c===cycles-1)capMin[e.pid]=Math.min(capMin[e.pid]??1e9,v)}if(e.t==='L')vprev[ei]=vprev[ei]+dt/e.l*(V(e.a)-V(e.b));if(e.t==='MC')vprev[ei]=[x[e.j1],x[e.j2]]})}const t=(c*NS+k+1)*sub*dt;
       ck.els.forEach((e,ei)=>{
         if(e.t==='XS'&&c===cycles-1){const v=e.s*e.vp*Math.sin(2*Math.PI*e.f*t);imax=Math.max(imax,Math.abs((V(e.a)-V(e.b)-v)/e.r))}});
       if(c===cycles-1){const kk=(k+1)%NS;v1[kk]=ck.p1==null?NaN:V(ck.p1);v2[kk]=ck.p2==null?NaN:V(ck.p2);X[kk]=Float64Array.from(x);r.Is.forEach((I,u)=>{Iabs[u]+=Math.abs(I)/NS;if(r.ccs[u])ccs[u]=true})}}
@@ -159,7 +168,7 @@ const SOLVER=(()=>{
      x(t) = x_dc + Im(X·e^{j2πft}): the dc part is the usual operating point (C open, L short), the ac part one complex
      solve (G, jωC, 1/jωL, sources as Norton equivalents, dc units as their 20 mΩ in CV or open in CC, ideal XF).
      Returned in the transient's format (one period at NS points), so every reader works unchanged. */
-  const LINEAR=new Set(['G','C','L','VS','DC','XS','XF']);
+  const LINEAR=new Set(['G','C','L','VS','DC','XS','XF','MC']);
   const linear=ck=>ck.els.every(e=>LINEAR.has(e.t));
   function clsolve(Ar,Ai,br,bi,n){for(let c=0;c<n;c++){let m=c,mv=0;for(let r=c;r<n;r++){const v=Math.hypot(Ar[r*n+c],Ai[r*n+c]);if(v>mv){mv=v;m=r}}if(mv<1e-30)continue;
       if(m!==c){for(let k=0;k<n;k++){let t=Ar[c*n+k];Ar[c*n+k]=Ar[m*n+k];Ar[m*n+k]=t;t=Ai[c*n+k];Ai[c*n+k]=Ai[m*n+k];Ai[m*n+k]=t}let t=br[c];br[c]=br[m];br[m]=t;t=bi[c];bi[c]=bi[m];bi[m]=t}
@@ -184,6 +193,10 @@ const SOLVER=(()=>{
       else if(e.t==='VS'){const g=1/e.r;add(e.a,e.a,g,0);if(e.a>=0)br[e.a]+=g*(A||0)}
       else if(e.t==='DC'){if(!cc[dcs.indexOf(ei)])y(e.a,e.b,1/e.r,0)}
       else if(e.t==='XS'){const g=1/e.r,ph=e.ph||0,m=e.s*e.vp;y(e.a,e.b,g,0);inj(e.a,e.b,g*m*Math.cos(ph),g*m*Math.sin(ph))}
+      else if(e.t==='MC'){const J=(r,c,gr,gi)=>add(r,c,gr,gi);
+        J(e.j1,e.a,1,0);J(e.j1,e.b,-1,0);J(e.j1,e.j1,0,-w*e.l1);J(e.j1,e.j2,0,-w*e.m);
+        J(e.j2,e.c,1,0);J(e.j2,e.d,-1,0);J(e.j2,e.j2,0,-w*e.l2);J(e.j2,e.j1,0,-w*e.m);
+        J(e.a,e.j1,1,0);J(e.b,e.j1,-1,0);J(e.c,e.j2,1,0);J(e.d,e.j2,-1,0)}
       else if(e.t==='XF'){const J=(r,c,g)=>add(r,c,g,0);J(e.j,e.sa,1);J(e.j,e.sb,-1);J(e.j,e.pa,-e.n);J(e.j,e.pb,e.n);
         J(e.sa,e.j,-1);J(e.sb,e.j,1);J(e.pa,e.j,e.n);J(e.pb,e.j,-e.n)}});
     const [Xr,Xi]=clsolve(Ar,Ai,br,bi,n);

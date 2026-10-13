@@ -16,7 +16,7 @@ const LABS=[
     {num:4,en:'Power Factor Improvement',ar:'تحسين معامل القدرة',bench:['lamp','px120','fluke','fluke','capbox']},
     {num:5,en:'Three-Phase AC Circuits',ar:'الدوائر ثلاثية الطور',bench:['xf3','px120','fluke','fluke','rheo']},
     {num:6,en:'Transients in DC Circuits',ar:'الحالة العابرة في دوائر التيار المستمر',bench:['metrix','hameg','yew'],built:true},
-    {num:7,en:'Magnetically Coupled Circuits',ar:'الدوائر المقترنة مغناطيسياً',bench:['variac','fluke','fluke','fluke']},
+    {num:7,en:'Magnetically Coupled Circuits',ar:'الدوائر المقترنة مغناطيسياً',bench:['variac','fluke','fluke','fluke','fluke'],built:true},
     {num:8,en:'Resonance in Series and Parallel Circuits',ar:'الرنين في دوائر التوالي والتوازي',bench:['metrix','hameg','fluke','bk'],built:true}
   ]},
   {id:'ee312',code:'EE312',title:'Basic Electronics Lab',ar:'معمل أساسيات الإلكترونيات',level:6,room:{rows:2,cols:5},exps:[

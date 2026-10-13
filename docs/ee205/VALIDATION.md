@@ -67,3 +67,14 @@ frequency response or a semiconductor is involved.
 | Proc III: I at resonance | 2 / (117.6 + 10 Ω BK 20 mA shunt) = 15.7 mA | 15.62 mA | −0.5 % | 18.06 mA | ✓ |
 | Proc III: B, Qo | 1069 Hz, 11.3 | from the P(f) plot | – | – | ✓ |
 | Proc IV: fop, B, Qo | 7605 Hz, 507 Hz, 15.0 | from the Z(f) plot | – | – | ✓ |
+
+## Exp 7 · Magnetically coupled coils (2 Vrms, 60 Hz)
+| Quantity | Theory | Simulated | Diff | Video (5 V) | Pass |
+|---|---|---|---|---|---|
+| Rdc coil 1 / coil 2 | 17.6 / 5.2 Ω | 17.6 / 5.2 Ω | 0 | R2 = 5.2 Ω | ✓ |
+| I, coil 1 alone | 2 / 646.8 = 3.092 mA | 3.09 mA | 0 | 7.76 mA at 5.02 V (= 3.09 mA at 2 V) | ✓ |
+| I, coil 2 alone | 2 / 161.8 = 12.36 mA | 12.35 mA | 0 | – | ✓ |
+| V2 (Proc II) = I1·ωM | 0.910 V | 0.91 V | 0 | 2.285 V at 5 V (= 0.914 V at 2 V) | ✓ |
+| VT (Proc III) = V1 + V2 | 2.91 V | 2.91 V | 0 | 7.5 V = 5 + 2.5 (dot at B) | ✓ |
+| I aiding | 2 / |22.8 + j1397| = 1.431 mA | 1.43 mA | 0 | – | ✓ |
+| I opposing | 2 / |22.8 + j219.4| = 9.07 mA | 9.06 mA | −0.1 % | – | ✓ |

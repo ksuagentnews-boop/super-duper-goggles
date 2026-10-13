@@ -38,3 +38,9 @@ Small gaps resolved while building (the manual always wins; videos only for look
 - The handheld voltmeter cannot follow 7.5–15 kHz, so in Procedures III–IV V = 2 Vrms is held with the CRO (5.66 Vpp); the BK 2704B ammeter reads flat at these frequencies, as the lab's did (video: 18.06 mA at series resonance). "V = 2 Vrms" is checked within ±2.5 % (the ammeter's burden moves it a little).
 - Coil resistances: 1000 turns 17.6 Ω, 500 turns 5.2 Ω (videos). The 1 µF capacitor of the list is in «العلبة»; no step uses it.
 - Off resonance the parallel current is above the BK's 2 mA range: the student moves to 20 mA (OL otherwise), as on the real meter.
+
+## Exp 7
+- The coils on the U-core: coil 1 (1000 turns) Rdc 17.6 Ω, L1 = 1.715 H; coil 2 (500 turns) Rdc 5.2 Ω, L2 = 0.429 H; M = 0.781 H (k = 0.91), fitted to the lab video at 5 V (I1 7.76 mA, V2 2.285 V, VT = 7.5 V → dot at B). The dot is not drawn on the part: Procedure III finds it.
+- "R = 1.15 Rdc" is the manual's allowance; the simulated coils have their dc resistance only (R ≪ X, so L changes by < 0.1 %).
+- Four Fluke 77s (M1–M3 voltmeters, M4 ammeter) instead of the list's two ammeters + three voltmeters: no step needs a second ammeter, and the desk stays readable (the table photo shows three meters).
+- 2 Vrms (manual), not the video's 5 V. The variable ac supply is locked until «المشرف يتأكد» checks the wiring (no ammeter across the source, no short); any wiring change re-locks it.
