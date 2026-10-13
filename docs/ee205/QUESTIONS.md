@@ -27,3 +27,8 @@ Small gaps resolved while building (the manual always wins; videos only for look
 - Fig. 6b's ZTH is built as the decade box (real part − RL ≈ 767 Ω) in series with the same iron-core coil.
 - The 4.7 µF and 22 µF capacitors are treated as non-polar (ac across them).
 - Two yellow-holster Fluke 77s as on the table photo: M1 voltmeter, M2 ammeter (A~, 300 mA jack in place of a plug).
+
+## Exp 6
+- Rs = 50 Ω (the MTX 3240 output); τ = (R + Rs)C. In Procedure II the coil's RL = 17.6 Ω adds to R as well.
+- Table 1's six times are the student's own choice (any six inside half a period); each row is graded against the theory at that time.
+- The "overshoot just vanishes" point is graded against where the student saw it (overshoot < 1 % of the step, i.e. invisible at 2 V/div), and Rc against 2√(L/C).

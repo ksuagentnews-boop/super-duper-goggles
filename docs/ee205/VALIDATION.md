@@ -44,3 +44,12 @@ frequency response or a semiconductor is involved.
 | Va-b at 1 µF | 2.032 V | 2.033 V | 0 | – | ✓ |
 | Va-b at 1.47 µF (maximum, XC ≈ XL) | 2.062 V | 2.063 V | 0 | – | ✓ |
 | Va-b at 22 µF | 1.940 V | 1.941 V | 0 | – | ✓ |
+
+## Exp 6 · Transients (square 0 → 10 V, 200 Hz, Rs = 50 Ω, scope 1 MΩ)
+| Quantity | Theory | Simulated | Diff | Video | Pass |
+|---|---|---|---|---|---|
+| τ = (10 k + 50)·0.047 µF | 0.472 ms | from the trace (63 % point) | – | – | ✓ |
+| vc top of the charge (1 MΩ scope load) | 9.90 × (1 − e^−5.3) ≈ 9.85 V | 9.85 V | 0 | – | ✓ |
+| Overshoot at R = 600 Ω (+ RL + Rs) | e^(−πζ/√(1−ζ²)), ζ = 0.547 → 12.6 % | 11.2 % | −1.4 pt (scope load, BE steps) | – | ✓ |
+| Ringing frequency at 600 Ω | 4646 Hz | trace | – | – | ✓ |
+| Critical R = 2√(L/C) | 1220 Ω total (box ≈ 1152 Ω) | overshoot < 1 % (invisible) from box ≈ 950 Ω | the eye sees it vanish early | – | ✓ (behaviour) |
