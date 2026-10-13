@@ -154,6 +154,7 @@ Updated after every finished item (commit + push each time).
 - **4 · PeakTech 4124 redrawn** from the lab photo (blue bumpers, colour LCD with soft menu, F1–F5, keypad, knob, CH1/CH2 area with OUT1/OUT2, waveform keys); behaviour, size and OUT1 position unchanged.
 - **1 · Highlights under parts:** the current line's node squares are drawn in a layer under the parts and leads (jack rings stay on top); they move on as soon as the connection is made.
 - **7 · Decade boxes separate:** `{type:'dbox'}` becomes two instruments (`dbox` A, `dbox2` B), each with its own ✥ handle, saved position and zoom; shared state and circuit unchanged.
+- **8 · Last moved on top:** an instrument, a lead or a part moved last is drawn on the top layer until something else is moved.
 
 ## In progress
 - Batch 4: 10, 6, 1, 7, 8, 2 (4 in a parallel worktree).

@@ -98,7 +98,7 @@ export async function run(page, vp, ok) {
   if (H.touch) await page.touchscreen.tap(wpt[0], wpt[1]); else await page.mouse.click(wpt[0], wpt[1]); await page.waitForTimeout(80);
   ok(await page.evaluate(id => BENCH.sim.RT.S.wcol[id] === 'red', wid), 'pick red, tap the wire: it turns red');
   await page.click('#pSw .px'); ok(await page.evaluate(() => BENCH.paint === null && document.getElementById('pSw').hidden), '✕ leaves colour mode');
-  const lc = await page.evaluate(() => ['Lp', 'Lm', 'mh', 'ml'].map(k => document.querySelector(`#Lcables [data-cab="${k}"] path:nth-child(2)`).getAttribute('stroke')).join());
+  const lc = await page.evaluate(() => ['Lp', 'Lm', 'mh', 'ml'].map(k => document.querySelector(`#bench [data-cab="${k}"] path:nth-child(2)`).getAttribute('stroke')).join());
   ok(lc === '#e2453b,#30363a,#e2453b,#30363a', 'supply and DMM leads: red on +/HI, black on −/COM (' + lc + ')');
   // movable instruments: the ✥ handle moves the DMM (mouse or finger), its cables follow, nothing on it is pressed;
   // the arrangement is remembered for this experiment and "ترتيب افتراضي" restores the default
@@ -143,6 +143,14 @@ export async function run(page, vp, ok) {
   await page.click('#bLayout'); await page.waitForTimeout(600);
   const p3 = await pos(); const d0 = await page.evaluate(() => BENCH.sim.RT.layout.DEF.dmm);
   ok(Math.abs(p3.x - d0.x) < 1 && Math.abs(p3.y - d0.y) < 1 && !(await page.evaluate(() => localStorage.getItem('eelab:layout:ee312/exp1'))), '"ترتيب افتراضي" restores the default layout');
+  { // last moved = on top, for parts and leads too
+    await H.place('R100', 2, 3); const pid = await page.evaluate(() => { const S = BENCH.sim.RT.S; return S.parts[S.parts.length - 1].id; });
+    const A = await H.node(2), B = await H.node(3), C = await H.node(4); await H.drag({ x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 }, { x: (B.x + C.x) / 2, y: (B.y + C.y) / 2 });
+    ok(await page.evaluate(id => !!document.querySelector(`#LtopCab [data-k="part:${id}"]`) && !document.querySelector(`#Lparts [data-k="part:${id}"]`), pid), 'a part moved last is drawn on the top layer');
+    const hd = await page.evaluate(() => { const R = BENCH.sim.RT, id = R.lead.leadFor(R.lead.grpOf('ml')); return { id, a: R.lead.headPos(id), b: R.lead.jackAt(R.lead.grpOf('ml')) }; });
+    await H.drag(hd.a, { x: hd.b.x + 6, y: hd.b.y + 4 });
+    ok(await page.evaluate(([id, pid]) => !!document.querySelector(`#LtopCab [data-k="head:${id}"]`) && !!document.querySelector(`#Lparts [data-k="part:${pid}"]`), [hd.id, pid]), 'then a lead moved last takes the top layer and the part goes back');
+    await page.evaluate(() => BENCH.sim.reset()); }
   await page.evaluate(() => { if (window.__orig) EXP_DEFS['ee312/exp1'] = window.__orig; else delete EXP_DEFS['ee312/exp1']; }); await page.click('#bStand'); await page.waitForTimeout(400);
 }
 
