@@ -141,17 +141,55 @@ const SOLVER=(()=>{
   /* ---------- transient ---------- */
   const NS=300;
   /* simulate `cycles` periods of frequency f; vsFn(t) drives VS elements. Returns the last period sampled at NS points. */
-  function simulate(ck,f,cycles=6,vsFn){const n=ck.n;const dt=1/f/NS;let x=new Float64Array(n);const vprev=ck.els.map(()=>0);const nd=dcList(ck).length;
+  function simulate(ck,f,cycles=6,vsFn,sub=1){const n=ck.n;const dt=1/f/NS/sub;let x=new Float64Array(n);const vprev=ck.els.map(()=>0);const nd=dcList(ck).length;
     const v1=new Float64Array(NS),v2=new Float64Array(NS),X=new Array(NS);let imax=0;const capMin={};const Iabs=new Array(nd).fill(0),ccs=new Array(nd).fill(false);
     const V=i=>i==null?0:i<0?0:x[i];
     /* start from the dc operating point at t = 0 (capacitors charged to it: the circuit has been powered for a while).
        Capacitors leak 10 MΩ here so a section with no dc path to earth takes its potential through them instead of
        sitting at an arbitrary level set by gmin */
-    {const r=solveCC(ck,{t:0,dt:0,vprev,leak:1e-7,vs:vsFn?vsFn(0):0},null,300,0.4,1e-9);x=r.x;ck.els.forEach((e,ei)=>{if(e.t==='C')vprev[ei]=V(e.a)-V(e.b);if(e.t==='OA')vprev[ei]=V(e.y)})}
-    for(let c=0;c<cycles;c++)for(let k=0;k<NS;k++){const t=(c*NS+k+1)*dt;const r=solveCC(ck,{t,dt,vprev,vs:vsFn?vsFn(t):0},x,60,0.5,1e-8);x=r.x;
-      ck.els.forEach((e,ei)=>{if(e.t==='OA')vprev[ei]=V(e.y);if(e.t==='C'){const v=V(e.a)-V(e.b);vprev[ei]=v;if(c===cycles-1)capMin[e.pid]=Math.min(capMin[e.pid]??1e9,v)}
+    {const r=solveCC(ck,{t:0,dt:0,vprev,leak:1e-7,vs:vsFn?vsFn(0):0},null,300,0.4,1e-9);x=r.x;ck.els.forEach((e,ei)=>{if(e.t==='C')vprev[ei]=V(e.a)-V(e.b);if(e.t==='L')vprev[ei]=1e3*(V(e.a)-V(e.b));if(e.t==='OA')vprev[ei]=V(e.y)})}
+    for(let c=0;c<cycles;c++)for(let k=0;k<NS;k++){let r;for(let q=1;q<=sub;q++){const t=((c*NS+k)*sub+q)*dt;r=solveCC(ck,{t,dt,vprev,vs:vsFn?vsFn(t):0},x,60,0.5,1e-8);x=r.x;
+      ck.els.forEach((e,ei)=>{if(e.t==='OA')vprev[ei]=V(e.y);if(e.t==='C'){const v=V(e.a)-V(e.b);vprev[ei]=v;if(c===cycles-1)capMin[e.pid]=Math.min(capMin[e.pid]??1e9,v)}if(e.t==='L')vprev[ei]=vprev[ei]+dt/e.l*(V(e.a)-V(e.b))})}const t=(c*NS+k+1)*sub*dt;
+      ck.els.forEach((e,ei)=>{
         if(e.t==='XS'&&c===cycles-1){const v=e.s*e.vp*Math.sin(2*Math.PI*e.f*t);imax=Math.max(imax,Math.abs((V(e.a)-V(e.b)-v)/e.r))}});
       if(c===cycles-1){const kk=(k+1)%NS;v1[kk]=ck.p1==null?NaN:V(ck.p1);v2[kk]=ck.p2==null?NaN:V(ck.p2);X[kk]=Float64Array.from(x);r.Is.forEach((I,u)=>{Iabs[u]+=Math.abs(I)/NS;if(r.ccs[u])ccs[u]=true})}}
     return {kind:'tran',f,v1,v2,X,imax,capMin,has1:ck.p1!=null,has2:ck.p2!=null,Idc:Iabs,ccs}}
-  return {VT,dexp,junction,bjt,mosfet,MODELS,diodeSi,zener,diodeGe,led,uf,lsolve,newton,point,sweep,interp,simulate,ccs,NS};
+  /* ---------- ac steady state (phasor) for linear circuits ----------
+     Every sine source runs at the same frequency f: VS = off + A·sin(2πft) (A = amp/2), XS = s·vp·sin(2πft + ph).
+     x(t) = x_dc + Im(X·e^{j2πft}): the dc part is the usual operating point (C open, L short), the ac part one complex
+     solve (G, jωC, 1/jωL, sources as Norton equivalents, dc units as their 20 mΩ in CV or open in CC, ideal XF).
+     Returned in the transient's format (one period at NS points), so every reader works unchanged. */
+  const LINEAR=new Set(['G','C','L','VS','DC','XS','XF']);
+  const linear=ck=>ck.els.every(e=>LINEAR.has(e.t));
+  function clsolve(Ar,Ai,br,bi,n){for(let c=0;c<n;c++){let m=c,mv=0;for(let r=c;r<n;r++){const v=Math.hypot(Ar[r*n+c],Ai[r*n+c]);if(v>mv){mv=v;m=r}}if(mv<1e-30)continue;
+      if(m!==c){for(let k=0;k<n;k++){let t=Ar[c*n+k];Ar[c*n+k]=Ar[m*n+k];Ar[m*n+k]=t;t=Ai[c*n+k];Ai[c*n+k]=Ai[m*n+k];Ai[m*n+k]=t}let t=br[c];br[c]=br[m];br[m]=t;t=bi[c];bi[c]=bi[m];bi[m]=t}
+      const pr=Ar[c*n+c],pi=Ai[c*n+c],pd=pr*pr+pi*pi;
+      for(let r=c+1;r<n;r++){const ar=Ar[r*n+c],ai=Ai[r*n+c];if(!ar&&!ai)continue;const fr=(ar*pr+ai*pi)/pd,fi=(ai*pr-ar*pi)/pd;
+        for(let k=c;k<n;k++){const xr=Ar[c*n+k],xi=Ai[c*n+k];Ar[r*n+k]-=fr*xr-fi*xi;Ai[r*n+k]-=fr*xi+fi*xr}br[r]-=fr*br[c]-fi*bi[c];bi[r]-=fr*bi[c]+fi*br[c]}}
+    const xr=new Float64Array(n),xi=new Float64Array(n);
+    for(let r=n-1;r>=0;r--){let sr=br[r],si=bi[r];for(let k=r+1;k<n;k++){sr-=Ar[r*n+k]*xr[k]-Ai[r*n+k]*xi[k];si-=Ar[r*n+k]*xi[k]+Ai[r*n+k]*xr[k]}
+      const pr=Ar[r*n+r],pi=Ai[r*n+r],pd=pr*pr+pi*pi;if(pd<1e-60){xr[r]=xi[r]=0;continue}xr[r]=(sr*pr+si*pi)/pd;xi[r]=(si*pr-sr*pi)/pd}
+    return [xr,xi]}
+  function phasor(ck,f,A,off){const n=ck.n,w=2*Math.PI*f;const vprev=ck.els.map(()=>0);
+    const dc=solveCC(ck,{t:0,dt:0,vprev,leak:1e-7,vs:off||0},null,300,0.4,1e-9);const cc=dc.ccs,dcs=dcList(ck);
+    const Ar=new Float64Array(n*n),Ai=new Float64Array(n*n),br=new Float64Array(n),bi=new Float64Array(n);
+    const add=(r,c,gr,gi)=>{if(r>=0&&c>=0){Ar[r*n+c]+=gr;Ai[r*n+c]+=gi}};
+    const y=(a,b,gr,gi)=>{add(a,a,gr,gi);add(b,b,gr,gi);add(a,b,-gr,-gi);add(b,a,-gr,-gi)};
+    const inj=(a,b,ir,ii)=>{if(a>=0){br[a]+=ir;bi[a]+=ii}if(b>=0){br[b]-=ir;bi[b]-=ii}};   // source current into a, out of b
+    for(let k=0;k<n;k++)Ar[k*n+k]+=1e-9;
+    ck.els.forEach((e,ei)=>{
+      if(e.t==='G')y(e.a,e.b,e.g,0);
+      else if(e.t==='C')y(e.a,e.b,0,w*e.c);
+      else if(e.t==='L')y(e.a,e.b,0,-1/(w*e.l));
+      else if(e.t==='VS'){const g=1/e.r;add(e.a,e.a,g,0);if(e.a>=0)br[e.a]+=g*(A||0)}
+      else if(e.t==='DC'){if(!cc[dcs.indexOf(ei)])y(e.a,e.b,1/e.r,0)}
+      else if(e.t==='XS'){const g=1/e.r,ph=e.ph||0,m=e.s*e.vp;y(e.a,e.b,g,0);inj(e.a,e.b,g*m*Math.cos(ph),g*m*Math.sin(ph))}
+      else if(e.t==='XF'){const J=(r,c,g)=>add(r,c,g,0);J(e.j,e.sa,1);J(e.j,e.sb,-1);J(e.j,e.pa,-e.n);J(e.j,e.pb,e.n);
+        J(e.sa,e.j,-1);J(e.sb,e.j,1);J(e.pa,e.j,e.n);J(e.pb,e.j,-e.n)}});
+    const [Xr,Xi]=clsolve(Ar,Ai,br,bi,n);
+    const X=new Array(NS),v1=new Float64Array(NS),v2=new Float64Array(NS);
+    for(let k=0;k<NS;k++){const th=2*Math.PI*k/NS,c=Math.cos(th),s=Math.sin(th);const x=new Float64Array(n);for(let i=0;i<n;i++)x[i]=dc.x[i]+Xr[i]*s+Xi[i]*c;X[k]=x;
+      v1[k]=ck.p1==null||ck.p1<0?(ck.p1==null?NaN:0):x[ck.p1];v2[k]=ck.p2==null||ck.p2<0?(ck.p2==null?NaN:0):x[ck.p2]}
+    return {kind:'tran',phasor:true,f,v1,v2,X,Xac:[Xr,Xi],xdc:dc.x,imax:0,capMin:{},has1:ck.p1!=null,has2:ck.p2!=null,Idc:dc.Is.map(Math.abs),ccs:cc}}
+  return {VT,dexp,junction,bjt,mosfet,MODELS,diodeSi,zener,diodeGe,led,uf,lsolve,newton,point,sweep,interp,simulate,phasor,linear,ccs,NS};
 })();

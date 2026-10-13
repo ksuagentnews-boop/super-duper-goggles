@@ -216,10 +216,10 @@ const BENCH={
     const ids=[...new Set(raw.map(s=>s.proc).filter(Boolean))];
     /* sheet: tables whose caption names a procedure and PLQs that start with "Procedure X" belong to it; PLQ numbers stay fixed */
     const ph=this.el.paperHost;ph.querySelectorAll('ol').forEach(ol=>[...ol.children].forEach((li,i)=>{if(li.tagName==='LI'&&!li.hasAttribute('value'))li.value=i+1}));
-    ph.querySelectorAll('h3').forEach(h=>{const m=/^Procedure\s+([A-Z])\b/.exec(h.textContent.trim());if(!m||!ids.includes(m[1])||h.dataset.proc)return;h.dataset.proc=m[1];
+    ph.querySelectorAll('h3').forEach(h=>{const m=/^Procedure\s+([IVX]+|[A-Z])\b/.exec(h.textContent.trim());if(!m||!ids.includes(m[1])||h.dataset.proc)return;h.dataset.proc=m[1];
       for(let e=h.nextElementSibling;e&&!/^H[23]$/.test(e.tagName)&&!e.querySelector('#submit');e=e.nextElementSibling)if(!e.dataset.proc)e.dataset.proc=m[1]});
     ph.querySelectorAll('table,li.plq').forEach(e=>{if(e.dataset.proc||e.closest('[data-proc]'))return;const t=(e.tagName==='TABLE'?(e.caption?e.caption.textContent:''):e.textContent.trim().slice(0,24))||'';
-      const m=(e.tagName==='TABLE'?/\bProcedure\s+([A-Z])\b/:/^Procedure\s+([A-Z])\b/).exec(t);if(m&&ids.includes(m[1]))e.dataset.proc=m[1]});
+      const m=(e.tagName==='TABLE'?/\bProcedure\s+([IVX]+|[A-Z])\b/:/^Procedure\s+([IVX]+|[A-Z])\b/).exec(t);if(m&&ids.includes(m[1]))e.dataset.proc=m[1]});
     this.procs=ids.map(id=>({id,title:((def.procs||[]).find(p=>p.id===id)||{}).title||''}));this.rawSteps=raw;this.procSel=new Set(ids);this.applyProcs();
     const pp=$q('#procPick');pp.hidden=true;if(this.mode==='manual'&&ids.length>1)this.showProcPick()},
   applyProcs(){const sim=this.sim,sel=this.procSel;const keep=this.rawSteps.filter(s=>!s.proc||sel.has(s.proc)).map(s=>({...s,lines:s.lines&&s.lines.slice()}));

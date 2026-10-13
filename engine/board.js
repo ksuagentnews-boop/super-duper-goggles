@@ -116,7 +116,7 @@ RT.inst=byKey;RT.layout={BX,BY,P,COLS,ROWS,parkY,PARK,regions,POS,DEF,FACE,TRAY,
 
 /* ---------- parts ---------- */
 const PARTS=def.parts;
-const POLAR=t=>['D','Z','C','LED','GE'].includes((PARTS[t]||{}).t);
+const POLAR=t=>['D','Z','C','LED','GE'].includes((PARTS[t]||{}).t)&&!(PARTS[t]||{}).np;
 /* multi-pin parts (ICs, transistors): def.pins = [{dx,dy,h,role,n}] node offsets from the anchor node p.n,
    the hole each leg goes into and its electrical role; def.pkg picks the drawing */
 const MULTI=t=>!!(PARTS[t]&&PARTS[t].pins);
@@ -161,6 +161,7 @@ function buildUser(force,opts){
     if(d.t==='R')els.push({t:'G',a:idx(p.a),b:idx(p.b),g:d.g||1/d.r,pid:p.id});
     else if(['D','Z','GE','LED'].includes(d.t))els.push({t:'D',a:idx(p.a),b:idx(p.b),f:SOLVER.MODELS[d.model||{D:'si',Z:'zener',GE:'ge',LED:'led'}[d.t]],pid:p.id});
     else if(d.t==='C')els.push({t:'C',a:idx(p.a),b:idx(p.b),c:d.c,pid:p.id});
+    else if(d.t==='L'){const m=inner();els.push({t:'L',a:idx(p.a),b:m,l:d.l,pid:p.id});els.push({t:'G',a:m,b:idx(p.b),g:1/(d.rs||0.01),pid:p.id})}
     else if(d.pins){const R={};pinNodes(p).forEach((nd,k)=>{const r=d.pins[k].role;if(r)R[r]=idx(nd)});
       if(d.t==='OA')els.push(Object.assign({t:'OA',y:inner(),m:SOLVER.MODELS[d.model],pid:p.id},R));
       else if(d.stamp)d.stamp(els,R,inner,p)}});
@@ -173,10 +174,15 @@ RT.buildUser=buildUser;
 /* ---------- analysis ---------- */
 function recompute(){
   const S=RT.S;const ck=buildUser(false);const gen=byKey.gen;const genOn=!!(gen&&gen.on());
-  if(ck.els.some(e=>e.t==='C'||e.t==='XS'||e.t==='OA')){
-    const f=byKey.xf?byKey.xf.FQ:genOn?S.gen.freq:50;
+  const reactive=ck.els.some(e=>e.t==='C'||e.t==='L'||e.t==='XS'||e.t==='XF'||e.t==='OA');
+  const srcF=ck.els.find(e=>e.t==='XS');
+  /* linear circuit driven by sines of one frequency (generator on Sine, mains sources): ac steady state (phasor) */
+  if(reactive&&SOLVER.linear(ck)&&(genOn?S.gen.wave==='Sine'&&!srcF:true)&&(genOn||srcF)){
+    const f=genOn?S.gen.freq:srcF.f;RT.TB=SOLVER.phasor(ck,f,genOn?S.gen.amp/2:0,genOn?S.gen.off:0);
+  }else if(reactive){
+    const f=byKey.xf?byKey.xf.FQ:srcF?srcF.f:genOn?S.gen.freq:50;
     const vsFn=genOn?(t=>S.gen.off+S.gen.amp/2*gen.wv(2*Math.PI*f*t)):null;
-    RT.TB=SOLVER.simulate(ck,f,def.cycles||6,vsFn);
+    RT.TB=SOLVER.simulate(ck,f,def.cycles||6,vsFn,def.sub||1);
   }else{const A=genOn?S.gen.amp/2:0,o=genOn?S.gen.off:0;RT.TB=SOLVER.sweep(ck,o-A,o+A,A?121:2);RT.TB.A=A;RT.TB.off=o}
   RT.TB.ck=ck;RT.dirty=false;
   INST.forEach(i=>i.measure&&i.measure());
@@ -268,13 +274,17 @@ function partBody(type,L,sel,lit,col){const h=L/2,d=PARTS[type]||{t:type};const 
   const legs=(a,b,col='#9aa3a8')=>`<line x1="${-h}" y1="0" x2="${a}" y2="0" stroke="${col}" stroke-width="2.2"/><line x1="${b}" y1="0" x2="${h}" y2="0" stroke="${col}" stroke-width="2.2"/>`;
   const glow=sel?`<rect x="${-h-8}" y="-15" width="${L+16}" height="30" rx="8" fill="none" stroke="${CH1}" stroke-width="2.5"/>`:'';
   if(t==='BR'){const c=SWATCH[col];return `<rect x="${-h-6}" y="-8" width="${L+12}" height="16" rx="5" fill="${c?c.c:'#f4f6f6'}" stroke="${sel?CH1:c?c.d:'#9aa6aa'}" stroke-width="${sel?3:1.5}"/><rect x="${-h+4}" y="-4" width="${L-8}" height="8" rx="3" fill="${c?c.d:'#e2e7e8'}" opacity="${c?.35:1}"/>`+pins()}
-  if(t==='R'){const [a,b,m]=rBands(d.r||1/d.g);const mc=m>=0?BANDC[m]:m===-1?'#c9a227':'#c0c0c0';
+  if(t==='R'){const [a,b,m]=rBands(d.nom||d.r||1/d.g);const mc=m>=0?BANDC[m]:m===-1?'#c9a227':'#c0c0c0';
     s+=legs(-14,14)+`<rect x="-15" y="-6" width="30" height="12" rx="5" fill="#e3c9a0" stroke="#a88a5c" stroke-width="1"/>`+[[-10,BANDC[a]],[-5,BANDC[b]],[0,mc],[8,'#c9a227']].map(([x,c])=>`<rect x="${x-1.6}" y="-6" width="3.2" height="12" fill="${c}"/>`).join('')}
   else if(t==='D'){s+=legs(-12,12)+`<rect x="-12" y="-5.5" width="24" height="11" rx="2.5" fill="#1c1d1f"/><rect x="6" y="-5.5" width="3.6" height="11" fill="#b9bec2"/>`}
   else if(t==='Z'){s+=legs(-10,10)+`<rect x="-10" y="-5" width="20" height="10" rx="4" fill="#c63a26" opacity=".95"/><rect x="-8" y="-3" width="16" height="2.4" rx="1" fill="#f08a76" opacity=".7"/><rect x="5" y="-5" width="3" height="10" fill="#111"/>`}
   else if(t==='GE'){s+=legs(-10,10,'#a7a08a')+`<rect x="-10" y="-4.5" width="20" height="9" rx="4" fill="#e9e3c7" opacity=".85" stroke="#b4ab86"/><line x1="-6" y1="0" x2="4" y2="0" stroke="#5a4e2a" stroke-width="1.6"/><rect x="5" y="-4.5" width="2.6" height="9" fill="#2a2a2a"/>`}
   else if(t==='LED'){const col=d.color||'#36c25a';s+=`<line x1="${-h}" y1="0" x2="-4" y2="0" stroke="#9aa3a8" stroke-width="2.2"/><path d="M4 0 L${h-6} 0 L${h-3} -3 L${h} 0" fill="none" stroke="#9aa3a8" stroke-width="2.2"/>`+
     (lit?`<circle r="${12+10*lit}" fill="${col}" opacity="${0.2+0.3*lit}"/>`:'')+`<circle r="9" fill="${col}" opacity="${lit?1:.8}" stroke="#1d5e2c"/><path d="M-6.5 -6.2 A9 9 0 0 1 -6.5 6.2" fill="none" stroke="#1d5e2c" stroke-width="2.4"/><circle cx="2.5" cy="-3" r="2.4" fill="#fff" opacity=".55"/>`}
+  else if(t==='C'&&d.np){/* film / ceramic capacitor on its carrier: no polarity */s+=legs(-8,8)+`<rect x="-9" y="-8" width="18" height="16" rx="3" fill="${d.col||'#d9a640'}" stroke="#7a5a1e"/>`+T(0,3,d.mark||'',{size:6.5,fill:'#3a2a08',a:'middle',w:700})}
+  else if(t==='L'){/* coil: copper winding between two black flanges; the iron core shows as a grey bar through it */
+    s+=legs(-17,17)+(d.core?`<rect x="-22" y="-4" width="44" height="8" rx="1.5" fill="#8d969b" stroke="#4f585c"/>`:'')+`<rect x="-17" y="-12" width="5" height="24" rx="1.5" fill="#1f2224"/><rect x="12" y="-12" width="5" height="24" rx="1.5" fill="#1f2224"/>`+
+      `<rect x="-12" y="-10" width="24" height="20" fill="#c9773a" stroke="#7a3e14"/>`+[-8,-4,0,4,8].map(x=>`<line x1="${x}" y1="-10" x2="${x}" y2="10" stroke="#9a5422" stroke-width="1"/>`).join('')+(d.core?`<rect x="-22" y="-3" width="44" height="6" fill="#8d969b" opacity=".85"/>`:'')}
   else if(t==='C'){const big=(d.c||0)>=1e-4,rad=big?11:7.5;s+=legs(-rad,rad)+`<circle r="${rad}" fill="#2a4f8f" stroke="#17305a"/><path d="M${rad*0.35} ${-rad*0.94} A${rad} ${rad} 0 0 1 ${rad*0.35} ${rad*0.94} Z" fill="#c9d4e6"/>`+
     T(rad*0.66,3,'−',{size:big?9:7,fill:'#17305a',a:'middle',w:700})+`<circle r="${rad*0.45}" fill="none" stroke="#7d93bb" stroke-width="1"/>`}
   return glow+s+pins();

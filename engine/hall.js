@@ -55,11 +55,33 @@ const HALL=(()=>{
       g.fillStyle='#1c2326';g.font=`600 ${h*.055}px ${MO}`;g.fillText('LTspice — Draft1.asc',w*.06,h*.115);g.strokeStyle='#1a5fb4';g.lineWidth=4;
       g.beginPath();g.moveTo(w*.2,h*.35);g.lineTo(w*.7,h*.35);g.moveTo(w*.2,h*.75);g.lineTo(w*.7,h*.75);g.moveTo(w*.2,h*.35);g.lineTo(w*.2,h*.75);g.moveTo(w*.7,h*.35);g.lineTo(w*.7,h*.75);g.stroke();
       g.fillStyle='#1a5fb4';g.beginPath();g.arc(w*.2,h*.55,h*.07,0,7);g.fill();g.fillStyle='#f3f3f0';g.font=`600 ${h*.06}px ${MO}`;g.fillText('~',w*.185,h*.57);g.fillStyle='#1c2326';g.fillText('.tran 50m',w*.3,h*.88)},
-    dbox:(g,w,h)=>{g.fillStyle='#1e2224';g.fillRect(0,0,w,h);g.fillStyle='#e9eef0';g.font=`600 ${h*.11}px ${MO}`;g.fillText('DECADE RESISTANCE',w*.06,h*.18);for(let i=0;i<5;i++){knob(g,w*(.12+i*.19),h*.55,h*.12,'#3a4246','#c9d1d5');g.fillStyle='#e9eef0';g.font=`500 ${h*.08}px ${MO}`;g.fillText(['×1','×10','×100','×1k','×10k'][i],w*(.07+i*.19),h*.86)}}
+    dbox:(g,w,h)=>{g.fillStyle='#1e2224';g.fillRect(0,0,w,h);g.fillStyle='#e9eef0';g.font=`600 ${h*.11}px ${MO}`;g.fillText('DECADE RESISTANCE',w*.06,h*.18);for(let i=0;i<5;i++){knob(g,w*(.12+i*.19),h*.55,h*.12,'#3a4246','#c9d1d5');g.fillStyle='#e9eef0';g.font=`500 ${h*.08}px ${MO}`;g.fillText(['×1','×10','×100','×1k','×10k'][i],w*(.07+i*.19),h*.86)}},
+    /* EE205 instruments */
+    thandar:(g,w,h)=>{panel(g,w,h,'THANDAR  TS3022S','#dcd8cc');[0,1].forEach(u=>{const x0=w*(.03+u*.49);g.fillStyle='#c3ccb0';rr(g,x0,h*.18,w*.2,h*.2,4);g.fill();rr(g,x0+w*.23,h*.18,w*.2,h*.2,4);g.fill();
+        g.fillStyle='#1d2318';g.font=`600 ${h*.13}px ${MO}`;g.fillText(u?'5.00':'12.00',x0+w*.03,h*.33);knob(g,x0+w*.07,h*.58,h*.07,'#f6f3ec','#c9c3b4');knob(g,x0+w*.19,h*.58,h*.06,'#f6f3ec','#c9c3b4');knob(g,x0+w*.36,h*.58,h*.07,'#f6f3ec','#c9c3b4');
+        ['#f2f0ea','#f2f0ea','#d43a2c','#d43a2c'].forEach((c,i)=>{g.fillStyle=c;g.beginPath();g.arc(x0+w*(.06+i*.07),h*.86,h*.045,0,7);g.fill()})})},
+    hameg:(g,w,h)=>{panel(g,w,h,'HAMEG  HM 203-7','#dcdcd2');g.fillStyle='#173c36';rr(g,w*.04,h*.14,w*.42,h*.62,12);g.fill();g.strokeStyle='#3d7f72';g.lineWidth=2;
+        for(let i=1;i<10;i++){const x=w*.04+w*.042*i;g.beginPath();g.moveTo(x,h*.15);g.lineTo(x,h*.75);g.stroke()}for(let j=1;j<8;j++){const y=h*.14+h*.0775*j;g.beginPath();g.moveTo(w*.05,y);g.lineTo(w*.45,y);g.stroke()}
+        g.strokeStyle='#8dffb8';g.lineWidth=4;g.beginPath();for(let i=0;i<=200;i++){const x=w*.05+w*.4*i/200,y=h*.45-Math.sin(i/200*Math.PI*4)*h*.15;i?g.lineTo(x,y):g.moveTo(x,y)}g.stroke();
+        knob(g,w*.62,h*.66,h*.09,'#ece9e0','#c0392b');knob(g,w*.8,h*.66,h*.09,'#ece9e0','#c0392b');knob(g,w*.86,h*.3,h*.1,'#ece9e0','#c0392b');[.55,.6,.65,.7,.75].forEach(x=>{g.fillStyle='#3a3f42';rr(g,w*x,h*.86,w*.035,h*.06,3);g.fill()})},
+    metrix:(g,w,h)=>{g.fillStyle='#1f4fbf';g.fillRect(0,0,w,h);g.fillStyle='#8c9396';rr(g,w*.08,h*.06,w*.84,h*.88,16);g.fill();g.fillStyle='#2a3a2c';rr(g,w*.24,h*.14,w*.52,h*.3,6);g.fill();
+        g.fillStyle='#b8e0b0';g.font=`600 ${h*.13}px ${MO}`;g.fillText('1.000 kHz',w*.3,h*.33);knob(g,w*.5,h*.66,h*.1,'#5d6467','#3a4043');for(let i=0;i<4;i++){g.fillStyle='#d9dcdc';rr(g,w*.12,h*(.14+i*.08),w*.07,h*.06,3);g.fill();rr(g,w*.81,h*(.14+i*.08),w*.07,h*.06,3);g.fill()}
+        g.fillStyle='#2c3438';g.beginPath();g.arc(w*.7,h*.88,h*.04,0,7);g.fill();g.fillStyle='#fff';g.font=`700 ${h*.06}px ${MO}`;g.fillText('metrix MTX 3240',w*.62,h*.8)},
+    hand:(g,w,h,col)=>{g.fillStyle=col;g.fillRect(0,0,w,h);g.fillStyle='#3a3d38';rr(g,w*.08,h*.05,w*.84,h*.9,10);g.fill();g.fillStyle='#c9d3b4';rr(g,w*.14,h*.1,w*.72,h*.2,5);g.fill();
+        g.fillStyle='#1e2418';g.font=`600 ${h*.11}px ${MO}`;g.fillText('0.000',w*.25,h*.25);g.fillStyle='#191b1c';g.beginPath();g.arc(w*.5,h*.55,w*.25,0,7);g.fill();
+        [['#b52a22',.25],['#b52a22',.42],['#1d1f20',.58],['#b52a22',.75]].forEach(([c,x])=>{g.fillStyle=c;g.beginPath();g.arc(w*x,h*.87,w*.05,0,7);g.fill()})},
+    yew:(g,w,h)=>{g.fillStyle='#cfcfbe';g.fillRect(0,0,w,h);g.fillStyle='#2f3128';g.font=`600 ${h*.11}px ${MO}`;g.fillText('YEW 2786 DECADE RESISTANCE BOX',w*.04,h*.16);
+        for(let i=0;i<6;i++)knob(g,w*(.2+i*.135),h*.58,h*.16,'#262728','#1a1b1c');[.38,.58,.78].forEach((y,i)=>{g.fillStyle=i===1?'#1d1f20':'#f2f0ea';g.beginPath();g.arc(w*.06,h*y,h*.06,0,7);g.fill()})}
   };
+  ['lamp','px120','capbox','xf3','rheo','variac'].forEach(k=>FACES[k]=(g,w,h)=>panel(g,w,h,{lamp:'FLUORESCENT LAMP 20 W',px120:'METRIX PX 120',capbox:'CAPACITOR BOX BC05',xf3:'3-PHASE TRANSFORMER',rheo:'RHEOSTATS',variac:'VARIABLE AC SUPPLY'}[k],k==='xf3'?'#c0392b':'#e3e8ea'));
+  FACES.fluke=(g,w,h)=>FACES.hand(g,w,h,'#5f6458');FACES.flukey=(g,w,h)=>FACES.hand(g,w,h,'#f2b51c');FACES.goldstar=(g,w,h)=>FACES.hand(g,w,h,'#f2b51c');FACES.bk=(g,w,h)=>FACES.hand(g,w,h,'#2a2d2f');
   function instrument(kind,w,h,d,x,z,top){const side=std(kind==='dmm'||kind==='dbox'?'#2f3538':kind==='psu'?'#d9d4c8':'#d6dde0',{roughness:.55}),f=std('#fff',{map:tex(512,Math.round(512*h/w),(g,W,H)=>FACES[kind](g,W,H)),roughness:.5});
     const sc=kind==='xf'?std('#6e3b2a'):side;return boxM(w,h,d,[sc,sc,sc,sc,f,sc],x,top+h/2,z)}
-  const SIZE={gen:[0.44,0.2,0.3],psu:[0.42,0.2,0.3],scope:[0.54,0.27,0.3],dmm:[0.32,0.13,0.28],xf:[0.46,0.3,0.34],dbox:[0.24,0.11,0.17]};
+  const SIZE={gen:[0.44,0.2,0.3],psu:[0.42,0.2,0.3],scope:[0.54,0.27,0.3],dmm:[0.32,0.13,0.28],xf:[0.46,0.3,0.34],dbox:[0.24,0.11,0.17],
+    thandar:[0.44,0.2,0.3],hameg:[0.5,0.29,0.36],metrix:[0.42,0.24,0.24],fluke:[0.1,0.18,0.05],flukey:[0.1,0.18,0.05],goldstar:[0.1,0.18,0.05],bk:[0.1,0.18,0.05],yew:[0.44,0.12,0.2],
+    lamp:[0.62,0.12,0.14],px120:[0.3,0.14,0.22],capbox:[0.36,0.12,0.2],xf3:[0.4,0.3,0.3],rheo:[0.5,0.25,0.18],variac:[0.4,0.22,0.3]};
+  /* parts that lie on the front of the table (left of the panel) instead of the back row; handheld meters stand slanted */
+  const FRONT=new Set(['dbox','yew','fluke','flukey','goldstar','bk']);
   function boardTex(){return tex(512,340,(g,W,H)=>{g.fillStyle='#e6eae8';g.fillRect(0,0,W,H);for(let i=0;i<35;i++){const cx=40+(i%7)*72,cy=40+Math.floor(i/7)*65;g.fillStyle='#d7ddda';rr(g,cx-26,cy-24,52,48,8);g.fill();g.fillStyle='#2f3739';for(let h=0;h<9;h++){g.beginPath();g.arc(cx+((h%3)-1)*14,cy+(Math.floor(h/3)-1)*13,3.2,0,7);g.fill()}}})}
   function sign(e){const L=e.lab;return tex(1024,300,(g,W,H)=>{g.fillStyle=e.built?'#2c7a6b':'#8fa29c';rr(g,8,8,W-16,H-16,40);g.fill();g.fillStyle='#fff';g.textAlign='center';g.font=`600 96px ${MO}`;g.fillText(`Exp ${e.num}`,W/2,118);
     let fs=44;g.font=`500 ${fs}px ${MO}`;while(g.measureText(e.en).width>W-90&&fs>24){fs-=2;g.font=`500 ${fs}px ${MO}`}g.fillStyle='#e6f3ef';g.fillText(e.en,W/2,186);
@@ -73,7 +95,7 @@ const HALL=(()=>{
     boxM(2.3,0.5,0.03,std('#cfd8d4'),x,0.5,z-0.48,false);
     boxM(2.5,0.12,0.04,std('#d9e1de'),x,top+0.06,z-0.53);
     /* a second DMM stands on top of the first (two bench meters per table) */
-    const kinds=e.bench.filter((k,i)=>k!=='dbox'&&k!=='pc'&&!(k==='dmm'&&e.bench.indexOf('dmm')!==i));const dmm2=e.bench.filter(k=>k==='dmm').length>1;
+    const kinds=e.bench.filter((k,i)=>!FRONT.has(k)&&k!=='pc'&&!(k==='dmm'&&e.bench.indexOf('dmm')!==i));const front=e.bench.filter(k=>FRONT.has(k)&&k!=='dbox');const dmm2=e.bench.filter(k=>k==='dmm').length>1;
     if(e.bench.includes('pc')){
       const mon=instrument('pc',0.62,0.4,0.04,x,z-0.32,top+0.12);boxM(0.06,0.12,0.06,frame,x,top+0.06,z-0.32);boxM(0.26,0.015,0.18,frame,x,top+0.008,z-0.32);
       boxM(0.48,0.02,0.16,std('#2a3034'),x-0.05,top+0.01,z+0.12);boxM(0.07,0.025,0.11,std('#2a3034'),x+0.34,top+0.012,z+0.14);
@@ -81,6 +103,7 @@ const HALL=(()=>{
     else{const gap=0.06;let tot=kinds.reduce((s,k)=>s+SIZE[k][0],0)+gap*(kinds.length-1);let cx=x-tot/2;
       kinds.forEach(k=>{const [w,h,d]=SIZE[k];instrument(k,w,h,d,cx+w/2,z-0.26,top);if(k==='dmm'&&dmm2)instrument(k,w,h,d,cx+w/2,z-0.26,top+h+0.004);cx+=w+gap});
       if(e.bench.includes('dbox')){instrument('dbox',...SIZE.dbox,x-0.95,z+0.2,top);instrument('dbox',...SIZE.dbox,x-0.68,z+0.2,top)}
+      {let fx=x-1.12,ny=0;const nyew=front.filter(k=>k==='yew').length;front.forEach(k=>{const [w,h,d]=SIZE[k];if(k==='yew'){instrument(k,w,h,d,fx+w/2,z+0.25,top+ny*(h+0.004));if(++ny===nyew)fx+=w+0.04}else{const m=instrument(k,w,h,d,fx+w/2,z+0.3,top);m.rotation.x=-0.5;m.position.y=top+0.06;fx+=w+0.04}})}
       const bb=new THREE.Mesh(new THREE.BoxGeometry(0.48,0.02,0.32),[std('#c3cbc8'),std('#c3cbc8'),std('#fff',{map:boardTex()}),std('#c3cbc8'),std('#c3cbc8'),std('#c3cbc8')]);bb.position.set(x+0.05,top+0.01,z+0.2);bb.receiveShadow=true;scene.add(bb)}
     // stool
     const cz=z+0.98,ch=new THREE.Group();const seatM=std(e.built?'#2f6f63':'#8a9692',{roughness:.5});
