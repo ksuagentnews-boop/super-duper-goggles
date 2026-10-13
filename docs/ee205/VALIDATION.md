@@ -53,3 +53,17 @@ frequency response or a semiconductor is involved.
 | Overshoot at R = 600 Ω (+ RL + Rs) | e^(−πζ/√(1−ζ²)), ζ = 0.547 → 12.6 % | 11.2 % | −1.4 pt (scope load, BE steps) | – | ✓ |
 | Ringing frequency at 600 Ω | 4646 Hz | trace | – | – | ✓ |
 | Critical R = 2√(L/C) | 1220 Ω total (box ≈ 1152 Ω) | overshoot < 1 % (invisible) from box ≈ 950 Ω | the eye sees it vanish early | – | ✓ (behaviour) |
+
+## Exp 8 · Resonance (E = 2 Vrms)
+| Quantity | Theory | Simulated | Diff | Video | Pass |
+|---|---|---|---|---|---|
+| Proc I: I (1 kHz, series 100 Ω + 17.5 mH + 4.7 µF) | 14.28 mA | 14.2 mA (BK 1 Ω shunt) | −0.6 % | 14.91 mA | ✓ |
+| Proc I: VR / VL / VC | 1.43 / 1.59 / 0.483 V | 1.428 / 1.587 / 0.480 V | < 1 % | – | ✓ |
+| Proc II: IR | 20.0 mA | 19.8 mA | −1 % | 20.17 mA | ✓ |
+| Proc II: IC | 59.1 mA | 57.9 mA (E sags 2 % with the ammeter in the C branch) | −2 % | 60.9 mA | ✓ |
+| Proc II: IL | 17.95 mA | 17.9 mA | −0.3 % | – | ✓ |
+| Proc II: I | 47.2 mA | 46.7 mA | −1 % | 48.1 mA | ✓ |
+| Proc III: fos | 12.03 kHz | peak at 12.0 kHz (500 Hz steps) | – | – | ✓ |
+| Proc III: I at resonance | 2 / (117.6 + 10 Ω BK 20 mA shunt) = 15.7 mA | 15.62 mA | −0.5 % | 18.06 mA | ✓ |
+| Proc III: B, Qo | 1069 Hz, 11.3 | from the P(f) plot | – | – | ✓ |
+| Proc IV: fop, B, Qo | 7605 Hz, 507 Hz, 15.0 | from the Z(f) plot | – | – | ✓ |

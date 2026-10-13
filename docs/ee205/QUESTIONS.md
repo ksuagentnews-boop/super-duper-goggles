@@ -32,3 +32,9 @@ Small gaps resolved while building (the manual always wins; videos only for look
 - Rs = 50 Ω (the MTX 3240 output); τ = (R + Rs)C. In Procedure II the coil's RL = 17.6 Ω adds to R as well.
 - Table 1's six times are the student's own choice (any six inside half a period); each row is graded against the theory at that time.
 - The "overshoot just vanishes" point is graded against where the student saw it (overshoot < 1 % of the step, i.e. invisible at 2 V/div), and Rc against 2√(L/C).
+
+## Exp 8
+- Procedures I–II give no source values: E = 2 Vrms at 1 kHz. The video's Procedure II readings (IR 20.17, I 48.1, IC 60.9 mA) are what 2 Vrms at 1 kHz gives.
+- The handheld voltmeter cannot follow 7.5–15 kHz, so in Procedures III–IV V = 2 Vrms is held with the CRO (5.66 Vpp); the BK 2704B ammeter reads flat at these frequencies, as the lab's did (video: 18.06 mA at series resonance). "V = 2 Vrms" is checked within ±2.5 % (the ammeter's burden moves it a little).
+- Coil resistances: 1000 turns 17.6 Ω, 500 turns 5.2 Ω (videos). The 1 µF capacitor of the list is in «العلبة»; no step uses it.
+- Off resonance the parallel current is above the BK's 2 mA range: the student moves to 20 mA (OL otherwise), as on the real meter.

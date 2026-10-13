@@ -17,7 +17,7 @@ const LABS=[
     {num:5,en:'Three-Phase AC Circuits',ar:'الدوائر ثلاثية الطور',bench:['xf3','px120','fluke','fluke','rheo']},
     {num:6,en:'Transients in DC Circuits',ar:'الحالة العابرة في دوائر التيار المستمر',bench:['metrix','hameg','yew'],built:true},
     {num:7,en:'Magnetically Coupled Circuits',ar:'الدوائر المقترنة مغناطيسياً',bench:['variac','fluke','fluke','fluke']},
-    {num:8,en:'Resonance in Series and Parallel Circuits',ar:'الرنين في دوائر التوالي والتوازي',bench:['metrix','hameg','fluke','bk']}
+    {num:8,en:'Resonance in Series and Parallel Circuits',ar:'الرنين في دوائر التوالي والتوازي',bench:['metrix','hameg','fluke','bk'],built:true}
   ]},
   {id:'ee312',code:'EE312',title:'Basic Electronics Lab',ar:'معمل أساسيات الإلكترونيات',level:6,room:{rows:2,cols:5},exps:[
     {num:1,en:'Exploring and Testing Junction Diodes',ar:'استكشاف واختبار الدايودات',bench:['psu','dmm','dmm'],built:true},

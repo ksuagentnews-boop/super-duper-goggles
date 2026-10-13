@@ -9,7 +9,8 @@
    current) and the black one in COM. A current jack is a small shunt to COM whatever the switch says — an ammeter goes in
    SERIES; across a source it takes a large current and its fuse blows (the jack then reads 0 until the fuse is replaced).
    V jacks load the circuit with 10 MΩ; Ω / ▶| / ·))) inject a test current in their own solve.
-   AC volts / amps are average-responding and roll off above their bandwidth (Fluke 77: flat to 1 kHz, ≈ −18 % at 5 kHz).
+   AC volts / amps are average-responding and roll off above their bandwidth (Fluke 77: flat to 1 kHz, ≈ −18 % at 5 kHz;
+   the BK 2704B used as the resonance ammeter reads flat to well above 15 kHz, as in the lab).
    State S[key]: {pos, rng (null = auto), hold, mm, fuse:{jack:true}, ac (GoldStar ~)}; derived each measure: pwr, fn, jack.
    Lab access: RT.meters() / meterOn() as for the bench DMMs (leadKeys = [active red lead, COM]); reading().cur for current. */
 ENGINE.hdmm=function(RT,opt){
@@ -25,10 +26,10 @@ const M={
     V:[0.4,4,40,400,1000],AV:[0.4,4,40,400,750],R:[400,4e3,40e3,400e3,4e6,40e6],fc:3000,keys:[['HOLD','HOLD'],['RANGE','RANGE'],['MM','MIN MAX'],['AC','~/⎓']]},
   bk2704:{W:250,H:400,name:'BK 2704B',counts:2000,
     pos:[['OFF','OFF'],['DCV:1000','1000'],['DCV:200','200'],['DCV:20','20'],['DCV:2','2'],['DCV:0.2','200m'],['ACV:750','750'],['ACV:200','200'],['ACV:20','20'],['ACV:2','2'],
-      ['DCI:0.002','2m'],['DCI:0.02','20m'],['DCI:0.2','200m'],['DCI:10','10A'],['ACI:0.02','20m'],['ACI:0.2','200m'],['ACI:10','10A'],
+      ['DCI:0.002','2m'],['DCI:0.02','20m'],['DCI:0.2','200m'],['DCI:10','10A'],['ACI:0.002','2m'],['ACI:0.02','20m'],['ACI:0.2','200m'],['ACI:10','10A'],
       ['OHM:200','200'],['OHM:2000','2k'],['OHM:20000','20k'],['OHM:200000','200k'],['OHM:2000000','2M'],['OHM:20000000','20M'],['DIODE','▶|·)))']],
     jacks:[{j:'a',lab:'10A',sh:0.01,fuse:15,col:'red'},{j:'ma',lab:'mA',sh:1,fuse:0.25,col:'red'},{j:'c',lab:'COM',col:'black'},{j:'v',lab:'VΩ',col:'red'}],
-    fc:4000,keys:[]}};
+    fc:100000,keys:[]}};   /* its ac ranges read the lab's resonance runs right up to 15 kHz (video: 18.06 mA at series resonance) */
 const D0=M[MODEL];const W=D0.W,H=D0.H;
 const yel=opt.color==='yellow'||MODEL==='goldstar';
 const JX=D0.jacks.map((q,i)=>({...q,x:Math.round(W*(i+0.5)/D0.jacks.length),y:H-44}));

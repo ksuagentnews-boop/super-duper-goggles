@@ -163,6 +163,7 @@ Updated after every finished item (commit + push each time).
 - Exp 2 built (Procedures I–III, 28 steps); test `tests/exp/ee205-exp2.mjs` desktop + phone.
 - Exp 3 built (Procedures I–II, 22 steps); test `tests/exp/ee205-exp3.mjs` desktop + phone.
 - Exp 6 built (Procedures I–II, 11 steps, transient with sub-steps); test `tests/exp/ee205-exp6.mjs` desktop + phone.
+- Exp 8 built (Procedures I–IV, 19 steps); test `tests/exp/ee205-exp8.mjs` desktop + phone. Batch 1 (Exp 1, 2, 3, 6, 8) done.
 
 ## In progress
 - Batch 4: 10, 6, 1, 7, 8, 2 (4 in a parallel worktree).
