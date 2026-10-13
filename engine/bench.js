@@ -260,20 +260,27 @@ const BENCH={
   drawStepCard(){const c=this.el.card;setTimeout(()=>this.labChip());if(!this.sim||this.mode!=='manual'){c.hidden=true;return}c.hidden=false;
     const S=this.sim.steps,i=this.cur(),all=i>=S.length;const min=c.classList.contains('min');
     const s=S[i],L=!all&&s.lines&&!this.sim.pc?s.lines:null;const done=L?L.map(l=>this.sim.lineDone(l)):[];const cur=L?done.indexOf(false):-1;
-    if(this.sim.setGuide)this.sim.setGuide(L&&cur>=0?this.sim.lineSpots(L[cur]):null);
-    const key=this.built+'|'+all+'|'+i+'|'+this.view+'|'+done.join('')+'|'+min;if(c.dataset.key===key)return;c.dataset.key=key;
+    /* a build step is a tutorial: one connection per card (sub-step), «رجوع» shows the previous one; the card follows the
+       first connection not made yet, and moves on by itself when it is made */
+    const nd=done.filter(Boolean).length;if(!this._sub||this._sub.i!==i||this._sub.nd!==nd)this._sub={i,nd,j:null};
+    const sj=L?(this._sub.j!=null?this._sub.j:cur>=0?cur:L.length-1):-1;
+    if(this.sim.setGuide)this.sim.setGuide(L&&sj>=0&&!done[sj]?this.sim.lineSpots(L[sj]):null);
+    const key=this.built+'|'+all+'|'+i+'|'+this.view+'|'+done.join('')+'|'+min+'|'+sj;if(c.dataset.key===key)return;c.dataset.key=key;
     if(all){c.innerHTML=`<div class="num done">✓</div><div class="body"><div class="k">خلصت خطوات المانيوال 🎉</div><div class="t">كل الخطوات تمت. كمّل الـ sheet (الشاشات والقراءات والأسئلة) واضغط "صحّح" عشان تشوف درجتك.</div><div class="acts"><button class="go" id="scSheet">افتح الـ sheet</button></div></div>`;
       BIDI.fix(c);c.querySelector('#scSheet').onclick=()=>{this.togglePanel(true);const r=$q('#submit');if(r)r.scrollIntoView({block:'center'})};return}
     const here=this.view===(L?'board':s.dev)&&!this.sim.pc;const CN='①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮';
-    const lines=L?`<ol class="wl">${L.map((l,j)=>`<li class="${done[j]?'ok':j===cur?'cur':''}"><span class="n">${CN[j]||j+1}</span><span class="lt"><bdi dir="ltr">${l.t}</bdi>${l.note?` <span class="nt">(${l.note})</span>`:''}</span>${done[j]?'<span class="tk">✓</span>':''}</li>`).join('')}</ol>`:'';
+    const lines=L?`<ol class="wl sub">${[sj].map(j=>{const l=L[j];return `<li class="${done[j]?'ok':'cur'}"><span class="n">${CN[j]||j+1}</span><span class="lt"><bdi dir="ltr">${l.t}</bdi>${l.note?` <span class="nt">(${l.note})</span>`:''}</span>${done[j]?'<span class="tk">✓</span>':''}</li>`}).join('')}</ol>`
+      +`<div class="subnav"><button id="scPrev" ${sj>0?'':'disabled'}>→ رجوع</button><span class="dots">${L.map((l,j)=>`<i class="${done[j]?'ok':''}${j===sj?' on':''}"></i>`).join('')}</span><span class="cnt">توصيلة ${sj+1} من ${L.length}</span>${this._sub.j!=null&&cur>=0&&sj!==cur?'<button id="scNext">التالي ←</button>':''}</div>`:'';
     const fig=s.fig?`<div class="sfig"><img class="figimg" src="${s.fig}" alt="${s.figCap||'Figure'}"><span>🔍</span></div>`:'';
     c.classList.toggle('has-lines',!!L);const h0=c.offsetHeight;
     const PS=s.proc?S.filter(x=>x.proc===s.proc):S,pi=PS.indexOf(s)+1;
     c.innerHTML=`<div class="num">${pi}</div><div class="body"><div class="k">${s.proc&&this.procs.length>1?`Procedure ${s.proc} · `:''}الخطوة ${pi} من ${PS.length}</div><div class="t">${s.t}</div>${lines}<div class="acts"><button class="go" id="scGo">وريني وين</button><button id="scAll">كل الخطوات</button></div></div>${fig}<button class="mini" id="scMin" aria-label="${min?'توسيع':'تصغير'}">${min?'▴':'▾'}</button><button class="mini" id="scHide" title="أخفِ الصفحة، خلّ المعمل بس" aria-label="أخفِ الصفحة">⟩</button>`;
     BIDI.fix(c);{const wl=c.querySelector('.wl'),cl=wl&&wl.querySelector('li.cur');if(cl)wl.scrollTop=Math.max(0,cl.offsetTop-wl.offsetTop-30)}if(Math.abs(c.offsetHeight-h0)>8&&this.view)requestAnimationFrame(()=>this.refit(true));
     const small=()=>innerHeight<=500||innerWidth<=600;
-    c.querySelector('#scGo').onclick=()=>{if(small()&&!c.classList.contains('min')){c.classList.add('min');c.dataset.key='';this.drawStepCard()}if(L){const ln=cur>=0&&(L[cur].lead||L[cur].jack);if(ln){if(this.view!=='ov')this.back()}else if(!here)this.focus('board');if(cur>=0)setTimeout(()=>this.sim.setGuide({...this.sim.lineSpots(L[cur]),flash:true}),reduceMotion?0:420)}else this.focus(s.dev)};
+    c.querySelector('#scGo').onclick=()=>{if(small()&&!c.classList.contains('min')){c.classList.add('min');c.dataset.key='';this.drawStepCard()}if(L){const ln=sj>=0&&(L[sj].lead||L[sj].jack);if(ln){if(this.view!=='ov')this.back()}else if(!here)this.focus('board');if(sj>=0)setTimeout(()=>this.sim.setGuide({...this.sim.lineSpots(L[sj]),flash:true}),reduceMotion?0:420)}else this.focus(s.dev)};
     c.querySelector('#scAll').onclick=()=>this.togglePanel(true);
+    const pv=c.querySelector('#scPrev'),nx=c.querySelector('#scNext');if(pv)pv.onclick=()=>{this._sub.j=Math.max(0,sj-1);c.dataset.key='';this.drawStepCard()};
+    if(nx)nx.onclick=()=>{const j=sj+1;this._sub.j=j>=cur?null:j;c.dataset.key='';this.drawStepCard()};
     c.querySelector('#scHide').onclick=()=>this.labOnly(true);
     c.querySelector('#scMin').onclick=()=>{c.classList.toggle('min');c.dataset.key='';this.drawStepCard();this.refit(true)}}
 };

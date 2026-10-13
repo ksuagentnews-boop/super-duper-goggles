@@ -18,7 +18,12 @@ export async function run(page, vp, ok) {
   const gl = () => page.evaluate(() => { const B = document.getElementById('LguideB'), P = document.getElementById('Lparts');
     return { under: !!(B.compareDocumentPosition(P) & Node.DOCUMENT_POSITION_FOLLOWING), n: [...B.querySelectorAll('text')].map(t => t.textContent), top: document.querySelectorAll('#Lguide rect').length }; });
   await H.focus('board'); const g0 = await gl();
-  await H.place('R1k', 0, 1); const g1 = await gl();
+  const sc = () => page.evaluate(() => { const c = document.getElementById('stepCard'); return { n: c.querySelectorAll('.wl li').length, cnt: (c.querySelector('.subnav .cnt') || {}).textContent || '', ok: !!c.querySelector('.wl li.ok'), t: (c.querySelector('.wl li .lt') || {}).textContent || '' }; });
+  const s0 = await sc();
+  await H.place('R1k', 0, 1); const g1 = await gl(); const s1 = await sc();
+  await page.click('#scPrev'); const s2 = await sc(); await page.click('#scNext'); const s3 = await sc();
+  ok(s0.n === 1 && /توصيلة 1 من \d+/.test(s0.cnt) && /توصيلة 2/.test(s1.cnt) && s2.ok && /توصيلة 1/.test(s2.cnt) && /توصيلة 2/.test(s3.cnt) && !s3.ok,
+    `one connection per card («${s0.cnt}» → «${s1.cnt}»), «رجوع» shows the one before with ✓, «التالي» comes back`);
   ok(g0.under && g0.top === 0 && g0.n.includes('node 0') && g0.n.includes('node 1') && !(g1.n.includes('node 0') && g1.n.includes('node 1')), `the current line's node squares lie under the parts (${g0.n.join(', ')}) and move on once it is made (${g1.n.join(', ') || '—'})`); await H.place('D4001', 1, 8); await H.place('BR', 8, 15); await H.place('BR', 8, 9);
   await H.place('D4001', 1, 2); await H.flip(1, 2); await H.place('D4001', 2, 9); await H.flip(2, 9);
   await H.lead('gr', 0); await H.lead('gb', 15);

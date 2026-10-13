@@ -444,3 +444,12 @@ bdi{unicode-bidi:isolate}
 #labShow{position:absolute;right:10px;bottom:12px;z-index:9;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;padding:8px 14px;font:600 13px var(--f-ui,inherit);direction:rtl;box-shadow:0 6px 18px rgba(20,30,28,.16);cursor:pointer;min-height:40px}
 #labShow[hidden]{display:none}
 #benchView.devzoom #labShow{display:none}
+
+/* build steps as a tutorial: one connection per card, a counter, dots and «رجوع» */
+#stepCard .subnav{display:flex;align-items:center;gap:8px;margin:4px 0 2px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+#stepCard .subnav button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:3px 10px;font:600 12px var(--f-ui,inherit);color:var(--accent-ink,var(--accent));cursor:pointer;min-height:30px}
+#stepCard .subnav button[disabled]{opacity:.35;cursor:default}
+#stepCard .subnav .dots{display:flex;gap:4px}#stepCard .subnav .dots i{width:7px;height:7px;border-radius:50%;background:#d5dcda}
+#stepCard .subnav .dots i.ok{background:var(--ok)}#stepCard .subnav .dots i.on{outline:2px solid var(--accent);outline-offset:1px}
+#stepCard .subnav .cnt{font-weight:600;color:var(--accent-ink,var(--accent))}
+#benchView.devzoom #stepCard .subnav{display:none}
