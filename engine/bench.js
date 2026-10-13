@@ -13,6 +13,7 @@ const BENCH={
     $q('#dClose').onclick=()=>this.setDrawer(!this.drawer);
     $q('#bPanelBtn').onclick=()=>this.togglePanel();
     $q('#bPanelClose').onclick=()=>this.togglePanel(false);
+    $q('#bLabOnly').onclick=()=>this.labOnly(true);$q('#labShow').onclick=()=>this.labOnly(false);
     $q('#bReset').onclick=()=>{this.sim.reset();this.done=[];this.sim.render();this.say('بدأت من جديد')};
     $q('#bSwitch').onclick=()=>{this.enter(this.exp,this.mode==='free'?'manual':'free',true)};
     /* paint bucket: open → pick a swatch → tap wires; ✕ or the bucket again leaves the mode */
@@ -34,6 +35,15 @@ const BENCH={
   togglePanel(force){const v=this.el.view,mob=BENCH.sheetOverlay();
     if(mob){const open=force!==undefined?force:!v.classList.contains('panel-open');v.classList.toggle('panel-open',open)}
     else{const closed=force!==undefined?!force:!v.classList.contains('panel-closed');v.classList.toggle('panel-closed',closed);requestAnimationFrame(()=>this.refit(false))}},
+  /* «المعمل بس»: the right-hand page (manual sheet, and the step card in Manual) slides away so only the bench shows; a
+     small tab brings it back (in Manual it shows the current step); remembered for the session */
+  labOnly(on,quiet){const v=this.el.view;if(on===undefined){try{on=sessionStorage.getItem('eelab:labonly')==='1'}catch(_){on=false}}
+    else try{sessionStorage.setItem('eelab:labonly',on?'1':'0')}catch(_){}
+    const bp=$q('#bpanel');if(quiet){bp.style.transition='none';requestAnimationFrame(()=>requestAnimationFrame(()=>bp.style.transition=''))}
+    v.classList.toggle('lab-only',on);if(on)v.classList.remove('panel-open');if(!this.sheetOverlay())v.classList.toggle('panel-closed',on);
+    this.labChip();if(!quiet){this.refit(false);setTimeout(()=>this.refit(false),320)}},
+  labChip(){const b=$q('#labShow'),t=$q('#labShowT'),on=this.el.view.classList.contains('lab-only');b.hidden=!on||!this.sim||!!this.sim.pc&&this.mode!=='manual';if(!on||!this.sim)return;
+    if(this.mode==='manual'&&this.sim.steps){const i=this.cur(),n=this.sim.steps.length,k=this.el.card.querySelector('.num');t.textContent=i>=n?'خلصت الخطوات':`الخطوة ${k?k.textContent:i+1}`}else t.textContent='المانيوال'},
   /* exp = registry id, e.g. 'ee312/exp3'; the experiment file is loaded on first use */
   enter(exp,mode,force){
     const E=this.el;E.view.hidden=false;HALL.pause();
@@ -52,6 +62,7 @@ const BENCH={
     this.svg=PC?null:document.getElementById('bench');this.hl=PC?{innerHTML:''}:document.getElementById('Lhl');
     if(!PC){this.svg.addEventListener('pointermove',e=>this.hover(e));this.svg.addEventListener('pointerleave',()=>{if(this.view==='ov')this.hl.innerHTML=''})}
     this._bagShown=false;
+    this.labOnly(undefined,true);
     if(PC){this.view='pc';ENGINE.runPC(EXP_DEFS[exp])}else ENGINE.run(EXP_DEFS[exp]);
     /* small screens: the step card starts folded so the overview gets the height */
     E.card.classList.toggle('min',!PC&&(innerHeight<=500||innerWidth<=600));E.card.dataset.key='';
@@ -121,7 +132,7 @@ const BENCH={
     return {top,bottom,left,right:T.right}},
   /* free area of the overview in px (used by the layout search before anything is drawn) */
   availArea(){const {W,H}=this.stageSize();const small=innerHeight<=500||innerWidth<=600;const bag=!this.el.view.classList.contains('no-bag');
-    const left=bag?(this.drawer?(small?104:136)+(matchMedia('(pointer:coarse)').matches?12:0):42):0;const card=this.mode==='manual'?(small?64:150):0;const tall=H>W*1.1,tr=tall?0:(small?70:96),tt=tall?52:0;return {W:Math.max(200,W-left-16-tr),H:Math.max(150,H-16-card-tt)}},
+    const left=bag?(this.drawer?(small?104:136)+(matchMedia('(pointer:coarse)').matches?12:0):42):0;const card=this.mode==='manual'&&!this.el.view.classList.contains('lab-only')?(small?64:150):0;const tall=H>W*1.1,tr=tall?0:(small?70:96),tt=tall?52:0;return {W:Math.max(200,W-left-16-tr),H:Math.max(150,H-16-card-tt)}},
   fit(r){const {W,H}=this.stageSize();if(!W||!H)return null;const {top,bottom,left,right}=this.pads();const m=Math.min(12,W*0.015);
     /* ≈4 % margin around what is on the desk */
     const mg=this.el.view.classList.contains('devzoom')?0:0.02,mx=r[2]*mg,my=r[3]*mg;r=[r[0]-mx,r[1]-my,r[2]+2*mx,r[3]+2*my];
@@ -246,7 +257,7 @@ const BENCH={
     el.querySelectorAll('.eye').forEach(b=>b.onclick=()=>{this.focus(b.dataset.dev);if(BENCH.sheetOverlay())this.togglePanel(false)})},
   /* step card: header, text, for build steps one connection per line (ticks itself, the current one glows on the
      board), the manual figure beside it (tap → full screen); folded to one line by default on small screens */
-  drawStepCard(){const c=this.el.card;if(!this.sim||this.mode!=='manual'){c.hidden=true;return}c.hidden=false;
+  drawStepCard(){const c=this.el.card;setTimeout(()=>this.labChip());if(!this.sim||this.mode!=='manual'){c.hidden=true;return}c.hidden=false;
     const S=this.sim.steps,i=this.cur(),all=i>=S.length;const min=c.classList.contains('min');
     const s=S[i],L=!all&&s.lines&&!this.sim.pc?s.lines:null;const done=L?L.map(l=>this.sim.lineDone(l)):[];const cur=L?done.indexOf(false):-1;
     if(this.sim.setGuide)this.sim.setGuide(L&&cur>=0?this.sim.lineSpots(L[cur]):null);
@@ -258,10 +269,11 @@ const BENCH={
     const fig=s.fig?`<div class="sfig"><img class="figimg" src="${s.fig}" alt="${s.figCap||'Figure'}"><span>🔍</span></div>`:'';
     c.classList.toggle('has-lines',!!L);const h0=c.offsetHeight;
     const PS=s.proc?S.filter(x=>x.proc===s.proc):S,pi=PS.indexOf(s)+1;
-    c.innerHTML=`<div class="num">${pi}</div><div class="body"><div class="k">${s.proc&&this.procs.length>1?`Procedure ${s.proc} · `:''}الخطوة ${pi} من ${PS.length}</div><div class="t">${s.t}</div>${lines}<div class="acts"><button class="go" id="scGo">وريني وين</button><button id="scAll">كل الخطوات</button></div></div>${fig}<button class="mini" id="scMin" aria-label="${min?'توسيع':'تصغير'}">${min?'▴':'▾'}</button>`;
+    c.innerHTML=`<div class="num">${pi}</div><div class="body"><div class="k">${s.proc&&this.procs.length>1?`Procedure ${s.proc} · `:''}الخطوة ${pi} من ${PS.length}</div><div class="t">${s.t}</div>${lines}<div class="acts"><button class="go" id="scGo">وريني وين</button><button id="scAll">كل الخطوات</button></div></div>${fig}<button class="mini" id="scMin" aria-label="${min?'توسيع':'تصغير'}">${min?'▴':'▾'}</button><button class="mini" id="scHide" title="أخفِ الصفحة، خلّ المعمل بس" aria-label="أخفِ الصفحة">⟩</button>`;
     BIDI.fix(c);{const wl=c.querySelector('.wl'),cl=wl&&wl.querySelector('li.cur');if(cl)wl.scrollTop=Math.max(0,cl.offsetTop-wl.offsetTop-30)}if(Math.abs(c.offsetHeight-h0)>8&&this.view)requestAnimationFrame(()=>this.refit(true));
     const small=()=>innerHeight<=500||innerWidth<=600;
     c.querySelector('#scGo').onclick=()=>{if(small()&&!c.classList.contains('min')){c.classList.add('min');c.dataset.key='';this.drawStepCard()}if(L){const ln=cur>=0&&(L[cur].lead||L[cur].jack);if(ln){if(this.view!=='ov')this.back()}else if(!here)this.focus('board');if(cur>=0)setTimeout(()=>this.sim.setGuide({...this.sim.lineSpots(L[cur]),flash:true}),reduceMotion?0:420)}else this.focus(s.dev)};
     c.querySelector('#scAll').onclick=()=>this.togglePanel(true);
+    c.querySelector('#scHide').onclick=()=>this.labOnly(true);
     c.querySelector('#scMin').onclick=()=>{c.classList.toggle('min');c.dataset.key='';this.drawStepCard();this.refit(true)}}
 };
