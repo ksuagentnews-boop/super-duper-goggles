@@ -130,7 +130,7 @@ setup(RT){
     steps:[
       {dev:'dmm',t:'Procedure A (Table 1.1): شغّل DMM 1 (POWER) وحوّله على وضع اختبار الدايود ▶|.',ok:s=>s.dmmDiode},
       {dev:'dmm',t:'والمداخل فاضية (ما فيه شي في HI و COM)، شوف قراءة الـ open circuit وسجّلها في Table 1.1.',ok:s=>ST.open},
-      {dev:'dmm',t:'اسحب الـ 1N4001 من الشنطة وحطه على مداخل DMM 1 (HI و COM) مثل المعمل، واضغط على الدايود عشان تقلبه لين يصير الكاثود (الحلقة الرمادية) في HI: القراءة نفس قراءة الـ open circuit (reverse biased). سجّلها.',ok:s=>ST.revSi},
+      {dev:'dmm',t:'اسحب الـ 1N4001 من العلبة وحطه على مداخل DMM 1 (HI و COM) مثل المعمل، واضغط على الدايود عشان تقلبه لين يصير الكاثود (الحلقة الرمادية) في HI: القراءة نفس قراءة الـ open circuit (reverse biased). سجّلها.',ok:s=>ST.revSi},
       {dev:'dmm',t:'اقلبه (اضغط عليه): الأنود في HI والكاثود في COM. الـ DMM يعطيك الـ forward voltage drop. سجّله في Table 1.1.',ok:s=>ST.f_D4001!=null},
       {dev:'dmm',t:'اضغط "شيل" وكرّر بنفس الطريقة (الأنود في HI) مع: الزينر 1N4733A، والـ LED (الرجل الطويلة في HI، ويضوي خفيف)، والـ Ge diode، وسجّل الـ forward drop لكل واحد.',ok:s=>ST.f_Z4733!=null&&ST.f_LED!=null&&ST.f_GE!=null},
       {dev:'dmm',t:'شيل الدايود من مداخل DMM 1 (زر "شيل") عشان ترجع تستخدم أطرافه.',ok:s=>!s.jdIn},

@@ -42,7 +42,7 @@
     <p id="smSub">جلست على الطاولة. اختر الطور:</p>
     <div class="sm-opts">
       <button data-mode="manual"><span class="tag">MANUAL</span><b>المانيوال</b><span>تمشي مع مانيوال التجربة خطوة بخطوة وبنفس قيمه. كل خطوة تتشيك عليك أول بأول، وفي الآخر تعبّي الـ sheet ويتصحّح.</span></button>
-      <button data-mode="free"><span class="tag">FREE</span><b>حر</b><span>نفس الطاولة ونفس الأجهزة بدون خطوات ولا تصحيح. ركّب أي دائرة من الشنطة وقِس براحتك.</span></button>
+      <button data-mode="free"><span class="tag">FREE</span><b>حر</b><span>نفس الطاولة ونفس الأجهزة بدون خطوات ولا تصحيح. ركّب أي دائرة من العلبة وقِس براحتك.</span></button>
     </div>
     <button class="sm-stand" id="smStand">↩ قم من الكرسي</button>
   </div>
@@ -87,11 +87,11 @@
         <button class="zback" id="zBack">✕ رجوع <kbd>ESC</kbd></button>
         <div class="zchip"><b id="zEn"></b><span id="zAr"></span></div>
       </div>
-      <button id="bagBtn" hidden aria-expanded="false"><span class="ic">🎒</span><span>الشنطة</span><span class="ar" id="bagAr">▸</span></button>
-      <div id="drawer" aria-label="شنطة القطع">
-        <div class="dhead"><b>🎒 القطع</b><span id="dHint">اسحب القطعة للوحة، أو اضغطها ثم اضغط بين nodeين</span></div>
+      <button id="bagBtn" hidden aria-expanded="false"><span class="ic"><svg class="boxic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9.5h17v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" fill="#e6f1ee"/><path d="M3.5 9.5h17v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2zM3.5 9.5 1.6 5.9l7.3-1.5 3.1 5.1M20.5 9.5l1.9-3.6-7.3-1.5-3.1 5.1M9.5 13.5h5"/></svg></span><span>العلبة</span><span class="ar" id="bagAr">▸</span></button>
+      <div id="drawer" aria-label="العلبة">
+        <div class="dhead"><b><svg class="boxic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9.5h17v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" fill="#e6f1ee"/><path d="M3.5 9.5h17v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2zM3.5 9.5 1.6 5.9l7.3-1.5 3.1 5.1M20.5 9.5l1.9-3.6-7.3-1.5-3.1 5.1M9.5 13.5h5"/></svg> العلبة</b><span id="dHint">اسحب القطعة للوحة، أو اضغطها ثم اضغط بين nodeين</span></div>
         <div class="bag" id="bag"></div>
-        <button id="dClose" aria-label="طي صندوق القطع">◂</button>
+        <button id="dClose" aria-label="طي العلبة">◂</button>
       </div>
       <div id="stepCard" hidden></div>
       <div id="toast"></div>

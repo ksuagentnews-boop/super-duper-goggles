@@ -383,3 +383,8 @@ bdi{unicode-bidi:isolate}
 .proc-off{display:none!important}
 #live .ph{margin:10px 0 4px;font:700 12.5px var(--f-mono);color:#2c7a6b;direction:ltr;text-align:right}
 .pp-i span[dir]{unicode-bidi:isolate;text-align:right}
+
+/* «العلبة» (the parts box): a small open-box icon, drawn in the accent colour */
+.boxic{width:20px;height:20px;fill:none;stroke:var(--accent);stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round;vertical-align:-4px;flex:none}
+.boxic path:first-child{stroke:none}
+#bagBtn .ic .boxic{width:24px;height:24px}

@@ -56,8 +56,14 @@ Updated after every finished item (commit + push each time).
   - Hall renders at 1.5× on touch devices (≈1.7× faster).
   - Device matrix: Chromium desktop / phone / iPad emulation pass. Safari, Firefox and real phones still need a manual check.
 
+- **8 · «العلبة»**
+  - The parts box is called «العلبة» everywhere (title, folded button, aria labels, the Free-mode description, the Exp 1 step).
+  - It has a small open-box SVG icon in the accent colour instead of 🎒. Checked by the instruments test.
+
 ## In progress
-- 8 · Parts box renamed «العلبة» with a small SVG box icon.
+- Merge into `main`.
 
 ## Next
-- Merge into `main` after item 8; ask the owner whether the request continued after item 8 (the message was cut off).
+- Ask the owner whether the request continued after item 8 (the message was cut off after "everywhere in the UI and").
+- Portrait layout for tables with many instruments (stack them; the lead tray now allows it).
+- Check on real devices: Safari iPhone/iPad, Android Chrome, Firefox; hall frame rate on a phone.

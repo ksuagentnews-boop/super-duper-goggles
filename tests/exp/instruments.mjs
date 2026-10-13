@@ -44,6 +44,7 @@ export async function run(page, vp, ok) {
     await page.mouse.move(c[0], c[1]); await page.waitForTimeout(60); ok(await page.evaluate(() => !!document.querySelector('#Lhl2 rect')) && (await view()) === 'ov', 'overview: hovering a control outlines it (no click)'); }
   await H.key('p:LON'); ok((await view()) === 'ov' && !(await page.evaluate(() => BENCH.sim.RT.S.psu.u[0].on)), 'overview: a supply key works at once and does not zoom');
   ok(await page.$eval('#drawer', e => e.offsetWidth > 60 && getComputedStyle(e).display !== 'none'), 'side parts box is open next to the board');
+  ok(await page.evaluate(() => { const h = document.querySelector('#drawer .dhead b'); return h.textContent.trim() === 'العلبة' && !!h.querySelector('svg.boxic') && !document.body.innerHTML.includes('🎒') && !/الشنطة/.test(document.body.innerHTML); }), 'the parts box is «العلبة» with its box icon (no 🎒, no «الشنطة»)');
   await H.place('R100', 30, 31); ok((await view()) === 'ov' && await page.evaluate(() => BENCH.sim.RT.S.parts.some(p => p.a === 30 && p.b === 31)), 'overview: placing a part works without zooming');
   await H.lead('mh', 30); ok((await view()) === 'ov' && await page.evaluate(() => BENCH.sim.RT.S.leads.mh.node === 30), 'overview: moving a lead works without zooming');
   { const tr = await page.evaluate(() => { const T = BENCH.sim.RT.layout.TRAY; return { x: T.x + T.w / 2, y: T.y + 14 }; });
