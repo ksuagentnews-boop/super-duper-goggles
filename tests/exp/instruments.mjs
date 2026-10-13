@@ -46,7 +46,12 @@ export async function run(page, vp, ok) {
   await H.lead('mh', 30); ok((await view()) === 'ov' && await page.evaluate(() => BENCH.sim.RT.S.leads.mh.node === 30), 'overview: moving a lead works without zooming');
   const rg = await page.evaluate(() => BENCH.sim.regions.dmm); await H.tap(rg[0] + rg[2] * 0.3, rg[1] + 90); await page.waitForTimeout(500);
   ok((await view()) === 'dmm', 'tapping the DMM body zooms on it');
-  await page.evaluate(() => BENCH.back()); await page.waitForTimeout(300);
+  { await page.waitForTimeout(300); const z = await page.evaluate(() => { const v = document.getElementById('benchView'), st = document.getElementById('bstage').getBoundingClientRect(), pd = BENCH.pads();
+      const g = document.querySelector('#Ldyn [data-inst="dmm"]').getBoundingClientRect(); const aw = st.width, ah = st.height - pd.top - pd.bottom;
+      const shown = s => { const e = document.querySelector(s); return !!e && getComputedStyle(e).display !== 'none'; };
+      return { fill: Math.max(g.width / aw, g.height / ah), box: shown('#drawer'), board: shown('#Lstatic'), other: shown('#Ldyn [data-inst="psu"]'), hint: shown('.ovhint') }; });
+    ok(z.fill > 0.84 && !z.box && !z.board && !z.other && !z.hint, `device zoom: the DMM alone at ${(z.fill * 100).toFixed(0)} % of the screen; parts box, hint, board and the supply hidden`); }
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300); ok((await view()) === 'ov' && await page.$eval('#drawer', e => getComputedStyle(e).display !== 'none'), 'ESC returns to the overview with the parts box back');
   await page.click('#dClose'); ok(await page.$eval('#drawer', e => e.offsetWidth < 50), 'the arrow folds the parts box');
   await page.click('#dClose'); ok(await page.$eval('#drawer', e => e.offsetWidth > 60), 'and opens it again');
   await page.waitForTimeout(300);

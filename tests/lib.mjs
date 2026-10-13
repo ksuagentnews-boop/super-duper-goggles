@@ -10,6 +10,7 @@ export const VIEWPORTS = {
   desktop: { viewport: { width: 1400, height: 900 } },
   phone: { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
   portrait: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
+  phone2: { viewport: { width: 932, height: 430 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3 },
   ipad: { viewport: { width: 1180, height: 820 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
 };
 
@@ -38,20 +39,22 @@ export function bench(page) {
     L: () => page.evaluate(() => BENCH.sim.RT.layout),
     focus: async d => { await page.evaluate(d => BENCH.focus(d), d); await page.waitForTimeout(d === 'board' ? 700 : 80); },
     toClient: (x, y) => page.evaluate(([x, y]) => { const s = document.getElementById('bench'); const p = s.createSVGPoint(); p.x = x; p.y = y; const q = p.matrixTransform(s.getScreenCTM()); return [q.x, q.y]; }, [x, y]),
-    tap: async (x, y) => { const [cx, cy] = await H.toClient(x, y); if (H.touch) await page.touchscreen.tap(cx, cy); else await page.mouse.click(cx, cy); await page.waitForTimeout(25); },
+    tap: async (x, y) => { await H.unzoom(); const [cx, cy] = await H.toClient(x, y); if (H.touch) await page.touchscreen.tap(cx, cy); else await page.mouse.click(cx, cy); await page.waitForTimeout(25); },
     key: async (k, times = 1) => { for (let i = 0; i < times; i++) {
       const c = await page.evaluate(k => { const e = document.querySelector(`#bench [data-k="${k}"]`); if (!e) return null; const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2, innerWidth, innerHeight]; }, k);
       if (!c) throw new Error('no control ' + k);
       if (c[0] < 0 || c[1] < 0 || c[0] > c[2] || c[1] > c[3]) throw new Error(`control ${k} off screen`);
       if (H.touch) await page.touchscreen.tap(c[0], c[1]); else await page.mouse.click(c[0], c[1]); await page.waitForTimeout(20); } },
     node: async i => { const L = await H.L(); return { x: L.BX + 44 + (i % L.COLS) * L.P, y: L.BY + 44 + Math.floor(i / L.COLS) * L.P }; },
-    bag: async t => { if (!(await page.evaluate(() => BENCH.drawer))) { await page.evaluate(() => BENCH.setDrawer(true)); await page.waitForTimeout(100); }
+    /* a device zoom shows only that device: leave it before working on the board, as a student would */
+    unzoom: async () => { if (await page.evaluate(() => { if (!document.getElementById('benchView').classList.contains('devzoom')) return false; BENCH.back(); return true; })) await page.waitForTimeout(60); },
+    bag: async t => { await H.unzoom(); if (!(await page.evaluate(() => BENCH.drawer))) { await page.evaluate(() => BENCH.setDrawer(true)); await page.waitForTimeout(100); }
       const b = await page.$(`#bag .bag-item[data-t="${t}"]`); await b.evaluate(e => e.scrollIntoView({ block: 'nearest' })); await page.waitForTimeout(30); const r = await b.boundingBox(); if (H.touch) await page.touchscreen.tap(r.x + r.width / 2, r.y + r.height / 2); else await page.mouse.click(r.x + r.width / 2, r.y + r.height / 2); await page.waitForTimeout(40); },
     /* drop a diode from the parts box straight onto a multimeter's HI / COM jacks */
     jack: async (t, key = 'dmm') => { await H.bag(t); const c = await page.evaluate(k => { const L = BENCH.sim.RT.layout, i = BENCH.sim.RT.inst[k]; const P = L.POS[k], r = i.jackSlot; return { x: P.x + r.x + r.w / 2, y: P.y + r.y + r.h / 2 }; }, key); await H.tap(c.x, c.y); },
     place: async (t, a, b) => { await H.bag(t); const A = await H.node(a), B = await H.node(b); await H.tap((A.x + B.x) / 2, (A.y + B.y) / 2); },
-    drag: async (from, to) => { const [x0, y0] = await H.toClient(from.x, from.y); const [x1, y1] = await H.toClient(to.x, to.y); await page.mouse.move(x0, y0); await page.mouse.down(); await page.mouse.move(x1, y1, { steps: 6 }); await page.mouse.up(); await page.waitForTimeout(40); },
-    lead: async (k, node) => { const p = await page.evaluate(k => { const s = document.getElementById('bench'); const e = s.querySelector(`[data-k="lead:${k}"]`); return { x: +e.getAttribute('cx'), y: +e.getAttribute('cy') }; }, k);
+    drag: async (from, to) => { await H.unzoom(); const [x0, y0] = await H.toClient(from.x, from.y); const [x1, y1] = await H.toClient(to.x, to.y); await page.mouse.move(x0, y0); await page.mouse.down(); await page.mouse.move(x1, y1, { steps: 6 }); await page.mouse.up(); await page.waitForTimeout(40); },
+    lead: async (k, node) => { await H.unzoom(); const p = await page.evaluate(k => { const s = document.getElementById('bench'); const e = s.querySelector(`[data-k="lead:${k}"]`); return { x: +e.getAttribute('cx'), y: +e.getAttribute('cy') }; }, k);
       const to = node == null ? await page.evaluate(k => { const L = BENCH.sim.RT.layout; return { x: L.BX - 40, y: L.parkY - 30 }; }, k) : await H.node(node); await H.drag(p, to); },
     leadAt: k => page.evaluate(k => BENCH.sim.RT.S.leads[k].node, k),
     select: async (a, b) => { const sel = await page.evaluate(([a, b]) => { const S = BENCH.sim.RT.S; const p = S.parts.find(q => (q.a === a && q.b === b) || (q.a === b && q.b === a)); return p && S.sel === p.id; }, [a, b]);

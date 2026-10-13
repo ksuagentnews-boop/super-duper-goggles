@@ -38,21 +38,31 @@ function parkFor(list){const want=list.map(w=>({k:w.k,x:w.x})).sort((a,b)=>a.x-b
   for(let i=want.length-2;i>=0;i--)want[i].x=Math.min(want[i].x,want[i+1].x-gap);
   const out={};want.forEach(w=>out[w.k]={x:Math.round(w.x),y:parkY});return out}
 const DEF={};{
+  /* candidates: down-facing instruments in the top row (every order); a right-facing one (DMM, transformer) either in the
+     left column or at the left end of the top row (a wider gap after it lets its cables turn down to the rack); a
+     left-facing one in the right column or at the right end. Crossing-free candidates only; the winner gives the largest
+     overview scale for the free area of this screen (phone landscape → wide, portrait / desktop with the step card → taller),
+     then the shortest cables. */
   const T=[],L=[],R=[];INST.forEach(i=>{const f=FACE[i.key];(f==='right'?L:f==='left'?R:T).push(i)});
-  const col=(a,xf)=>{let y=BY;a.forEach(i=>{DEF[i.key]={x:xf(i),y};y+=i.size[1]+RG})};
-  col(L,i=>BX-CG-i.size[0]);col(R,()=>BX+BW+CG);
-  const row=ord=>{const W=ord.reduce((t,i)=>t+i.size[0],0)+Math.max(0,ord.length-1)*RG;let x=BX+BW/2-W/2;const yb=parkY-22-34;
-    ord.forEach(i=>{DEF[i.key]={x:Math.round(x),y:yb-i.size[1]};x+=i.size[0]+RG})};
-  /* order of the top row: no parked cable crossing another cable or an instrument, then the shortest cables */
+  const GT=120;const av=BENCH.availArea?BENCH.availArea():{W:1200,H:700};
   const perms=a=>a.length<2?[a]:a.flatMap((x,i)=>perms([...a.slice(0,i),...a.slice(i+1)]).map(p=>[x,...p]));
-  let best=null;for(const ord of perms(T)){row(ord);const term=k=>{const f=fromOf(k),p=DEF[LEADDEF[k].inst.key];return {x:f.x+p.x,y:f.y+p.y}};
-    const pk=parkFor(LEADS.map(k=>({k,x:term(k).x})));const len=LEADS.reduce((t,k)=>{const a=term(k);return t+Math.hypot(a.x-pk[k].x,a.y-pk[k].y)},0);
-    const x=crossCount(parkedCables(DEF,pk),DEF);const score=x.cc.length*1e6+x.ci.length*1e6+len;
-    if(!best||score<best.score-1)best={score,ord}}
-  row(best?best.ord:T);
+  const place=(colL,colR,rowL,ord,rowR)=>{for(const k in DEF)delete DEF[k];
+    let y=BY;colL.forEach(i=>{DEF[i.key]={x:BX-CG-i.size[0],y};y+=i.size[1]+RG});y=BY;colR.forEach(i=>{DEF[i.key]={x:BX+BW+CG,y};y+=i.size[1]+RG});
+    const items=[...rowL.map(i=>[i,GT]),...ord.map((i,j)=>[i,j===ord.length-1&&rowR.length?GT:RG]),...rowR.map(i=>[i,RG])];
+    const W=items.reduce((t,[i,g],j)=>t+i.size[0]+(j<items.length-1?g:0),0);let x=BX+BW/2-W/2;const yb=parkY-22-34;
+    items.forEach(([i,g])=>{DEF[i.key]={x:Math.round(x),y:yb-i.size[1]};x+=i.size[0]+g})};
+  const bbox=()=>{let x0=BX-66,y0=parkY-34,x1=BX+BW+66,y1=BY+BH+16;INST.forEach(i=>{const p=DEF[i.key];x0=Math.min(x0,p.x-6);y0=Math.min(y0,p.y-46);x1=Math.max(x1,p.x+i.size[0]+6);y1=Math.max(y1,p.y+i.size[1]+6)});return [x0,y0,x1,y1]};
+  const splits=(a)=>{const out=[];for(let m=0;m<(1<<a.length);m++)out.push([a.filter((_,i)=>!(m>>i&1)),a.filter((_,i)=>m>>i&1)]);return out};
+  let best=null;
+  for(const [colL,rowL] of splits(L))for(const [colR,rowR] of splits(R))for(const ord of perms(T)){
+    place(colL,colR,rowL,ord,rowR);const term=k=>{const f=fromOf(k),p=DEF[LEADDEF[k].inst.key];return {x:f.x+p.x,y:f.y+p.y}};
+    const pk=parkFor(LEADS.map(k=>({k,x:term(k).x})));const x=crossCount(parkedCables(DEF,pk),DEF);if(x.cc.length||x.ci.length)continue;
+    const len=LEADS.reduce((t,k)=>{const a=term(k);return t+Math.hypot(a.x-pk[k].x,a.y-pk[k].y)},0);
+    const [x0,y0,x1,y1]=bbox();const sc=Math.min(av.W/(x1-x0),av.H/(y1-y0));
+    if(!best||sc>best.sc*1.002||(sc>best.sc*0.998&&len<best.len-1))best={sc,len,args:[colL,colR,rowL,ord,rowR]}}
+  if(best)place(...best.args);else place(L,R,[],T,[]);
   /* shift so the whole desk starts at (20,20) */
-  let x0=BX-66,y0=parkY-34;INST.forEach(i=>{x0=Math.min(x0,DEF[i.key].x);y0=Math.min(y0,DEF[i.key].y-46)});
-  const dx=20-x0,dy=20-y0;BX+=dx;BY+=dy;parkY+=dy;INST.forEach(i=>{DEF[i.key].x+=dx;DEF[i.key].y+=dy})}
+  const [x0,y0]=bbox();const dx=20-x0,dy=20-y0;BX+=dx;BY+=dy;parkY+=dy;INST.forEach(i=>{DEF[i.key].x+=dx;DEF[i.key].y+=dy})}
 /* the student's arrangement, remembered per experiment (relative to the panel) */
 const LSK='eelab:layout:'+(BENCH.exp||'');const POS={};
 function loadPos(){INST.forEach(i=>POS[i.key]={...DEF[i.key]});try{const s=JSON.parse(localStorage.getItem(LSK)||'null');if(s)INST.forEach(i=>{const q=s[i.key];if(q&&isFinite(q.x)&&isFinite(q.y))POS[i.key]={x:BX+q.x,y:BY+q.y}})}catch(_){}}
@@ -291,7 +301,7 @@ function labelsSVG(){const boxes=[];const all=plugs.map(q=>({x:q.p.x-10,y:q.p.y-
     if(!b)b={x:p.x-w/2,y:p.y-24-h/2,w,h};boxes.push(b);
     s+=`<rect x="${b.x}" y="${b.y}" width="${w}" height="${h}" rx="4" fill="#fffdf7" fill-opacity=".92" stroke="#b9c2c4" stroke-width=".8" pointer-events="none"/>`+T(b.x+w/2,b.y+11,t,{size:9.5,fill:'#26343a',a:'middle',w:600})});
   return s}
-function cablesSVG(){plugs.length=0;CAB.length=0;updPark();const body=INST.map(i=>i.cables?i.cables(DRAW):'').join('');return `<g filter="url(#cabShadow)">${body}</g>`+labelsSVG()}
+function cablesSVG(){plugs.length=0;CAB.length=0;updPark();const body=INST.map(i=>i.cables?`<g data-cabof="${i.key}">${i.cables(DRAW)}</g>`:'').join('');return `<g filter="url(#cabShadow)">${body}</g><g class="cablbl">${labelsSVG()}</g>`}
 function nearestEdge(x,y){let best=null,bd=34;EDGES.forEach(e=>{const a=nodeC(e[0]),b=nodeC(e[1]);const d=Math.hypot((a.x+b.x)/2-x,(a.y+b.y)/2-y);if(d<bd){bd=d;best=e}});return best}
 /* best anchor for a multi-pin part near (x,y): footprint inside the panel, every leg hole free */
 function nearestAnchor(t,x,y,skip,lim=90){const occ=occupied(skip);let best=null,bd=lim;for(let n=0;n<NN;n++){if(!fits(t,n))continue;const c=fpC(t,n);const d=Math.hypot(c.x-x,c.y-y);if(d>=bd)continue;

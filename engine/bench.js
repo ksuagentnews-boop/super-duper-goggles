@@ -22,11 +22,14 @@ const BENCH={
     $q('#bQuick').onclick=()=>QUICK.open($q('#bQuick'));
     $q('#bStand').onclick=()=>this.leave();
     addEventListener('keydown',e=>{if(E.view.hidden)return;if(e.key==='Escape'){if(this.view!=='ov')this.back()}});
-    addEventListener('resize',()=>{if(!E.view.hidden)this.refit(false)});
+    /* iPhone: size the bench to the visual viewport and re-fit on resize / rotation / toolbar changes */
+    const vv=window.visualViewport;const sync=()=>{if(vv){const st=E.view.style;st.top=vv.offsetTop+'px';st.left=vv.offsetLeft+'px';st.width=vv.width+'px';st.height=vv.height+'px'}if(!E.view.hidden)requestAnimationFrame(()=>this.refit(false))};
+    addEventListener('resize',sync);addEventListener('orientationchange',()=>setTimeout(sync,250));if(vv){vv.addEventListener('resize',sync);vv.addEventListener('scroll',sync)}this._vvSync=sync;sync();
     this.panelDefault();
   },
-  panelDefault(){const mob=innerWidth<=900;this.el.view.classList.toggle('panel-closed',!mob&&false);this.el.view.classList.remove('panel-open')},
-  togglePanel(force){const v=this.el.view,mob=innerWidth<=900;
+  sheetOverlay(){return matchMedia('(max-width:900px),(max-height:520px),(pointer:coarse) and (max-width:1400px)').matches},
+  panelDefault(){const mob=BENCH.sheetOverlay();this.el.view.classList.toggle('panel-closed',!mob&&false);this.el.view.classList.remove('panel-open')},
+  togglePanel(force){const v=this.el.view,mob=BENCH.sheetOverlay();
     if(mob){const open=force!==undefined?force:!v.classList.contains('panel-open');v.classList.toggle('panel-open',open)}
     else{const closed=force!==undefined?!force:!v.classList.contains('panel-closed');v.classList.toggle('panel-closed',closed);requestAnimationFrame(()=>this.refit(false))}},
   /* exp = registry id, e.g. 'ee312/exp3'; the experiment file is loaded on first use */
@@ -34,7 +37,7 @@ const BENCH={
     const E=this.el;E.view.hidden=false;HALL.pause();
     if(!force&&this.built===exp+'|'+mode){this.refit(false);return}
     if(!EXP_DEFS[exp]){REGISTRY.load(exp).then(()=>this.enter(exp,mode,true)).catch(()=>{this.say('تعذّر تحميل التجربة');this.leave()});return}
-    this.exp=exp;this.mode=mode;this.built=exp+'|'+mode;this.lineLog=[];STATS.start(exp,mode);this.view='ov';this.done=[];this.sim=null;
+    this.exp=exp;this.mode=mode;this.built=exp+'|'+mode;this.lineLog=[];STATS.start(exp,mode);this.view='ov';this.done=[];this.sim=null;this.devZoom();
     E.view.dataset.mode=mode;
     /* the parts box stays open next to the board (its arrow collapses it); none on PC tables or benches without parts */
     const hasBag=!EXP_DEFS[exp].pc&&!!(EXP_DEFS[exp].tray&&EXP_DEFS[exp].tray.length);E.view.classList.toggle('no-wires',!(EXP_DEFS[exp].tray||[]).some(t=>t[0]==='W'));this.setPaint(null);E.view.classList.toggle('no-bag',!hasBag);/* portrait phones: the box starts folded (its arrow opens it) so the desk keeps the width */const bagOpen=hasBag&&innerWidth>=520;this.drawer=bagOpen;E.view.classList.toggle('drawer-open',bagOpen);$q('#dClose').textContent=bagOpen?'◂':'▸';
@@ -50,7 +53,7 @@ const BENCH={
     if(PC){this.view='pc';ENGINE.runPC(EXP_DEFS[exp])}else ENGINE.run(EXP_DEFS[exp]);
     /* small screens: the step card starts folded so the overview gets the height */
     E.card.classList.toggle('min',!PC&&(innerHeight<=500||innerWidth<=600));E.card.dataset.key='';
-    this.ui();this.syncLayoutBtn();
+    if(this._vvSync)this._vvSync();this.ui();this.syncLayoutBtn();
     requestAnimationFrame(()=>{this.refit(false)});
   },
   leave(toHall){STATS.endSeat();this.setDrawer(false,true);this.el.view.hidden=true;if(toHall)HALL.resume();else HALL.standUp()},
@@ -74,29 +77,47 @@ const BENCH={
     this.el.bag.querySelectorAll('.bag-item').forEach(b=>b.classList.toggle('on',b.dataset.t===a||(b.dataset.t==='W'&&w)));
     this.el.dHint.textContent=w?'وضع السلك: اضغط على node ثم node ثانية على اللوحة':a?'اضغط بين nodeين متجاورين على اللوحة عشان تركّب القطعة':'اسحب القطعة للوحة، أو اضغطها ثم اضغط بين nodeين'},
   /* ---- view / camera ---- */
+  /* the stage as the student really sees it: the bench is sized to the visual viewport (iOS toolbars, the host app's
+     bar) and keeps out of the safe areas (CSS), so the stage box is the visible area */
   stageSize(){return {W:this.el.stage.clientWidth,H:this.el.stage.clientHeight}},
-  pads(){const top=this.view==='ov'?52:60;let bottom=14;
-    if(this.mode==='manual'&&!this.el.card.hidden)bottom+=this.el.card.offsetHeight+10;
-    const left=this.el.view.classList.contains('no-bag')?0:this.el.drawer.offsetWidth+8;
+  /* what the overview may use: the hint and the tool buttons float over the desk and take no space */
+  pads(){const top=this.view==='ov'?8:this.el.view.classList.contains('devzoom')?(this.stageSize().H<520?40:56):60;let bottom=8;
+    if(this.mode==='manual'&&!this.el.card.hidden)bottom+=this.el.card.offsetHeight+8;
+    const left=this.el.view.classList.contains('no-bag')||this.el.view.classList.contains('devzoom')?0:this.el.drawer.offsetWidth+8;
     return {top,bottom,left}},
-  fit(r){const {W,H}=this.stageSize();if(!W||!H)return null;const {top,bottom,left}=this.pads();const m=Math.min(18,W*0.03);
+  /* free area of the overview in px (used by the layout search before anything is drawn) */
+  availArea(){const {W,H}=this.stageSize();const small=innerHeight<=500||innerWidth<=600;const bag=!this.el.view.classList.contains('no-bag');
+    const left=bag?(this.drawer?(small?104:136):42):0;const card=this.mode==='manual'?(small?64:150):0;return {W:Math.max(200,W-left-16),H:Math.max(150,H-16-card)}},
+  fit(r){const {W,H}=this.stageSize();if(!W||!H)return null;const {top,bottom,left}=this.pads();const m=Math.min(12,W*0.015);
+    /* ≈4 % margin around what is on the desk */
+    const mx=r[2]*0.02,my=r[3]*0.02;r=[r[0]-mx,r[1]-my,r[2]+2*mx,r[3]+2*my];
     const aw=Math.max(60,W-2*m-left),ah=Math.max(60,H-top-bottom);const s=Math.max(r[2]/aw,r[3]/ah);const vw=W*s,vh=H*s;
-    return {x:r[0]+r[2]/2-vw/2-left*s/2,y:r[1]-top*s-(ah*s-r[3])/2,w:vw,h:vh}},
+    const cx=left+m+aw/2,cy=top+ah/2;return {x:r[0]+r[2]/2-cx*s,y:r[1]+r[3]/2-cy*s,w:vw,h:vh}},
   setVB(v){this.vb=v;this.svg.setAttribute('viewBox',`${v.x} ${v.y} ${v.w} ${v.h}`)},
   animTo(to){if(!to)return;cancelAnimationFrame(this.anim);if(!this.vb||reduceMotion){this.setVB(to);return}const from={...this.vb},t0=performance.now(),dur=560;
     const step=now=>{const k=ease(Math.min(1,(now-t0)/dur));this.setVB({x:from.x+(to.x-from.x)*k,y:from.y+(to.y-from.y)*k,w:from.w+(to.w-from.w)*k,h:from.h+(to.h-from.h)*k});if(k<1)this.anim=requestAnimationFrame(step)};this.anim=requestAnimationFrame(step)},
   /* focus: the device plus a margin of context (about a quarter of its size on each side), never closer than that */
-  curRect(){if(this.view==='ov')return this.ovRect;const r=this.sim.regions[this.view];const small=this.stageSize().H<520,f=small?0.1:0.26;const mx=Math.max(small?24:70,r[2]*f),my=Math.max(small?20:60,r[3]*f);return [r[0]-mx,r[1]-my,r[2]+2*mx,r[3]+2*my]},
+  curRect(){if(this.view==='ov')return this.ovRect;const r=this.sim.regions[this.view];if(this.el.view.classList.contains('devzoom')){const m=0.035;return [r[0]-r[2]*m,r[1]-r[3]*m,r[2]*(1+2*m),r[3]*(1+2*m)]}const small=this.stageSize().H<520,f=small?0.1:0.26;const mx=Math.max(small?24:70,r[2]*f),my=Math.max(small?20:60,r[3]*f);return [r[0]-mx,r[1]-my,r[2]+2*mx,r[3]+2*my]},
   refit(anim){if(!this.sim||!this.svg)return;const t=this.fit(this.curRect());if(anim)this.animTo(t);else{cancelAnimationFrame(this.anim);t&&this.setVB(t)}},
-  ui(){const E=this.el,ov=this.view==='ov';if(this.sim&&this.sim.pc){E.zoomUI.hidden=true;E.ovHint.hidden=true;E.bagBtn.hidden=true;this.drawStepCard();return}E.zoomUI.hidden=ov;E.ovHint.hidden=!ov;E.bagBtn.hidden=true;
+  /* the overview hint: once per session, small, then it fades away */
+  hintOnce(ov){const h=this.el.ovHint;let seen=false;try{seen=sessionStorage.getItem('eelab:hint')==='1'}catch(_){}
+    if(!ov||seen||this._hintShown){h.hidden=true;return}this._hintShown=true;h.hidden=false;h.classList.remove('fade');try{sessionStorage.setItem('eelab:hint','1')}catch(_){}
+    clearTimeout(this._hintT);this._hintT=setTimeout(()=>{h.classList.add('fade');setTimeout(()=>{h.hidden=true},700)},4200)},
+  ui(){const E=this.el,ov=this.view==='ov';if(this.sim&&this.sim.pc){E.zoomUI.hidden=true;E.ovHint.hidden=true;E.bagBtn.hidden=true;this.drawStepCard();return}E.zoomUI.hidden=ov;E.bagBtn.hidden=true;this.hintOnce(ov);
     if(!ov){const n=this.sim.names[this.view];E.zEn.textContent=n[0];E.zAr.textContent=n[1]}
     if(ov)this.hl.innerHTML='';else this.hl.innerHTML='';
     E.ovHint.textContent=innerWidth<600&&innerHeight>innerWidth?'اقلب الجوال بالعرض، واضغط على أي جهاز':matchMedia('(pointer:coarse)').matches?'الأزرار شغّالة من هنا · ✥ تحرّك الجهاز · جسمه يقرّب':'الأزرار والأسلاك شغّالة من هنا · اسحب ✥ عشان تحرّك الجهاز · اضغط على جسمه عشان تقرّب';
     this.drawStepCard()},
   regionAt(p){const R=this.sim.regions;for(const k of Object.keys(R).reverse()){const r=R[k];if(p.x>=r[0]&&p.x<=r[0]+r[2]&&p.y>=r[1]&&p.y<=r[1]+r[3])return k}return null},
   ovClick(p){const k=this.regionAt(p);if(k){this._hk=null;this.focus(k)}},
-  focus(k){if(this.sim&&this.sim.pc){this.sim.focus(k);return}if(!this.sim||!this.sim.regions[k])return;this.view=k;this.ui();this.refit(true)},
-  back(){if(this.sim&&this.sim.pc)return;this.view='ov';this.ui();this.refit(true)},
+  focus(k){if(this.sim&&this.sim.pc){this.sim.focus(k);return}if(!this.sim||!this.sim.regions[k])return;this.view=k;this.devZoom();this.ui();this.refit(true)},
+  /* close device zoom: the device alone at ≈90 % of the screen; the box, hints, tools, board and the other instruments hide */
+  devZoom(){const k=this.view,on=k!=='ov'&&k!=='board'&&!(this.sim&&this.sim.pc);const E=this.el;E.view.classList.toggle('devzoom',on);
+    let st=document.getElementById('zoomStyle');if(!st){st=document.createElement('style');st.id='zoomStyle';document.head.appendChild(st)}
+    st.textContent=on?`#benchView.devzoom #Ldyn>g:not([data-inst="${k}"]),#benchView.devzoom #Lcables g[data-cabof]:not([data-cabof="${k}"]),#benchView.devzoom #Lcables .cablbl{display:none}`:'';
+    const c=E.card;if(on&&c&&!c.hidden&&(innerHeight<=520||innerWidth<=600)&&!c.classList.contains('min')){c.classList.add('min');c.dataset.key='';this._unminCard=true}
+    else if(!on&&this._unminCard){this._unminCard=false;if(c){c.classList.remove('min');c.dataset.key=''}}},
+  back(){if(this.sim&&this.sim.pc)return;this.view='ov';this.devZoom();this.ui();this.refit(true)},
   /* open / collapse the side parts box */
   setDrawer(open,silent){if(this.el.view.classList.contains('no-bag'))return;this.drawer=open;const E=this.el;E.view.classList.toggle('drawer-open',open);$q('#dClose').textContent=open?'◂':'▸';
     if(!silent)setTimeout(()=>this.refit(true),20)},
@@ -117,7 +138,7 @@ const BENCH={
   drawSteps(){const el=document.getElementById('live');if(!el)return;const S=this.sim.steps,c=this.cur(),n=this.done.filter(Boolean).length;
     el.innerHTML=`<div class="sh"><b>خطوات التجربة</b><span dir="ltr">${n} / ${S.length}</span></div><div class="prog"><i style="width:${n/S.length*100}%"></i></div>`+
       S.map((s,i)=>`<div class="step ${this.done[i]?'done':i===c?'cur':'todo'}"><span class="m">${this.done[i]?'✓':i+1}</span><span class="x">${s.t}</span>${i===c?`<button class="eye" data-dev="${s.dev}">وريني</button>`:''}</div>`).join('');
-    el.querySelectorAll('.eye').forEach(b=>b.onclick=()=>{this.focus(b.dataset.dev);if(innerWidth<=900)this.togglePanel(false)})},
+    el.querySelectorAll('.eye').forEach(b=>b.onclick=()=>{this.focus(b.dataset.dev);if(BENCH.sheetOverlay())this.togglePanel(false)})},
   /* step card: header, text, for build steps one connection per line (ticks itself, the current one glows on the
      board), the manual figure beside it (tap → full screen); folded to one line by default on small screens */
   drawStepCard(){const c=this.el.card;if(!this.sim||this.mode!=='manual'){c.hidden=true;return}c.hidden=false;

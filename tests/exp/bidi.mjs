@@ -21,12 +21,12 @@ export async function run(page, vp, ok) {
       BIDI.leaks(document.getElementById('stepCard')).forEach(t => bad.push('card: ' + t));
       /* the default layout has no crossings; on this viewport the overview is fitted to instruments + board */
       let cross = null, fill = null; if (BENCH.sim.RT && BENCH.sim.RT.crossings) { const x = BENCH.sim.RT.crossings(); cross = x.cc.concat(x.ci);
-        const R = BENCH.ovRect, vb = BENCH.vb, st = BENCH.stageSize(), pd = BENCH.pads(); const s = st.W / vb.w; const aw = st.W - pd.left - 2 * Math.min(18, st.W * 0.03), ah = st.H - pd.top - pd.bottom;
-        fill = Math.max(R[2] * s / aw, R[3] * s / ah); }
+        const R = BENCH.ovRect, vb = BENCH.vb, st = BENCH.stageSize(), pd = BENCH.pads(); const s = st.W / vb.w; const aw = st.W - pd.left - 2 * Math.min(12, st.W * 0.015), ah = st.H - pd.top - pd.bottom;
+        fill = Math.max(R[2] * 1.04 * s / aw, R[3] * 1.04 * s / ah); }
       const n = (BENCH.sim.steps || []).length; BENCH.leave(true); return { n, bad, cross, fill };
     }, id);
     if (r.cross) ok(!r.cross.length, `${id}: default layout without crossings` + (r.cross.length ? ': ' + r.cross.join(', ') : ''));
-    if (r.fill != null) ok(r.fill > 0.97, `${id}: overview fitted to instruments + board (${(r.fill * 100).toFixed(0)} % of the free area)`);
+    if (r.fill != null) ok(r.fill > 0.97, `${id}: overview fitted to instruments + board with a ≈4 % margin (${(r.fill * 100).toFixed(0)} % of the visible free area)`);
     ok(r.bad.length === 0, `${id}: ${r.n} steps + sheet, every English run isolated` + (r.bad.length ? ` — ${r.bad.length} not: ${r.bad.slice(0, 4).join(' | ')}` : ''));
   }
 }
