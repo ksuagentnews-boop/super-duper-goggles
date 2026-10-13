@@ -46,4 +46,9 @@ export async function run(page, vp, ok) {
   await page.evaluate(() => BENCH.focus('sc')); await page.waitForTimeout(700); const d0 = await st();
   await zoomIn(2); const d1 = await st(); ok(d1.view === 'sc' && d1.w < d0.w * 0.8, `inside the scope zoom, ${touch ? 'pinch' : 'wheel'} goes closer (${Math.round(d0.w)} → ${Math.round(d1.w)})`);
   await page.keyboard.press('Escape'); await page.waitForTimeout(700); const d2 = await st(); ok(d2.view === 'ov' && !d2.user && Math.abs(d2.w - d2.fw) < 1, '✕ / ESC back to the fitted overview');
+  // ?debug=1: the real viewport numbers on screen (and nothing without it)
+  ok(await page.evaluate(() => !document.getElementById('dbgOverlay')), 'no debug overlay without ?debug=1');
+  await page.goto('http://app.local/?debug=1'); await page.waitForFunction(() => document.querySelector('#hallLoading').hidden, null, { timeout: 20000 }); await page.evaluate(() => WELCOME.close());
+  await sit(page, 'ee312/exp9', 'free'); await page.waitForTimeout(600);
+  const dbg = await page.$eval('#dbgOverlay', e => e.textContent); ok(/visualViewport \d/.test(dbg) && /safe-area/.test(dbg) && /free rect/.test(dbg) && /fitted bbox/.test(dbg) && /iframe/.test(dbg), '?debug=1 overlay prints the viewport, safe areas, free rect and fitted bbox');
 }

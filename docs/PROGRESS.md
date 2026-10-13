@@ -85,8 +85,18 @@ Updated after every finished item (commit + push each time).
   - Pinch / wheel and pan work inside it.
   - On a lead line, «وريني وين» shows the overview (jack + node), because the tray and the rack are outside the board zoom.
 
+- **B4 · `?debug=1` overlay**
+  - Adding `?debug=1` to the link shows a small corner overlay with:
+    - innerWidth/Height and the visualViewport (size, offset, scale);
+    - devicePixelRatio and the safe-area insets (CSS `env()` probe);
+    - whether the page runs in an iframe;
+    - the bench's stage and free rect, the layout's assumed area, the fitted bbox on screen, the current view's target and its fill %.
+  - It measures only the page's own window (never `screen.*`), so it is right inside the Claude app's preview iframe.
+  - The bench also refits when the stage itself changes size (ResizeObserver), e.g. iOS bars or the host app's bars, not only on window resize.
+  - To use it: open the site link with `?debug=1` on the iPhone (Claude app and Safari), sit at a crowded table (Exp 9), take one screenshot of the overview and one of a device zoom, and send them.
+
 ## In progress
-- B4 · `?debug=1` overlay.
+- B5 · Exp 9 overlaps at 844×390; overlap check for every experiment.
 
 ## Next
 - Ask the owner whether the request continued after item 8 (the message was cut off after "everywhere in the UI and").

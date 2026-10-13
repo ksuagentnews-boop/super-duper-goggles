@@ -26,6 +26,8 @@ const BENCH={
     const vv=window.visualViewport;const sync=()=>{if(vv){const st=E.view.style;st.top=vv.offsetTop+'px';st.left=vv.offsetLeft+'px';st.width=vv.width+'px';st.height=vv.height+'px'}if(!E.view.hidden)requestAnimationFrame(()=>this.refit(false))};
     addEventListener('resize',sync);addEventListener('orientationchange',()=>setTimeout(sync,250));if(vv){vv.addEventListener('resize',sync);vv.addEventListener('scroll',sync)}this._vvSync=sync;sync();
     this.panelDefault();this.gestures();
+    /* the stage can change size without a window resize (iOS toolbars, the host app's bars, the sheet panel): refit then too */
+    if(window.ResizeObserver)new ResizeObserver(()=>{if(!E.view.hidden)this.refit(false)}).observe(E.stage);
   },
   sheetOverlay(){return matchMedia('(max-width:900px),(max-height:520px),(pointer:coarse) and (max-width:1400px)').matches},
   panelDefault(){const mob=BENCH.sheetOverlay();this.el.view.classList.toggle('panel-closed',!mob&&false);this.el.view.classList.remove('panel-open')},

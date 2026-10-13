@@ -388,3 +388,5 @@ bdi{unicode-bidi:isolate}
 .boxic{width:20px;height:20px;fill:none;stroke:var(--accent);stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round;vertical-align:-4px;flex:none}
 .boxic path:first-child{stroke:none}
 #bagBtn .ic .boxic{width:24px;height:24px}
+/* ?debug=1 overlay: the real viewport numbers (never in the way: no pointer events) */
+#dbgOverlay{position:fixed;left:6px;bottom:6px;z-index:999;margin:0;padding:6px 8px;max-width:calc(100% - 12px);overflow:hidden;background:rgba(18,26,24,.82);color:#d8f3ea;font:10.5px/1.45 var(--f-mono),monospace;border-radius:8px;pointer-events:none;white-space:pre-wrap;direction:ltr;text-align:left}
