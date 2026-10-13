@@ -15,7 +15,7 @@ const DEBUG=(()=>{
     const B=typeof BENCH!=='undefined'?BENCH:null,bv=document.getElementById('benchView');
     if(B&&B.sim&&bv&&!bv.hidden&&!B.sim.pc&&B.svg&&B.vb){const st=B.el.stage.getBoundingClientRect(),pd=B.pads();const m=B.svg.getScreenCTM();
       const scr=r=>r&&m?{x:r[0]*m.a+m.e,y:r[1]*m.d+m.f,w:r[2]*m.a,h:r[3]*m.d}:null;
-      const free={x:st.left+pd.left,y:st.top+pd.top,w:st.width-pd.left,h:st.height-pd.top-pd.bottom};const cur=scr(B.curRect());
+      const free={x:st.left+pd.left,y:st.top+pd.top,w:st.width-pd.left-(pd.right||0),h:st.height-pd.top-pd.bottom};const cur=scr(B.curRect());
       o.bench={view:B.view,stage:{x:r1(st.left),y:r1(st.top),w:r1(st.width),h:r1(st.height)},free,bbox:scr(B.ovRect),target:cur,
         fill:cur?r1(Math.max(cur.w/free.w,cur.h/free.h)*100):null,avail:B.availArea(),userZoom:!!B.user,vb:B.vb}}
     return o}

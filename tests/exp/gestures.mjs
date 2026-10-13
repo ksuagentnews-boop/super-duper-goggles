@@ -38,7 +38,7 @@ export async function run(page, vp, ok) {
   { const R = await page.evaluate(() => BENCH.sim.boardRect); const c = await page.evaluate(([x, y]) => { const s = document.getElementById('bench'); const p = s.createSVGPoint(); p.x = x; p.y = y; const q = p.matrixTransform(s.getScreenCTM()); return [q.x, q.y]; }, [R[0] + 6, R[1] + R[3] / 2]);
     if (touch) await page.touchscreen.tap(c[0], c[1]); else await page.mouse.click(c[0], c[1]); await page.waitForTimeout(700);
     const b = await page.evaluate(() => { const s = document.getElementById('bench'), st = document.getElementById('bstage').getBoundingClientRect(), pd = BENCH.pads(), R = BENCH.sim.boardRect, m = s.getScreenCTM();
-      return { view: BENCH.view, fill: Math.max(R[2] * m.a / (st.width - pd.left), R[3] * m.d / (st.height - pd.top - pd.bottom)), box: getComputedStyle(document.getElementById('drawer')).display !== 'none' }; });
+      return { view: BENCH.view, fill: Math.max(R[2] * m.a / (st.width - pd.left - (pd.right || 0)), R[3] * m.d / (st.height - pd.top - pd.bottom)), box: getComputedStyle(document.getElementById('drawer')).display !== 'none' }; });
     ok(b.view === 'board' && b.fill > 0.86 && b.box, `tapping the board's frame zooms onto the board (${(b.fill * 100).toFixed(0)} % of the free area), parts box still there`);
     const w0 = (await st()).w; await zoomIn(1); ok((await st()).w < w0 * 0.8, 'pinch / wheel goes closer inside the board zoom');
     await page.keyboard.press('Escape'); await page.waitForTimeout(600); }

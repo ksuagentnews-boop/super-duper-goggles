@@ -62,6 +62,7 @@
 <!-- ================= BENCH ================= -->
 <div id="benchView" hidden data-mode="manual">
   <div class="btop">
+    <div class="ovhint" id="ovHint">اضغط على أي جهاز عشان تقرّب عليه</div>
     <button class="tb" id="bStand">↩ قم من الطاولة</button>
     <div class="ttl"><b id="bTitle">EE312 · تجربة 3</b><span id="bSub">Limiting Circuits</span></div>
     <span class="mchip" id="bChip">المانيوال</span>
@@ -77,10 +78,9 @@
     </aside>
     <div id="bstage">
       <div id="svgHost"></div>
-      <div class="ovhint" id="ovHint">اضغط على أي جهاز عشان تقرّب عليه</div>
       <div class="btools">
-        <button class="zback" id="bLayout" title="رجّع الأجهزة لأماكنها الأصلية">⤾ ترتيب افتراضي</button><button class="zback" id="bFit" hidden title="رجّع العرض كامل">⤢ عرض كامل</button>
-        <div class="paint" id="paint"><button class="zback" id="pBucket" aria-pressed="false" title="لوّن أسلاك اللوحة">🪣 لون السلك</button>
+        <button class="zback" id="bLayout" title="رجّع الأجهزة لأماكنها الأصلية"><span class="ti">⤾</span><span class="tl">ترتيب افتراضي</span></button><button class="zback" id="bFit" hidden title="رجّع العرض كامل"><span class="ti">⤢</span><span class="tl">عرض كامل</span></button>
+        <div class="paint" id="paint"><button class="zback" id="pBucket" aria-pressed="false" title="لوّن أسلاك اللوحة"><span class="ti">🪣</span><span class="tl">لون السلك</span></button>
           <div class="sw" id="pSw" hidden><button data-c="black" title="أسود"></button><button data-c="red" title="أحمر"></button><button data-c="blue" title="أزرق"></button><button data-c="grey" title="رمادي"></button><button data-c="yellow" title="أصفر"></button><button data-c="green" title="أخضر"></button><button data-c="x" class="px" title="خروج">✕</button></div></div>
       </div>
       <div class="zoomui" id="zoomUI" hidden>

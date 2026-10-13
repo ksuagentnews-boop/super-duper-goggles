@@ -11,6 +11,10 @@ export const VIEWPORTS = {
   phone: { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
   portrait: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
   phone2: { viewport: { width: 932, height: 430 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3 },
+  /* real phones with the host app's bars / browser chrome: less height than the bare screen */
+  appbar: { viewport: { width: 844, height: 330 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3 },
+  se: { viewport: { width: 667, height: 375 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
+  android: { viewport: { width: 740, height: 360 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3 },
   ipad: { viewport: { width: 1180, height: 820 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
 };
 

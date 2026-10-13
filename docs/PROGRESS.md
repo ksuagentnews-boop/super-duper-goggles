@@ -95,10 +95,20 @@ Updated after every finished item (commit + push each time).
   - The bench also refits when the stage itself changes size (ResizeObserver), e.g. iOS bars or the host app's bars, not only on window resize.
   - To use it: open the site link with `?debug=1` on the iPhone (Claude app and Safari), sit at a crowded table (Exp 9), take one screenshot of the overview and one of a device zoom, and send them.
 
+- **B5 · Nothing on the desk under the UI**
+  - The bench tools (ترتيب افتراضي, لون السلك, عرض كامل) are compact icon-over-label buttons. They sit in a column at the right edge in landscape, or a row on top on tall screens, and the fit reserves that strip.
+  - The once-only hint shows over the top bar, not on the desk.
+  - The bench also refits when the parts box or the step card change size.
+  - New check in `tests/exp/bidi.mjs`: for every experiment, no instrument, board or tray sits under the parts box, a tool, the hint, the zoom chip or the step card, or off the stage.
+  - The check passes at desktop, 844×390, 844×330 (host-app bars), 932×430, 740×360, 667×375, 390×844 and iPad.
+  - Full desktop + phone regressions pass.
+
 ## In progress
-- B5 · Exp 9 overlaps at 844×390; overlap check for every experiment.
+- Nothing. Batch 2 (B1–B5) is on `main`.
+
 
 ## Next
+- Owner: open the site with `?debug=1` on the iPhone (Claude app + Safari) and send one screenshot of the Exp 9 overview and one of a device zoom, so the real numbers can be compared.
 - Ask the owner whether the request continued after item 8 (the message was cut off after "everywhere in the UI and").
 - Portrait layout for tables with many instruments (stack them; the lead tray now allows it).
 - Check on real devices: Safari iPhone/iPad, Android Chrome, Firefox; hall frame rate on a phone.

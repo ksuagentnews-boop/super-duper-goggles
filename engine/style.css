@@ -390,3 +390,16 @@ bdi{unicode-bidi:isolate}
 #bagBtn .ic .boxic{width:24px;height:24px}
 /* ?debug=1 overlay: the real viewport numbers (never in the way: no pointer events) */
 #dbgOverlay{position:fixed;left:6px;bottom:6px;z-index:999;margin:0;padding:6px 8px;max-width:calc(100% - 12px);overflow:hidden;background:rgba(18,26,24,.82);color:#d8f3ea;font:10.5px/1.45 var(--f-mono),monospace;border-radius:8px;pointer-events:none;white-space:pre-wrap;direction:ltr;text-align:left}
+
+/* bench tools: icon over a short label; a column at the right edge (landscape) or a row on top (tall screens). The fit
+   reserves that strip, so the tools never cover an instrument. The once-only hint sits in the top bar, not on the desk. */
+.btools .zback{flex-direction:column;gap:1px;justify-content:center;line-height:1.15;text-align:center;width:78px;padding:5px 4px}
+.btools .zback .ti{font-size:15px;line-height:1}.btools .zback .tl{font-size:10.5px;white-space:normal}
+#benchView.tall .btools{flex-direction:row-reverse;align-items:flex-start;flex-wrap:wrap;max-width:calc(100% - 20px)}
+#benchView.tall .paint{flex-direction:row-reverse;align-items:flex-start}
+.paint .sw{display:grid;grid-template-columns:repeat(2,26px);gap:5px}
+#benchView.tall .paint .sw{grid-template-columns:repeat(7,26px)}
+@media (max-width:900px),(max-height:500px){.btools .zback{width:60px;padding:4px 2px}.btools .zback .ti{font-size:13px}.btools .zback .tl{font-size:9.5px}.paint .sw{grid-template-columns:repeat(2,24px)}#benchView.tall .paint .sw{grid-template-columns:repeat(7,24px)}}
+.btop{position:relative}
+.btop .ovhint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);max-width:calc(100% - 16px);z-index:7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:600px){.btop .ovhint{left:50%;transform:translate(-50%,-50%);max-width:calc(100% - 16px);white-space:nowrap}}

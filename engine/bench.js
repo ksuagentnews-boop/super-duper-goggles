@@ -27,7 +27,7 @@ const BENCH={
     addEventListener('resize',sync);addEventListener('orientationchange',()=>setTimeout(sync,250));if(vv){vv.addEventListener('resize',sync);vv.addEventListener('scroll',sync)}this._vvSync=sync;sync();
     this.panelDefault();this.gestures();
     /* the stage can change size without a window resize (iOS toolbars, the host app's bars, the sheet panel): refit then too */
-    if(window.ResizeObserver)new ResizeObserver(()=>{if(!E.view.hidden)this.refit(false)}).observe(E.stage);
+    if(window.ResizeObserver){const ro=new ResizeObserver(()=>{if(E.view.hidden)return;const {W,H}=this.stageSize();E.view.classList.toggle('tall',H>W*1.1);this.refit(false)});[E.stage,E.drawer,E.card].forEach(x=>x&&ro.observe(x))}
   },
   sheetOverlay(){return matchMedia('(max-width:900px),(max-height:520px),(pointer:coarse) and (max-width:1400px)').matches},
   panelDefault(){const mob=BENCH.sheetOverlay();this.el.view.classList.toggle('panel-closed',!mob&&false);this.el.view.classList.remove('panel-open')},
@@ -83,19 +83,23 @@ const BENCH={
      bar) and keeps out of the safe areas (CSS), so the stage box is the visible area */
   stageSize(){return {W:this.el.stage.clientWidth,H:this.el.stage.clientHeight}},
   /* what the overview may use: the hint and the tool buttons float over the desk and take no space */
-  pads(){const top=this.view==='ov'?8:this.el.view.classList.contains('devzoom')?(this.stageSize().H<520?40:56):60;let bottom=8;
+  /* the free area of the stage: minus the parts box (left), the step card (bottom), the zoom chip (top) and the bench tools —
+     a column on the right in landscape, a row on top on tall screens — so nothing on the desk ever sits under them */
+  tools(){const t=$q('#benchView .btools');if(!t||this.el.view.classList.contains('devzoom')||(this.sim&&this.sim.pc)||getComputedStyle(t).display==='none')return {right:0,top:0};
+    const tall=this.el.view.classList.contains('tall'),r=t.getBoundingClientRect();return tall?{right:0,top:r.height+10}:{right:r.width+10,top:0}},
+  pads(){const T=this.tools();let top=this.view==='ov'?8:this.el.view.classList.contains('devzoom')?(this.stageSize().H<520?40:56):60;top=Math.max(top,T.top);let bottom=8;
     if(this.mode==='manual'&&!this.el.card.hidden)bottom+=this.el.card.offsetHeight+8;
     const left=this.el.view.classList.contains('no-bag')||this.el.view.classList.contains('devzoom')?0:this.el.drawer.offsetWidth+8;
-    return {top,bottom,left}},
+    return {top,bottom,left,right:T.right}},
   /* free area of the overview in px (used by the layout search before anything is drawn) */
   availArea(){const {W,H}=this.stageSize();const small=innerHeight<=500||innerWidth<=600;const bag=!this.el.view.classList.contains('no-bag');
-    const left=bag?(this.drawer?(small?104:136):42):0;const card=this.mode==='manual'?(small?64:150):0;return {W:Math.max(200,W-left-16),H:Math.max(150,H-16-card)}},
-  fit(r){const {W,H}=this.stageSize();if(!W||!H)return null;const {top,bottom,left}=this.pads();const m=Math.min(12,W*0.015);
+    const left=bag?(this.drawer?(small?104:136):42):0;const card=this.mode==='manual'?(small?64:150):0;const tall=H>W*1.1,tr=tall?0:(small?70:96),tt=tall?52:0;return {W:Math.max(200,W-left-16-tr),H:Math.max(150,H-16-card-tt)}},
+  fit(r){const {W,H}=this.stageSize();if(!W||!H)return null;const {top,bottom,left,right}=this.pads();const m=Math.min(12,W*0.015);
     /* ≈4 % margin around what is on the desk */
     const mx=r[2]*0.02,my=r[3]*0.02;r=[r[0]-mx,r[1]-my,r[2]+2*mx,r[3]+2*my];
-    const aw=Math.max(60,W-2*m-left),ah=Math.max(60,H-top-bottom);const s=Math.max(r[2]/aw,r[3]/ah);const vw=W*s,vh=H*s;
+    const aw=Math.max(60,W-2*m-left-right),ah=Math.max(60,H-top-bottom);const s=Math.max(r[2]/aw,r[3]/ah);const vw=W*s,vh=H*s;
     const cx=left+m+aw/2,cy=top+ah/2;return {x:r[0]+r[2]/2-cx*s,y:r[1]+r[3]/2-cy*s,w:vw,h:vh}},
-  setVB(v){this.vb=v;this.svg.setAttribute('viewBox',`${v.x} ${v.y} ${v.w} ${v.h}`)},
+  setVB(v){{const {W,H}=this.stageSize();if(W&&H)this.el.view.classList.toggle('tall',H>W*1.1)}this.vb=v;this.svg.setAttribute('viewBox',`${v.x} ${v.y} ${v.w} ${v.h}`)},
   animTo(to){if(!to)return;cancelAnimationFrame(this.anim);if(!this.vb||reduceMotion){this.setVB(to);return}const from={...this.vb},t0=performance.now(),dur=560;
     const step=now=>{const k=ease(Math.min(1,(now-t0)/dur));this.setVB({x:from.x+(to.x-from.x)*k,y:from.y+(to.y-from.y)*k,w:from.w+(to.w-from.w)*k,h:from.h+(to.h-from.h)*k});if(k<1)this.anim=requestAnimationFrame(step)};this.anim=requestAnimationFrame(step)},
   /* focus: the device plus a margin of context (about a quarter of its size on each side), never closer than that */
