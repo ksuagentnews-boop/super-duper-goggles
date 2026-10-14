@@ -6,7 +6,7 @@ const pick=a=>a[Math.floor(Math.random()*a.length)];
 const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
 const RED='#ff5a4f',BLK='#2a2f33',CH1='#f2c230',CH2='#3fd3d8',CH3='#ff6fd8',CH4='#5b8cff';
-const T=(x,y,s,o={})=>`<text x="${x}" y="${y}" font-size="${o.size||11}" fill="${o.fill||'#22302f'}" text-anchor="${o.a||'start'}" font-weight="${o.w||400}" pointer-events="none">${s}</text>`;
+const T=(x,y,s,o={})=>`<text x="${x}" y="${y}" font-size="${o.size||11}" fill="${o.fill||'#22302f'}" text-anchor="${o.a||'start'}" font-weight="${o.w||400}"${o.stroke?` stroke="${o.stroke}" stroke-width="${o.sw||1}"`:''}${o.ls?` letter-spacing="${o.ls}"`:''}${o.ff?` font-family="${o.ff}"`:''}${o.it?' font-style="italic"':''} pointer-events="none">${s}</text>`;
 const fmtV=v=>{const a=Math.abs(v);return a>=1?v.toFixed(2)+'V':(v*1000).toFixed(1)+'mV'};
 const VDS=[0.002,0.005,0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,10];
 const TDS=[];[1e-6,1e-5,1e-4,1e-3,1e-2,1e-1].forEach(d=>[1,2,5].forEach(m=>TDS.push(+(d*m).toPrecision(3))));TDS.push(1);
