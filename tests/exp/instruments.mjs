@@ -47,7 +47,7 @@ export async function run(page, vp, ok) {
   const disp = () => page.evaluate(() => { const t = [...document.querySelectorAll('#bench .Linst text')].map(e => e.textContent); return t; });
   await H.key('p:LI-', 45); await H.key('p:LVC-', 7);
   let st = await page.evaluate(() => BENCH.sim.RT.S.psu.u[0]); ok(Math.abs(st.v - 5) < 1e-9 && Math.abs(st.ilim - 0.05) < 1e-9, 'unit L preset 5.00 V / 0.050 A (dc OFF)');
-  ok((await disp()).includes('5.00') && (await disp()).includes('0.050'), 'OFF (PRESET) shows the set voltage and current limit');
+  ok((await disp()).includes('5.000') && (await disp()).includes('0.050'), 'OFF (PRESET) shows the set voltage and current limit');
   await H.focus('dmm'); await H.key('m:DCV'); await H.focus('psu'); await H.key('p:LON');
   let s = await page.evaluate(() => BENCH.sim.RT.psuStat(0));
   ok(!s.cc && s.i > 0.040 && s.i < 0.046, `CV: I = ${s.i.toFixed(4)} A`);
@@ -104,6 +104,14 @@ export async function run(page, vp, ok) {
   // the arrangement is remembered for this experiment and "ترتيب افتراضي" restores the default
   const pos = () => page.evaluate(() => ({ ...BENCH.sim.RT.layout.POS.dmm }));
   const dmmState = () => page.evaluate(() => JSON.stringify(BENCH.sim.RT.S.dmm));
+  /* move mode (batch 5): no ✥ handle until «✥ تحريك» is lit; with it lit a tap on a device body does not zoom */
+  const hvis = () => page.evaluate(() => { const h = document.querySelector('#bench [data-k="mv:dmm"]'); return !!h && h.getBoundingClientRect().width > 0; });
+  ok(!(await hvis()), 'move mode off: no ✥ handle on the instruments');
+  const tapBtn = async sel => { const r = await page.$eval(sel, e => { const b = e.getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; }); if (vp === 'phone') await page.touchscreen.tap(r[0], r[1]); else await page.mouse.click(r[0], r[1]); await page.waitForTimeout(80); };
+  await tapBtn('#bMove'); ok((await hvis()) && (await page.$eval('#bMove', e => e.getAttribute('aria-pressed'))) === 'true', '«✥ تحريك» lit: the ✥ handles show');
+  { const c = await page.evaluate(() => { const L = BENCH.sim.RT.layout, P = L.POS.dmm, i = BENCH.sim.RT.inst.dmm, m = document.getElementById('bench').getScreenCTM(); return [(P.x + i.size[0] * 0.5) * m.a + m.e, (P.y + 8) * m.d + m.f]; });
+    if (vp === 'phone') await page.touchscreen.tap(c[0], c[1]); else await page.mouse.click(c[0], c[1]); await page.waitForTimeout(150);
+    ok((await view()) === 'ov', 'move mode: a tap on the DMM body does not zoom'); }
   const p0 = await pos(), st0 = await dmmState();
   const hb = await page.$eval('#bench [data-k="mv:dmm"] circle:nth-child(2)', e => { const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
   const scale = await page.evaluate(() => document.getElementById('bench').getScreenCTM().a);
@@ -140,6 +148,7 @@ export async function run(page, vp, ok) {
   ok(await page.evaluate(() => !!localStorage.getItem('eelab:layout:ee312/exp1')), 'arrangement saved for this experiment');
   await page.evaluate(() => BENCH.enter('ee312/exp1', 'free', true)); await page.waitForTimeout(300);
   const p2 = await pos(); ok(Math.abs(p2.x - p1s.x) < 1 && Math.abs(p2.y - p1s.y) < 1, 'arrangement restored on the next visit');
+  ok(!(await hvis()) && (await page.$eval('#bMove', e => e.getAttribute('aria-pressed'))) === 'false', 'sitting again: move mode is off, no handles');
   await page.click('#bLayout'); await page.waitForTimeout(600);
   const p3 = await pos(); const d0 = await page.evaluate(() => BENCH.sim.RT.layout.DEF.dmm);
   ok(Math.abs(p3.x - d0.x) < 1 && Math.abs(p3.y - d0.y) < 1 && !(await page.evaluate(() => localStorage.getItem('eelab:layout:ee312/exp1'))), '"ترتيب افتراضي" restores the default layout');

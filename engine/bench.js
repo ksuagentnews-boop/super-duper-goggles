@@ -19,6 +19,8 @@ const BENCH={
     /* paint bucket: open → pick a swatch → tap wires; ✕ or the bucket again leaves the mode */
     $q('#pBucket').onclick=()=>this.setPaint(this.paint===null?(this.lastPaint||'red'):null);
     $q('#pSw').querySelectorAll('button').forEach(b=>b.onclick=()=>this.setPaint(b.dataset.c==='x'?null:b.dataset.c));
+    /* «✥ تحريك»: move mode shows the ✥ handles on every instrument; a tap on a device body then does not zoom */
+    $q('#bMove').onclick=()=>this.setMove(!this.moveMode);
     $q('#bLayout').onclick=()=>{if(this.sim&&this.sim.resetLayout){this.sim.resetLayout();this.say('رجعت الأجهزة لترتيبها الافتراضي')}};
     $q('#bQuick').onclick=()=>QUICK.open($q('#bQuick'));
     $q('#bStand').onclick=()=>this.leave();
@@ -49,7 +51,7 @@ const BENCH={
     const E=this.el;E.view.hidden=false;HALL.pause();
     if(!force&&this.built===exp+'|'+mode){this.refit(false);return}
     if(!EXP_DEFS[exp]){REGISTRY.load(exp).then(()=>this.enter(exp,mode,true)).catch(()=>{this.say('تعذّر تحميل التجربة');this.leave()});return}
-    this.exp=exp;this.mode=mode;this.built=exp+'|'+mode;this.lineLog=[];STATS.start(exp,mode);this.view='ov';this.setUser(false);this.done=[];this.sim=null;this.devZoom();
+    this.exp=exp;this.mode=mode;this.built=exp+'|'+mode;this.lineLog=[];STATS.start(exp,mode);this.view='ov';this.setUser(false);this.done=[];this.sim=null;this.setMove(false);this.devZoom();
     E.view.dataset.mode=mode;
     /* the parts box stays open next to the board (its arrow collapses it); none on PC tables or benches without parts */
     const hasBag=!EXP_DEFS[exp].pc&&!!(EXP_DEFS[exp].tray&&EXP_DEFS[exp].tray.length);E.view.classList.toggle('no-wires',!(EXP_DEFS[exp].tray||[]).some(t=>t[0]==='W'||(EXP_DEFS[exp].parts[t[0]]||{}).t==='BR'));this.setPaint(null,true);E.view.classList.toggle('no-bag',!hasBag);/* portrait phones: the box starts folded (its arrow opens it) so the desk keeps the width */const bagOpen=hasBag&&innerWidth>=520;this.drawer=bagOpen;E.view.classList.toggle('drawer-open',bagOpen);$q('#dClose').textContent=bagOpen?'◂':'▸';
@@ -185,13 +187,16 @@ const BENCH={
     clearTimeout(this._hintT);this._hintT=setTimeout(()=>{h.classList.add('fade');setTimeout(()=>{h.hidden=true},700)},4200)},
   ui(){const E=this.el,ov=this.view==='ov';if(this.sim&&this.sim.pc){E.zoomUI.hidden=true;E.ovHint.hidden=true;E.bagBtn.hidden=true;this.drawStepCard();return}E.zoomUI.hidden=ov;E.bagBtn.hidden=true;
     if(this._lastView!==this.view){this._lastView=this.view;this.sim.RT&&this.sim.RT.closePad&&this.sim.RT.closePad()}/* a view change closes the knob buttons */
-    E.ovHint.textContent=innerWidth<600&&innerHeight>innerWidth?'اقلب الجوال بالعرض، واضغط على أي جهاز':matchMedia('(pointer:coarse)').matches?'الأزرار شغّالة من هنا · ✥ تحرّك الجهاز · جسمه يقرّب':'الأزرار والأسلاك شغّالة من هنا · اسحب ✥ عشان تحرّك الجهاز · اضغط على جسمه عشان تقرّب';
+    E.ovHint.textContent=innerWidth<600&&innerHeight>innerWidth?'اقلب الجوال بالعرض، واضغط على أي جهاز':matchMedia('(pointer:coarse)').matches?'الأزرار شغّالة من هنا · جسم الجهاز يقرّب · «تحريك» تحرّك الأجهزة':'الأزرار والأسلاك شغّالة من هنا · اضغط على جسم الجهاز عشان تقرّب · «✥ تحريك» عشان تحرّك الأجهزة';
     this.hintOnce(ov);
     if(!ov){const n=this.sim.names[this.view];E.zEn.textContent=n[0];E.zAr.textContent=n[1]}
     if(ov)this.hl.innerHTML='';else this.hl.innerHTML='';
     this.drawStepCard()},
   regionAt(p){const R=this.sim.regions;for(const k of Object.keys(R).reverse()){if(k==='rack')continue;const r=R[k];if(p.x>=r[0]&&p.x<=r[0]+r[2]&&p.y>=r[1]&&p.y<=r[1]+r[3])return k}return null},
-  ovClick(p){const k=this.regionAt(p);if(k){this._hk=null;this.focus(k)}},
+  ovClick(p){if(this.moveMode)return;const k=this.regionAt(p);if(k){this._hk=null;this.focus(k)}},
+  moveMode:false,
+  setMove(on){this.moveMode=!!on;this.el.view.classList.toggle('movemode',this.moveMode);const b=$q('#bMove');if(b)b.setAttribute('aria-pressed',String(this.moveMode));if(this.sim&&this.sim.RT&&this.sim.RT.camera)this.sim.RT.camera();
+    if(this.moveMode)this.say('وضع التحريك: اسحب أي جهاز من مقبض ✥ · اضغط «تحريك» مرة ثانية للرجوع')},
   focus(k){if(this.sim&&this.sim.pc){this.sim.focus(k);return}if(!this.sim||!this.sim.regions[k])return;this.view=k;this.devZoom();this.ui();this.refit(true,true)},
   /* close device zoom: the device alone at ≈90 % of the screen; the box, hints, tools, board and the other instruments hide */
   devZoom(){setTimeout(()=>this.syncTouchMenu(),0);const k=this.view,on=k!=='ov'&&k!=='board'&&!(this.sim&&this.sim.pc);const E=this.el;E.view.classList.toggle('devzoom',on);

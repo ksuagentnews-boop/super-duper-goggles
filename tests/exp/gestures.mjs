@@ -45,9 +45,9 @@ export async function run(page, vp, ok) {
       const v1 = await v(); ok(Math.abs(v1 - 5.5) < 1e-9, `a finger drag of 72 px across the COARSE knob turns it 5 detents (5.00 → ${v1.toFixed(2)} V)`);
       await page.touchscreen.tap(k.x, k.y); await page.waitForTimeout(150);
       const pad = await page.evaluate(() => { const e = document.getElementById('kpad'); return { shown: !e.hidden, val: e.querySelector('.kv').textContent, b: [...e.querySelectorAll('.kb')].map(x => Math.min(x.getBoundingClientRect().width, x.getBoundingClientRect().height)) }; });
-      ok(pad.shown && pad.b.length === 2 && Math.min(...pad.b) >= 44 && /5\.50 V/.test(pad.val), `a tap on the knob shows big − / + buttons (${pad.b.join(', ')} px) and its value «${pad.val}»`);
+      ok(pad.shown && pad.b.length === 2 && Math.min(...pad.b) >= 44 && /5\.500 V/.test(pad.val), `a tap on the knob shows big − / + buttons (${pad.b.join(', ')} px) and its value «${pad.val}»`);
       const plus = await page.evaluate(() => { const r = document.querySelector('#kpad .kb[data-d="+"]').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }); await page.touchscreen.tap(plus[0], plus[1]); await page.waitForTimeout(100);
-      ok(Math.abs(await v() - 5.6) < 1e-9 && /5\.60 V/.test(await page.evaluate(() => document.querySelector('#kpad .kv').textContent)), '+ turns it one detent and the value follows');
+      ok(Math.abs(await v() - 5.6) < 1e-9 && /5\.600 V/.test(await page.evaluate(() => document.querySelector('#kpad .kv').textContent)), '+ turns it one detent and the value follows');
       const e3 = await empty(); if (e3) { await page.touchscreen.tap(e3.x, e3.y); await page.waitForTimeout(150); } ok(await page.evaluate(() => document.getElementById('kpad').hidden), 'a tap elsewhere hides the buttons'); }
     else { await page.mouse.move(k.x, k.y); await page.mouse.wheel(0, -100); await page.waitForTimeout(80); ok(Math.abs(await v() - 5.1) < 1e-9, 'desktop: the wheel over the knob body turns it'); } }
   await page.evaluate(() => { if (BENCH.view !== 'ov') BENCH.back(); BENCH.fitAll(); }); await page.waitForTimeout(400);
