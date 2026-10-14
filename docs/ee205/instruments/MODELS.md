@@ -2,6 +2,16 @@
 
 Reference for redrawing the EE205 instruments. Crops of every instrument, cut at full resolution from the table photos and video frames and enlarged 2×, are in `crops/`. Draw each instrument from its crop, not from memory, and compare the drawing with the crop side by side (see CLAUDE.md, Batch 5).
 
+## Owner's reference photos (`ref/`): use these first
+Clear, straight-on photos of the same models, found and checked by the owner. They show every label and control sharply. Draw the layout, labels and controls from `ref/`. Where the lab's unit is an older version, take its colours and logo from the lab crop; the differences are listed below.
+
+| File | Device | Same as the lab's? |
+|---|---|---|
+| `ref/hameg-hm203-7.jpg` | Hameg HM 203-7 | Yes, identical. Copy every label, knob, key, scale and socket from it. |
+| `ref/threephase-transformer-leybold.jpg` | Leybold three-phase transformer, red housing | Yes, the same old version: 8 sockets, two triangles, ⚠ + lamp. The photo is small; read the printed voltages and labels from the 4× lab close-ups in `crops/`. |
+| `ref/rheostat-leybold.jpg` | Leybold rheostat | Same model, newer print. Layout: black slider carriage on the top slot; end panel with a black round element top-left, red socket top-right, a large round recess with a black centre, two yellow ⚠ stickers (owner: leave them out), "max … W" print, a black socket and the ⏚ mark with a green-yellow socket at the bottom. The lab's units are beige rather than white; the CE mark is not on them. |
+| `ref/variable-ac-supply-leybold-521-35.jpg` | Leybold 521 35 Variable extra-low voltage transformer S | Same model and layout. The lab's unit is cream with a **red** rocker and the old L-in-a-circle Leybold logo; this photo shows the newer LD logo and an orange rocker. Panel, left to right: rocker top-left; field 1: fuse "1.8A", two black ~ sockets "12V" (fixed ac); field 2: fuse "6A", two black ~ sockets "0…20V" (variable ac); field 3: the large silver pointer knob with dot marks, then a blue − and a red + socket "0…20V" (variable dc through the bridge rectifier drawn between fields 2 and 3). Bottom right: "521 35 / KLEINSPANNUNGS-STELLTRAFO S / VARIABLE EXTRA LOW VOLTAGE TRANSFORMER S". Black feet. |
+
 Sizes are the real outside dimensions where a datasheet gives them (W × H × D); the others are estimated from the photos against known parts, such as the 4 mm sockets (≈ 15 mm across the collar) and the plug-in panel. Use them for the one common bench scale.
 
 | Instrument | Model (how identified) | Real size, approx. | Crop |
