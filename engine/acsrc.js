@@ -55,23 +55,56 @@ ENGINE.mains=function(RT,opt){const KEY='ac',P='a',W=300,H=210,V=opt.v||127,F=60
 ENGINE.mains.size=[300,210];
 
 /* ---------- variable ac supply (Exp 7) ---------- */
-ENGINE.variac=function(RT,opt){const KEY='ac',P='a',W=460,H=250,F=60,VMAX=24;const L=lock(RT,KEY,'المصدر');const knob=ENGINE.knob;
-  const J={L:{x:400,y:196},N:{x:356,y:196}};
+ENGINE.variac=function(RT,opt){const KEY='ac',P='a',W=450,H=262,F=60,VMAX=20;const L=lock(RT,KEY,'المصدر');
+  /* Leybold 521 35 «variable extra low voltage transformer S» as in the lab (cream case, red rocker, old L-in-a-circle logo;
+     docs/ee205/instruments/variac-notes.md). Field 1: fuse 1.8 A, fixed 12 V ~ (two black sockets, leads ac12a / ac12b,
+     spare). Field 2: fuse 6 A, the variable 0 … 20 V ~ output (two black sockets: the experiment's leads acL / acN).
+     The silver pointer knob sets it. Field 3: 0 … 20 V ⎓ through the printed bridge (blue − / red +; drawn, not wired in
+     this simulator: no experiment uses it). */
+  const J={L:{x:236,y:186},N:{x:199,y:186},A:{x:92,y:186},B:{x:126,y:186}};const KX=278,KY=113,INK='#2d2d2b';
   function fresh(){const d={pwr:false,ok:false,sig:'',v:0};if(opt.prev)opt.prev(d);return d}
-  function svg(){const d=RT.S[KEY];let s=`<rect width="${W}" height="${H}" rx="14" fill="#e9e3d2" stroke="#a49d8a" stroke-width="2"/><rect x="0" y="0" width="${W}" height="26" rx="12" fill="#d8d0bb"/>`;
-    s+=T(18,18,'VARIABLE AC SUPPLY  ·  60 Hz',{size:11,w:700,fill:'#3b372d'});
-    s+=`<rect x="22" y="44" width="30" height="40" rx="4" fill="#3b3f42" stroke="#111" data-k="${P}:PWR" style="cursor:pointer"/><rect x="26" y="${d.pwr?48:64}" width="22" height="16" rx="3" fill="${d.pwr?'#e74c3c':'#7a2a22'}" pointer-events="none"/>`+T(37,100,'POWER',{size:7.5,a:'middle',fill:'#3b372d'});
-    s+=`<rect x="70" y="40" width="${W-90}" height="96" rx="8" fill="#ddd6c4" stroke="#bdb5a1"/>`;
-    s+=post(100,196,'#1d1f20','')+post(150,196,'#1d1f20','')+T(125,170,'12 V ~',{size:9,a:'middle',w:700,fill:'#3b372d'});
-    s+=knob(300,90,22,'#8f8a7c',`${P}:V`,'',null,{fill:'#f6f3ec',ang:(d.v/VMAX*270-135)*Math.PI/180});
-    for(let i=0;i<=12;i++){const a=(i/12*270-135)*Math.PI/180;s+=`<line x1="${300+Math.sin(a)*28}" y1="${90-Math.cos(a)*28}" x2="${300+Math.sin(a)*33}" y2="${90-Math.cos(a)*33}" stroke="#3b372d" stroke-width="1" pointer-events="none"/>`;if(i%3===0)s+=T(300+Math.sin(a)*42,90-Math.cos(a)*42+3,String(i*2),{size:7.5,a:'middle',fill:'#3b372d'})}
-    s+=T(300,134,'0 … 24 V ~',{size:8.5,a:'middle',fill:'#3b372d'});
-    s+=post(J.N.x,J.N.y,'#2f5fd0','')+post(J.L.x,J.L.y,'#d43a2c','')+T(378,170,'VARIABLE OUTPUT',{size:8.5,a:'middle',w:700,fill:'#3b372d'});
-    s+=`<circle cx="62" cy="64" r="6" fill="${d.pwr?'#ff4433':'#6b3a3a'}"/>`;return s}
+  const sock=(p,col='#1c1c1c',ring='#3a3a3a')=>`<circle cx="${p.x}" cy="${p.y}" r="12" fill="${ring}"/><circle cx="${p.x}" cy="${p.y}" r="10" fill="${col}" stroke="#000" stroke-width=".8"/><circle cx="${p.x}" cy="${p.y}" r="6.5" fill="none" stroke="#000" stroke-opacity=".5" stroke-width="1.4"/><circle cx="${p.x}" cy="${p.y}" r="3.2" fill="#555"/>`;
+  const fuse=(x,y)=>`<circle cx="${x}" cy="${y}" r="12" fill="#b9bcbd" stroke="#6f7273" stroke-width="1.2"/><circle cx="${x}" cy="${y}" r="8.5" fill="#161616"/><circle cx="${x-2.5}" cy="${y-2.5}" r="2.5" fill="#fff" opacity=".12"/>`;
+  function svg(){const d=RT.S[KEY];let s='';
+    // feet, cream case with the carrying slot on top, light front panel
+    s+=`<rect x="92" y="${H-14}" width="22" height="14" rx="2" fill="#1d1d1d"/><rect x="${W-114}" y="${H-14}" width="22" height="14" rx="2" fill="#1d1d1d"/>`;
+    s+=`<rect x="160" y="-8" width="130" height="16" rx="5" fill="#4d4f50" stroke="#2c2d2e"/>`;
+    s+=`<rect width="${W}" height="${H-10}" rx="12" fill="#e9e2cc" stroke="#a8a08a" stroke-width="2"/><rect x="7" y="13" width="${W-14}" height="${H-34}" rx="4" fill="#f1ecdc" stroke="#cbc3ab" stroke-width="1.2"/>`;
+    // the three grey fields
+    s+=`<rect x="36" y="70" width="124" height="118" rx="6" fill="#c9c9c4"/><rect x="154" y="70" width="118" height="118" rx="6" fill="#c9c9c4"/><rect x="278" y="70" width="121" height="118" rx="6" fill="#c9c9c4"/>`;
+    s+=`<rect x="154" y="70" width="118" height="118" rx="6" fill="none" stroke="#f1ecdc" stroke-width="3"/><rect x="278" y="70" width="121" height="118" rx="6" fill="none" stroke="#f1ecdc" stroke-width="3"/>`;
+    // red rocker, top-left, over the first field's corner
+    s+=`<rect x="37" y="48" width="38" height="46" rx="3" fill="#151515" data-k="${P}:PWR" style="cursor:pointer"/><rect x="43" y="54" width="26" height="34" rx="2" fill="${d.pwr?'#e84a2c':'#b9301c'}" pointer-events="none"/>`+
+       `<rect x="43" y="${d.pwr?54:71}" width="26" height="17" rx="2" fill="${d.pwr?'#ff6a45':'#a4281a'}" pointer-events="none"/>`+(d.pwr?`<rect x="40" y="51" width="32" height="40" rx="3" fill="#ff5a33" opacity=".25" pointer-events="none"/>`:'');
+    // field 1: fuse 1.8 A, 12 V ~
+    s+=fuse(134,111)+T(135,134,'1.8A',{size:8,fill:INK,a:'middle'})+T(105,157,'12V',{size:8.5,fill:INK,a:'middle'})+T(92,176,'~',{size:9,fill:INK,a:'middle'})+T(126,176,'~',{size:9,fill:INK,a:'middle'})+sock(J.A)+sock(J.B);
+    // field 2: fuse 6 A, the variable ac output, the printed bridge diagram to the dc output
+    s+=fuse(174,111)+T(174,134,'6A',{size:8,fill:INK,a:'middle'});
+    s+=`<path d="M199 165 V146 H265 M284 146 H352 V165 M236 165 V159 H265 M284 159 H312 V165" fill="none" stroke="${INK}" stroke-width="1"/>`+
+       `<rect x="265" y="141" width="19" height="22" fill="#d8d8d4" stroke="${INK}" stroke-width="1"/><path d="M269 152 h11 M274 147 l5 5 l-5 5 z M279 147 v10" fill="none" stroke="${INK}" stroke-width="1"/>`;
+    s+=T(224,156,'0...20V',{size:8,fill:INK,a:'middle'})+T(334,156,'0...20V',{size:8,fill:INK,a:'middle'})+T(199,176,'~',{size:9,fill:INK,a:'middle'})+T(236,176,'~',{size:9,fill:INK,a:'middle'})+sock(J.N)+sock(J.L);
+    // field 3: dc − (blue) / + (red)
+    s+=T(310,175,'−',{size:10,fill:INK,a:'middle',w:700})+T(348,175,'+',{size:10,fill:INK,a:'middle',w:700})+sock({x:310,y:186},'#2f5fd0','#1f3e8c')+sock({x:348,y:186},'#d43a2c','#8a2016');
+    // the silver pointer knob (variable output) with its dots
+    for(let k=0;k<7;k++){const a=(-135+k*45)*Math.PI/180;s+=`<circle cx="${(KX+Math.sin(a)*35).toFixed(1)}" cy="${(KY-Math.cos(a)*35).toFixed(1)}" r="1.5" fill="${INK}"/>`}
+    const ang=(d.v/VMAX*270-135)*Math.PI/180;
+    s+=`<circle cx="${KX}" cy="${KY}" r="40" fill="transparent" data-k="knob:${P}:V" data-knob="${P}:V"/><circle cx="${KX}" cy="${KY+3}" r="25" fill="#000" opacity=".22"/>`+
+       `<circle cx="${KX}" cy="${KY}" r="25" fill="#e4e5e3" stroke="#8d9091" stroke-width="1.5" data-k="knob:${P}:V" data-knob="${P}:V" style="cursor:pointer"/>`+
+       `<circle cx="${KX}" cy="${KY}" r="21" fill="#f4f4f2" pointer-events="none"/><line x1="${(KX-Math.sin(ang)*6).toFixed(1)}" y1="${(KY+Math.cos(ang)*6).toFixed(1)}" x2="${(KX+Math.sin(ang)*20).toFixed(1)}" y2="${(KY-Math.cos(ang)*20).toFixed(1)}" stroke="#222" stroke-width="2.2" stroke-linecap="round" pointer-events="none"/>`;
+    s+=`<rect x="${KX-48}" y="${KY-12}" width="16" height="24" fill="transparent" data-k="${P}:V-" style="cursor:pointer"/><rect x="${KX+32}" y="${KY-12}" width="16" height="24" fill="transparent" data-k="${P}:V+" style="cursor:pointer"/>`+
+       `<path d="M${KX-44} ${KY} l5 -4 v8 z" fill="#8b877c" pointer-events="none"/><path d="M${KX+44} ${KY} l-5 -4 v8 z" fill="#8b877c" pointer-events="none"/>`;
+    // thin red line, the old Leybold logo bottom-left, the product text bottom-right
+    s+=`<line x1="36" y1="199" x2="399" y2="199" stroke="#b7462f" stroke-width="1.6"/>`;
+    s+=`<rect x="34" y="206" width="24" height="22" rx="3" fill="#f7f4ea" stroke="#1b1b1b" stroke-width="2"/><path d="M41 211 v12 h10" fill="none" stroke="#1b1b1b" stroke-width="3"/>`;
+    s+=T(398,212,'521 35',{size:6.4,fill:INK,a:'end'})+T(398,220,'KLEINSPANNUNGS-STELLTRAFO S',{size:6.4,fill:INK,a:'end'})+T(398,228,'VARIABLE EXTRA LOW VOLTAGE TRANSFORMER S',{size:6.4,fill:INK,a:'end'});
+    return s}
   function keyFn(k){const d=RT.S[KEY];if(k==='PWR')L.power();if(k==='CHK')L.check();if(k==='V+'||k==='V-'){d.v=clamp(Math.round((d.v+(k==='V+'?0.05:-0.05))*100)/100,0,VMAX);RT.dirty=true}}
   return {key:KEY,prefix:P,size:[W,H],name:['Variable AC supply','مصدر الجهد المتردد المتغيّر'],fresh,svg,keyFn,wheel:['V'],knobInfo:()=>'≈ '+RT.S[KEY].v.toFixed(2)+' V ~',
-    leads:[{k:'acL',label:'~ OUT',from:J.L,banana:true,circuit:true,pol:'+',tray:'AC out (red)',jn:'VAR OUT'},{k:'acN',label:'~ OUT',from:J.N,banana:true,circuit:true,pol:'-',tray:'AC out (blue)',jn:'VAR OUT −'}],
-    stamp(ck){const d=RT.S[KEY],l=RT.S.leads;if(!d.pwr||l.acL.node==null||l.acN.node==null)return;const a=ck.idx(l.acL.node),b=ck.idx(l.acN.node);ck.els.push({t:'XS',a,b,s:1,vp:d.v*Math.SQRT2,f:F,r:0.3});ck.ac={a,b,vp:d.v*Math.SQRT2}},
+    leads:[{k:'acL',label:'0…20V ~',from:J.L,banana:true,circuit:true,pol:'+',tray:'AC out ~',jn:'VAR OUT ~'},{k:'acN',label:'0…20V ~',from:J.N,banana:true,circuit:true,pol:'-',tray:'AC out ~',jn:'VAR OUT ~'},
+      {k:'ac12a',label:'12V ~',from:J.A,banana:true,circuit:true,pol:'+',tray:'12 V ~',jn:'12 V ~',spare:true},{k:'ac12b',label:'12V ~',from:J.B,banana:true,circuit:true,pol:'-',tray:'12 V ~',jn:'12 V ~',spare:true}],
+    stamp(ck){const d=RT.S[KEY],l=RT.S.leads;if(!d.pwr)return;
+      if(l.ac12a&&l.ac12b&&l.ac12a.node!=null&&l.ac12b.node!=null)ck.els.push({t:'XS',a:ck.idx(l.ac12a.node),b:ck.idx(l.ac12b.node),s:1,vp:12*Math.SQRT2,f:F,r:0.3});
+      if(l.acL.node==null||l.acN.node==null)return;const a=ck.idx(l.acL.node),b=ck.idx(l.acN.node);ck.els.push({t:'XS',a,b,s:1,vp:d.v*Math.SQRT2,f:F,r:0.3});ck.ac={a,b,vp:d.v*Math.SQRT2}},
     measure(){L.watch();const c=RT.TB&&RT.TB.ck&&RT.TB.ck.ac;if(c)L.trip(srcI(RT,c.a,c.b,0.3,c.vp))}};
 };
 ENGINE.variac.size=[460,250];
