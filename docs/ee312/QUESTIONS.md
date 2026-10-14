@@ -34,3 +34,9 @@ These came up while building Exp 1–10. All of them are now closed. Each one sa
 9. **Exp 10: resistor tolerance. Decision: nominal values.**
    - Table 10.1 asks for the measured values, and every calculation is graded from the student's own measured R and V. Random tolerances would add no learning and would make the reference values in the sheets harder to check.
    - The DMM reads the nominal values exactly.
+
+## Batch 5 · Exp 5 on the breadboard (14 Oct)
+- **Zener of Fig. 5.4b:** the manual does not name it; the slides read vO+ ≈ +4.24 V = V_D1 + V_Z, i.e. V_Z ≈ 3.5 V at ≈ 10 mA. Drawn and simulated as a 3.6 V Zener (1N4729A) instead of the 1N4733A (5.1 V) used before. A photo of the Zener's marking would confirm it.
+- **µA741 model:** the output limits were fitted to the lab's own readings (slides 30, 33): +14.2 / −14.0 V at light load, +13.8 V sourcing ≈ 10 mA, −13.2 V sinking ≈ 12 mA; slew rate 0.68 V/µs (datasheet typ. 0.5) so the measured bandwidth at G = 11 (≈ 69 kHz, slide 28) is met.
+- **Rail check with the MT3805 (slides 19–20):** the slides measure each unit on the supply's own terminals; on the simulator the meter leads go on the breadboard's posts (Vc / Va against ⏚), after the banana leads, which reads the same voltage.
+- **Board size:** the Digilent board has 4 blocks × 64 columns; the simulator draws 2 blocks × 30 columns with a larger hole pitch, so every hole is reachable on a phone.

@@ -16,7 +16,10 @@ const RT={S:null,dirty:true,TB:null,PX,MODE,uid:1};
    Default arrangement: each instrument sits on the side its terminals face (BNCs / jacks on the bottom → top row above the panel,
    on the right → left column, on the left → right column), so every cable runs straight to the panel without crossing another
    cable or passing over another instrument. */
-const COLS=def.cols||7,ROWS=def.rows||5,P=88,NN=COLS*ROWS,BW=COLS*P,BH=ROWS*P;
+/* the panel: the plug-in panel (nodes of 9 holes on a grid) or, for def.board = 'breadboard', the Digilent breadboard
+   (engine/breadboard.js: posts, rails and 5-hole strips; parts and jumpers go hole to hole) */
+const BBG=def.board==='breadboard'?ENGINE.breadboard(def.bb||{}):null;
+const COLS=BBG?BBG.C:def.cols||7,ROWS=BBG?1:def.rows||5,P=88,NN=BBG?BBG.NN:COLS*ROWS,BW=BBG?BBG.W:COLS*P,BH=BBG?BBG.H:ROWS*P;
 /* an instrument drawn as a pair (the two decade boxes) becomes two instruments, each moved and zoomed on its own */
 const specs=[].concat(...def.instruments.map(s=>s.type==='dbox'&&!s.box?[{...s,box:'a'},{...s,box:'b'}]:[s])).map(s=>Object.assign({},s,{at:{x:0,y:0}}));
 const ALL=specs.map(spec=>ENGINE[spec.type](RT,spec));
@@ -124,18 +127,24 @@ const termOf=k=>{const f=fromOf(k),p=POS[LEADDEF[k].inst.key];return {x:f.x+p.x,
    when it is moved, so a lead never keeps an old route across the desk */
 const DPARK={};const setDpark=()=>{for(const k in DPARK)delete DPARK[k];Object.assign(DPARK,parkFor(ALEADS().map(k=>{const f=fromOf(k),p=DEF[LEADDEF[k].inst.key];return {k,x:f.x+p.x}})))};setDpark();
 const PARK={};const updPark=()=>ALEADS().forEach(k=>{const ik=LEADDEF[k].inst.key,d=DPARK[k];PARK[k]={x:d.x+POS[ik].x-DEF[ik].x,y:d.y+POS[ik].y-DEF[ik].y}});updPark();
-const nodeC=i=>({x:BX+44+(i%COLS)*P,y:BY+44+Math.floor(i/COLS)*P});
+const nodeC=BBG?(i=>{const c=BBG.nodeC(i);return {x:BX+c.x,y:BY+c.y}}):(i=>({x:BX+44+(i%COLS)*P,y:BY+44+Math.floor(i/COLS)*P}));
 const holeOff=h=>({x:((h%3)-1)*19,y:(Math.floor(h/3)-1)*19});
-const holeP=(i,h)=>{const c=nodeC(i),o=holeOff(h);return {x:c.x+o.x,y:c.y+o.y}};
-const EDGES=[];for(let i=0;i<NN;i++){if(i%COLS<COLS-1)EDGES.push([i,i+1]);if(i+COLS<NN)EDGES.push([i,i+COLS])}
+/* a hole; on the breadboard h = 'j<id>' is the bare top end of the standing jumper id, where a mini-grabber hook clips */
+const holeP=(i,h)=>{if(typeof h==='string'&&h[0]==='j'){const w=RT.S.wires.find(q=>q.id===+h.slice(1));return w?stubTip(w):nodeC(i)}
+  if(BBG){const q=BBG.holeP(i,h)||BBG.nodeC(i);return {x:BX+q.x,y:BY+q.y}}const c=nodeC(i),o=holeOff(h);return {x:c.x+o.x,y:c.y+o.y}};
+const stubTip=w=>{const a=holeP(w.a,w.ha);return {x:a.x+11,y:a.y-15}};
+/* the outline of a node (guide, drag targets) */
+const nodeRect=i=>{if(BBG){const r=BBG.rect(i);return [BX+r[0],BY+r[1],r[2],r[3]]}const c=nodeC(i);return [c.x-32,c.y-32,64,64]};
+const nodeLabel=i=>BBG?BBG.nodeName(i):'node '+i;
+const EDGES=[];if(!BBG)for(let i=0;i<NN;i++){if(i%COLS<COLS-1)EDGES.push([i,i+1]);if(i+COLS<NN)EDGES.push([i,i+COLS])}
 function dirHole(a,b){if(b===a+1)return 5;if(b===a-1)return 3;if(b===a+COLS)return 7;return 1}
 const regions={},names={};
 const updRegions=()=>{ALL.forEach(i=>{if(!act(i))delete regions[i.key]});INST.forEach(i=>{const p=POS[i.key];regions[i.key]=[p.x-6,p.y-44,i.size[0]+12,i.size[1]+50]})};
 updRegions();ALL.forEach(i=>names[i.key]=i.name||ENGINE.NAMES[i.key]);
 /* the board's own frame (a thin border round the panel) is what zooms; the rack row and the lead tray are part of the
    overview fit only ('rack', never focused), so a touch beside the panel reaches what is there */
-regions.board=[BX-14,BY-14,BW+28,BH+28];const updRack=()=>{regions.rack=[BX-66,parkY-34,BW+132,BY+BH+16-(parkY-34)];if(TRAY.on){const r=regions.rack,x0=Math.min(r[0],TRAY.x-6),x1=Math.max(r[0]+r[2],TRAY.x+TRAY.w+6),y1=Math.max(r[1]+r[3],TRAY.y+TRAY.h+6);regions.rack=[x0,r[1],x1-x0,y1-r[1]]}};updRack();names.board=ENGINE.NAMES.board;
-RT.inst=byKey;RT.layout={BX,BY,P,COLS,ROWS,parkY,PARK,regions,POS,DEF,FACE,TRAY,SLOT,GROUPS,PL};
+regions.board=[BX-14,BY-14,BW+28,BH+28];const updRack=()=>{regions.rack=[BX-66,parkY-34,BW+132,BY+BH+16-(parkY-34)];if(TRAY.on){const r=regions.rack,x0=Math.min(r[0],TRAY.x-6),x1=Math.max(r[0]+r[2],TRAY.x+TRAY.w+6),y1=Math.max(r[1]+r[3],TRAY.y+TRAY.h+6);regions.rack=[x0,r[1],x1-x0,y1-r[1]]}};updRack();names.board=BBG?['Digilent breadboard','البريدبورد']:ENGINE.NAMES.board;
+RT.inst=byKey;RT.layout={BX,BY,P,COLS,ROWS,parkY,PARK,regions,POS,DEF,FACE,TRAY,SLOT,GROUPS,PL,BB:BBG,nodeC:i=>nodeC(i),holeP:(i,h)=>holeP(i,h),stubTip:id=>{const w=RT.S.wires.find(q=>q.id===id);return w?stubTip(w):null}};
 
 /* ---------- parts ---------- */
 const PARTS=def.parts;
@@ -144,7 +153,9 @@ const POLAR=t=>['D','Z','C','LED','GE'].includes((PARTS[t]||{}).t)&&!(PARTS[t]||
    the hole each leg goes into and its electrical role; def.pkg picks the drawing */
 const MULTI=t=>!!(PARTS[t]&&PARTS[t].pins);
 const pinNodes=p=>PARTS[p.type].pins.map(q=>p.n+q.dy*COLS+q.dx);
-const fits=(t,n)=>{const ps=PARTS[t].pins;const c=n%COLS,r=Math.floor(n/COLS);return ps.every(q=>c+q.dx>=0&&c+q.dx<COLS&&r+q.dy>=0&&r+q.dy<ROWS)};
+const fits=(t,n)=>{if(BBG)return PARTS[t].pkg==='DIP8'&&BBG.dipFits(n);const ps=PARTS[t].pins;const c=n%COLS,r=Math.floor(n/COLS);return ps.every(q=>c+q.dx>=0&&c+q.dx<COLS&&r+q.dy>=0&&r+q.dy<ROWS)};
+/* the hole a multi-pin leg takes: on the breadboard the row next to the channel (F above, E below) */
+const pinHole=q=>BBG?(q.dy===0?4:0):q.h;
 const ends=p=>MULTI(p.type)?pinNodes(p):[p.a,p.b];
 /* centre of a multi-pin footprint */
 function fpC(t,n){const ps=PARTS[t].pins;let x=0,y=0;ps.forEach(q=>{const c=nodeC(n+q.dy*COLS+q.dx);x+=c.x;y+=c.y});return {x:x/ps.length,y:y/ps.length}}
@@ -175,7 +186,7 @@ let drag=null;
 /* ---------- netlist from the bench ---------- */
 function buildUser(force,opts){
   const S=RT.S;const U=SOLVER.uf(NN+1),E=NN;const L=S.leads;
-  S.parts.forEach(p=>{if(PARTS[p.type].t==='BR')U.u(p.a,p.b)});S.wires.forEach(w=>U.u(w.a,w.b));
+  S.parts.forEach(p=>{if(PARTS[p.type].t==='BR')U.u(p.a,p.b)});S.wires.forEach(w=>{if(w.b!=null)U.u(w.a,w.b)});
   LEADS.forEach(k=>{if(LEADDEF[k].earth&&L[k].node!=null)U.u(L[k].node,E)});
   const root=U.f(E);const map=new Map();const idx=n=>{const r=U.f(n);if(r===root)return -1;if(!map.has(r))map.set(r,map.size);return map.get(r)};
   let nIn=0;const inner=()=>{const k='in'+(nIn++);map.set(k,map.size);return map.size-1};
@@ -303,7 +314,12 @@ function pkgBody(type,sel,icon){const d=PARTS[type];let s='';
     s+=`<rect x="${-bw/2}" y="${big?yt+16:yt}" width="${bw}" height="${yb-(big?yt+16:yt)}" rx="2.5" fill="#1f2224" stroke="#0c0d0e"/>`+T(0,yb-8,d.mark||'',{size:9,fill:'#d9dcde',a:'middle',w:600});
     s=`<g transform="translate(${P} 0)">${s}</g>`}
   return s}
-function partBody(type,L,sel,lit,col){const h=L/2,d=PARTS[type]||{t:type};const t=d.t;let s='';if(d.pins)return pkgBody(type,sel,true);
+function partBody(type,L,sel,lit,col){if(BBG&&L>0&&!(PARTS[type]||{}).pins&&(PARTS[type]||{}).t!=='BR'){const k=0.55,h=L/2;
+    /* breadboard: the part at its small real size, legs thin and bent (a kink near each hole) */
+    const leg=`<path d="M${-h} 0 L${-h+3} -2.5 L${-17*k} -2.5 M${h} 0 L${h-3} -2.5 L${17*k} -2.5" fill="none" stroke="#a9b0b4" stroke-width="1.3"/>`;
+    return leg+`<g transform="translate(0 -2.5) scale(${k})">${partBody0(type,34,sel,lit,col)}</g>`}
+  return partBody0(type,L,sel,lit,col)}
+function partBody0(type,L,sel,lit,col){const h=L/2,d=PARTS[type]||{t:type};const t=d.t;let s='';if(d.pins)return pkgBody(type,sel,true);
   const legs=(a,b,col='#9aa3a8')=>`<line x1="${-h}" y1="0" x2="${a}" y2="0" stroke="${col}" stroke-width="2.2"/><line x1="${b}" y1="0" x2="${h}" y2="0" stroke="${col}" stroke-width="2.2"/>`;
   const glow=sel?`<rect x="${-h-8}" y="-15" width="${L+16}" height="30" rx="8" fill="none" stroke="${CH1}" stroke-width="2.5"/>`:'';
   if(t==='BR'){const c=SWATCH[col];return `<rect x="${-h-6}" y="-8" width="${L+12}" height="16" rx="5" fill="${c?c.c:'#f4f6f6'}" stroke="${sel?CH1:c?c.d:'#9aa6aa'}" stroke-width="${sel?3:1.5}"/><rect x="${-h+4}" y="-4" width="${L-8}" height="8" rx="3" fill="${c?c.d:'#e2e7e8'}" opacity="${c?.35:1}"/>`+pins()}
@@ -324,36 +340,60 @@ function partBody(type,L,sel,lit,col){const h=L/2,d=PARTS[type]||{t:type};const 
   function pins(){return `<circle cx="${-h}" cy="0" r="4.5" fill="#c8a24a" stroke="#6b5520"/><circle cx="${h}" cy="0" r="4.5" fill="#c8a24a" stroke="#6b5520"/>`}}
 
 /* ---------- board, parts, cables ---------- */
-function staticSVG(){let s=`<rect x="${BX}" y="${BY}" width="${BW}" height="${BH}" rx="12" fill="#e9ecea" stroke="#b3bcb8" stroke-width="2"/>`;
+function staticSVG(){if(BBG)return `<g transform="translate(${BX} ${BY})">${BBG.svg()}</g>`+T(BX+8,BY-8,'Breadboard · كل عمود فيه 5 فتحات موصولة، وكل صف rail موصول بطوله',{size:12,fill:'#7d8e93'})+`<rect x="${BX-60}" y="${parkY-22}" width="${BW+120}" height="44" rx="10" fill="#d9d1c0" opacity=".55"/>`;
+  let s=`<rect x="${BX}" y="${BY}" width="${BW}" height="${BH}" rx="12" fill="#e9ecea" stroke="#b3bcb8" stroke-width="2"/>`;
   for(let i=0;i<NN;i++){const c=nodeC(i);s+=`<rect x="${c.x-30}" y="${c.y-30}" width="60" height="60" rx="8" fill="#dde2df" stroke="#cdd4d0" data-k="node:${i}"/>`;for(let h=0;h<9;h++){const o=holeOff(h);s+=`<circle cx="${c.x+o.x}" cy="${c.y+o.y}" r="4.2" fill="#2f3739" pointer-events="none"/>`}}
   s+=T(BX+8,BY-8,'Plug-in panel · كل مربع node فيه 9 فتحات موصولة',{size:12,fill:'#7d8e93'});
   s+=`<rect x="${BX-60}" y="${parkY-22}" width="${BW+120}" height="44" rx="10" fill="#d9d1c0" opacity=".55"/>`;
   return s}
-function partHoles(p){if(MULTI(p.type))return pinNodes(p).map((n,k)=>n+':'+PARTS[p.type].pins[k].h);return [p.a+':'+dirHole(p.a,p.b),p.b+':'+dirHole(p.b,p.a)]}
-function occupied(skip){const S=RT.S;const occ=new Set();S.parts.forEach(p=>{if(p.id!==skip)partHoles(p).forEach(h=>occ.add(h))});S.wires.forEach(w=>{occ.add(w.a+':'+w.ha);occ.add(w.b+':'+w.hb)});S.pl.forEach(P=>P.clips.forEach(c=>{if(c.bn!=null)occ.add(c.bn+':'+c.bh)}));return occ}
-function freeHole(node,pref=[4,0,2,6,8,1,3,5,7]){const occ=occupied();for(const h of pref)if(!occ.has(node+':'+h))return h;return null}
+function partHoles(p){if(MULTI(p.type))return pinNodes(p).map((n,k)=>n+':'+pinHole(PARTS[p.type].pins[k]));return [p.a+':'+legHole(p,0),p.b+':'+legHole(p,1)]}
+/* the hole each leg of a two-leg part sits in (breadboard: where it was put; panel: the side facing the other node) */
+const legHole=(p,k)=>BBG&&p.ha!=null?(k?p.hb:p.ha):(k?dirHole(p.b,p.a):dirHole(p.a,p.b));
+function occupied(skip){const S=RT.S;const occ=new Set();S.parts.forEach(p=>{if(p.id!==skip)partHoles(p).forEach(h=>occ.add(h))});S.wires.forEach(w=>{occ.add(w.a+':'+w.ha);if(w.b!=null)occ.add(w.b+':'+w.hb)});S.pl.forEach(P=>P.clips.forEach(c=>{if(c.bn!=null)occ.add(c.bn+':'+c.bh)}));return occ}
+function freeHole(node,pref){if(!pref)pref=BBG?[...Array(BBG.nHoles(node)).keys()]:[4,0,2,6,8,1,3,5,7];const occ=occupied();for(const h of pref)if(!occ.has(node+':'+h))return h;return null}
+/* breadboard jumpers: thin kit wires with bare ends, coloured like the lab's (the student can repaint them); a standing jumper
+   (one end in a hole, the other bare in the air) is where a mini-grabber hook clips */
+const KIT=['#2f6bd9','#e2453b','#f0c419','#ef7d22','#2f9a4c','#30363a','#f2f2ee'];
+function jumperSVG(w){const S=RT.S,sel=S.sel===w.id,c=SWATCH[S.wcol[w.id]]?SWATCH[S.wcol[w.id]].c:KIT[w.id%KIT.length],a=holeP(w.a,w.ha);
+  if(w.b==null){const t=stubTip(w);const d=`M${a.x} ${a.y} Q${a.x+2} ${t.y+4} ${t.x-3} ${t.y+3}`;
+    return `<path d="${d}" fill="none" stroke="${sel?'#fff2a8':'#0008'}" stroke-width="4.6" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${c}" stroke-width="3" stroke-linecap="round"/><line x1="${t.x-3}" y1="${t.y+3}" x2="${t.x}" y2="${t.y}" stroke="#d08a3a" stroke-width="1.8" stroke-linecap="round"/><circle cx="${a.x}" cy="${a.y}" r="2" fill="#c9c9c3"/>`+
+      `<path d="${d}" fill="none" stroke="transparent" stroke-width="14" data-k="wire:${w.id}" style="cursor:pointer"/>`}
+  const b=holeP(w.b,w.hb);const L=Math.hypot(b.x-a.x,b.y-a.y);const mx=(a.x+b.x)/2,my=(a.y+b.y)/2-Math.min(26,L*0.22);const d=`M${a.x} ${a.y} Q${mx} ${my} ${b.x} ${b.y}`;
+  return `<path d="${d}" fill="none" stroke="${sel?'#fff2a8':'#0007'}" stroke-width="4.6" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${c}" stroke-width="3" stroke-linecap="round"/><circle cx="${a.x}" cy="${a.y}" r="2" fill="#c9c9c3"/><circle cx="${b.x}" cy="${b.y}" r="2" fill="#c9c9c3"/>`+
+    `<path d="${d}" fill="none" stroke="transparent" ${BENCH.paint!=null?'stroke-width="22" vector-effect="non-scaling-stroke"':'stroke-width="12"'} data-k="wire:${w.id}" style="cursor:pointer"/>`}
 function partsSVG(){const S=RT.S;let s='';
-  S.wires.forEach(w=>{const a=holeP(w.a,w.ha),b=holeP(w.b,w.hb);const mx=(a.x+b.x)/2,my=(a.y+b.y)/2-Math.min(40,Math.hypot(b.x-a.x,b.y-a.y)*0.25);const sel=S.sel===w.id;const d=`M${a.x} ${a.y} Q${mx} ${my} ${b.x} ${b.y}`;
+  if(BBG)S.wires.forEach(w=>s+=jumperSVG(w));else S.wires.forEach(w=>{const a=holeP(w.a,w.ha),b=holeP(w.b,w.hb);const mx=(a.x+b.x)/2,my=(a.y+b.y)/2-Math.min(40,Math.hypot(b.x-a.x,b.y-a.y)*0.25);const sel=S.sel===w.id;const d=`M${a.x} ${a.y} Q${mx} ${my} ${b.x} ${b.y}`;
     const wc=wireCol(w);s+=`<path d="${d}" fill="none" stroke="${sel?'#fff2a8':wc.d}" stroke-width="7" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${wc.c}" stroke-width="4.5" stroke-linecap="round"/><path d="${d}" fill="none" stroke="transparent" ${BENCH.paint!=null?'stroke-width="26" vector-effect="non-scaling-stroke"':'stroke-width="16"'} data-k="wire:${w.id}" style="cursor:pointer"/>`});
   S.parts.forEach(p=>{if(drag&&drag.kind==='move'&&drag.id===p.id&&drag.active)return;if(p.id===LASTP)return;s+=partSVG(p)});
   return s}
 /* one part on the panel (the part moved last is drawn on the top layer, see cablesSVG) */
+/* a DIP-8 on the breadboard: its body over the channel, the legs in rows F (pins 8…5) and E (pins 1…4), the notch at pin 1's end */
+function dipBB(type,n,sel,id){const d=PARTS[type],hp=d.pins.map(q=>holeP(n+q.dy*COLS+q.dx,pinHole(q)));const xs=hp.map(h=>h.x),ys=hp.map(h=>h.y);
+  const x0=Math.min(...xs)-7,x1=Math.max(...xs)+7,yF=Math.min(...ys),yE=Math.max(...ys),y0=yF+2.5,y1=yE-2.5;let s=sel?`<rect x="${x0-6}" y="${yF-9}" width="${x1-x0+12}" height="${yE-yF+18}" rx="6" fill="none" stroke="${CH1}" stroke-width="2.5"/>`:'';
+  hp.forEach((h,k)=>{const top=d.pins[k].dy===0;s+=`<rect x="${h.x-2.2}" y="${top?h.y-1:y1-1}" width="4.4" height="${top?y0-h.y+2:h.y-y1+2}" fill="#c3c8cc" stroke="#7d868b" stroke-width=".6"/>`});
+  s+=`<rect x="${x0}" y="${y0}" width="${x1-x0}" height="${y1-y0}" rx="2" fill="#1f2224" stroke="#0c0d0e"/><path d="M${x0} ${(y0+y1)/2-3.5} a3.5 3.5 0 0 1 0 7" fill="#3a3f42"/><circle cx="${x0+4.5}" cy="${y1-3.5}" r="1.6" fill="#3a3f42"/>`;
+  s+=T((x0+x1)/2+2,(y0+y1)/2+2.5,d.mark||'',{size:6.4,fill:'#d9dcde',a:'middle',w:600});
+  return `<g data-k="part:${id}" style="cursor:grab">${s}</g>`}
 function partSVG(p){const S=RT.S;let s='';
+    if(MULTI(p.type)&&BBG)return dipBB(p.type,p.n,S.sel===p.id,p.id);
     if(MULTI(p.type)){const c=nodeC(p.n);return `<g transform="translate(${c.x} ${c.y})" data-k="part:${p.id}" style="cursor:grab">${pkgBody(p.type,S.sel===p.id)}</g>`}
-    const a=holeP(p.a,dirHole(p.a,p.b)),b=holeP(p.b,dirHole(p.b,p.a));const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;const ang=Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI;const L=Math.hypot(b.x-a.x,b.y-a.y);
-    s+=`<g transform="translate(${mx} ${my}) rotate(${ang})" data-k="part:${p.id}" style="cursor:grab">${partBody(p.type,L,S.sel===p.id,litNow(p),S.wcol['p'+p.id])}</g>`;
+    const a=holeP(p.a,legHole(p,0)),b=holeP(p.b,legHole(p,1));const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;const ang=Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI;const L=Math.hypot(b.x-a.x,b.y-a.y);
+    /* on the breadboard the body is smaller (real parts on 2.54 mm holes) and the long thin legs bend down into the holes */
+    const body=partBody(p.type,L,S.sel===p.id,litNow(p),S.wcol['p'+p.id]);
+    s+=`<g transform="translate(${mx} ${my}) rotate(${ang})" data-k="part:${p.id}" style="cursor:grab">${BBG?`<g class="bbleg">${body}</g>`:body}</g>`;
     if(p.dead)s+=T(mx,my+5,'💥',{size:20,a:'middle'});
-    const lab=PARTS[p.type].lab;if(lab){const vert=Math.abs(ang)>45;s+=T(vert?mx+20:mx,vert?my+4:my-17,lab,{size:9.5,fill:'#22302f',a:vert?'start':'middle',w:600})}
+    const lab=PARTS[p.type].lab;if(lab){const vert=Math.abs(ang)>45&&Math.abs(ang)<135,o=BBG?11:17;s+=T(vert?mx+o+3:mx,vert?my+4:my-o,lab,{size:BBG?7:9.5,fill:'#22302f',a:vert?'start':'middle',w:600})}
   return s}
 /* selection toolbar (⇄ / ✕) and wire-start marker: drawn above the cables so a plug never hides them */
 function toolbarSVG(){const S=RT.S;let s='';
   const sp=S.parts.find(p=>p.id===S.sel),sw=S.wires.find(w=>w.id===S.sel);
-  if(sp||sw){let x,y;if(sp&&MULTI(sp.type)){const c=fpC(sp.type,sp.n);x=c.x;y=nodeC(sp.n).y-({DIP8:34,UCORE:30}[PARTS[sp.type].pkg]||84)}else if(sp){const a=nodeC(sp.a),b=nodeC(sp.b);x=(a.x+b.x)/2;y=(a.y+b.y)/2-40}else{const a=holeP(sw.a,sw.ha),b=holeP(sw.b,sw.hb);x=(a.x+b.x)/2;y=(a.y+b.y)/2-44}
+  if(sp||sw){let x,y;if(sp&&MULTI(sp.type)){const c=fpC(sp.type,sp.n);x=c.x;y=nodeC(sp.n).y-({DIP8:34,UCORE:30}[PARTS[sp.type].pkg]||84)}else if(sp){const a=BBG?holeP(sp.a,legHole(sp,0)):nodeC(sp.a),b=BBG?holeP(sp.b,legHole(sp,1)):nodeC(sp.b);x=(a.x+b.x)/2;y=(a.y+b.y)/2-(BBG?26:40)}else{const a=holeP(sw.a,sw.ha),b=sw.b!=null?holeP(sw.b,sw.hb):stubTip(sw);x=(a.x+b.x)/2;y=(a.y+b.y)/2-(BBG?30:44)}
     const btn=(bx,lab,k,c)=>`<circle cx="${bx}" cy="${y}" r="15" fill="#141c20" stroke="${c}" stroke-width="2" data-k="${k}" style="cursor:pointer"/>`+T(bx,y+5,lab,{size:14,fill:c,a:'middle',w:600});
     s+=sp&&POLAR(sp.type)?btn(x-20,'⇄','tb:flip',CH2)+btn(x+20,'✕','tb:del',RED):btn(x,'✕','tb:del',RED)}
   /* tap-to-plug: every compatible free jack lights up; a tap plugs the picked lead there */
   if(S.pick!=null)GROUPS.filter(g=>fitsJ(S.pick,g)&&jackFree(g)).forEach(g=>{const a=jackAt(g);s+=`<circle class="pjack" cx="${a.x}" cy="${a.y}" r="22" fill="rgba(44,122,107,.22)" stroke="${CH2}" stroke-width="3.5" data-k="pj:${g}" style="cursor:pointer"/>`});
-  if(S.wireMode&&S.wireStart!=null){const c=nodeC(S.wireStart);s+=`<rect x="${c.x-32}" y="${c.y-32}" width="64" height="64" rx="9" fill="none" stroke="#e0b000" stroke-width="3" pointer-events="none"/>`}
+  if(S.wireMode&&S.wireStart!=null){const r=nodeRect(S.wireStart);s+=`<rect x="${r[0]}" y="${r[1]}" width="${r[2]}" height="${r[3]}" rx="6" fill="none" stroke="#e0b000" stroke-width="3" pointer-events="none"/>`;if(S.wireHole!=null){const q=holeP(S.wireStart,S.wireHole);s+=`<circle cx="${q.x}" cy="${q.y}" r="5" fill="#e0b000" pointer-events="none"/>`}}
+  if(BBG&&S.armA){const q=holeP(S.armA.n,S.armA.h);s+=`<circle cx="${q.x}" cy="${q.y}" r="6" fill="none" stroke="${CH2}" stroke-width="2.5" pointer-events="none"/>`}
   return s}
 /* lead positions: the head (BNC / banana plug) sits in its jack, in the student's hand (snapping to a near free jack), or in
    its tray slot; a clip sits in a panel hole, in the hand, on the rack near its instrument (head plugged), or trails the head */
@@ -391,6 +431,8 @@ const DRAW={leadPos,
   wire:(c,col,dark,k,w=3)=>{const d=bz(c);return `<g data-cab="${k||''}"><path d="${d}" fill="none" stroke="${dark}" stroke-width="${w+2}" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/></g>`}};
 /* one lead: coax = BNC head, dark trunk, a split, red + black clips; banana = plug, cable, plug. In the tray it lies coiled. */
 function clipSVG(id,j,p,c,k){const P=RT.S.pl[id],on=P.clips[j].bn!=null;if(k&&(on||P.jack!=null))plugs.push({k,p});
+  /* breadboard: a mini-grabber hook hanging on the jumper's bare end; a banana plug on its post */
+  if(BBG&&on&&PL[id].kind!=='banana')return `<g transform="translate(${p.x} ${p.y}) rotate(28)"><path d="M0 0 q-4 -6 1 -8" fill="none" stroke="#d0d4d6" stroke-width="1.6"/><rect x="-3.6" y="1" width="7.2" height="22" rx="3.4" fill="${c.c}" stroke="${c.d}" stroke-width="1.2"/><rect x="-2.4" y="18" width="4.8" height="9" rx="2" fill="${c.d}"/></g>`+`<circle cx="${p.x}" cy="${p.y+10}" r="14" fill="transparent" data-k="clip:${id}:${j}" style="cursor:grab"/>`;
   return `<circle cx="${p.x}" cy="${p.y}" r="${on?7:9}" fill="${c.c}" stroke="${c.d}" stroke-width="2"/>`+(on?'':`<circle cx="${p.x}" cy="${p.y}" r="3" fill="#c8a24a"/>`)+`<circle cx="${p.x}" cy="${p.y}" r="16" fill="transparent" data-k="clip:${id}:${j}" style="cursor:grab"/>`}
 function headSVG(id,a,j){const q=PL[id],h=`<circle cx="${a.x}" cy="${a.y}" r="18" fill="transparent" data-k="head:${id}" style="cursor:grab"/>`,c=plCol(id,0);
   if(q.kind!=='banana')return (j?`<circle cx="${a.x}" cy="${a.y}" r="11" fill="#59646a" stroke="#1e2326" stroke-width="2"/><circle cx="${a.x}" cy="${a.y}" r="5" fill="#2b3236"/>`
@@ -437,18 +479,38 @@ function cablesSVG(){plugs.length=0;CAB.length=0;updPark();syncLeads();const tra
 function nearestEdge(x,y){let best=null,bd=34;EDGES.forEach(e=>{const a=nodeC(e[0]),b=nodeC(e[1]);const d=Math.hypot((a.x+b.x)/2-x,(a.y+b.y)/2-y);if(d<bd){bd=d;best=e}});return best}
 /* best anchor for a multi-pin part near (x,y): footprint inside the panel, every leg hole free */
 function nearestAnchor(t,x,y,skip,lim=90){const occ=occupied(skip);let best=null,bd=lim;for(let n=0;n<NN;n++){if(!fits(t,n))continue;const c=fpC(t,n);const d=Math.hypot(c.x-x,c.y-y);if(d>=bd)continue;
-    if(PARTS[t].pins.some(q=>occ.has((n+q.dy*COLS+q.dx)+':'+q.h)))continue;bd=d;best=n}return best}
+    if(PARTS[t].pins.some(q=>occ.has((n+q.dy*COLS+q.dx)+':'+pinHole(q))))continue;bd=d;best=n}return best}
 /* a two-leg part may not push a leg into a hole that is already taken (e.g. under an IC) */
 const edgeFree=(e,skip)=>{const occ=occupied(skip);return !occ.has(e[0]+':'+dirHole(e[0],e[1]))&&!occ.has(e[1]+':'+dirHole(e[1],e[0]))};
-function nearestNode(x,y){let best=null,bd=40;for(let i=0;i<NN;i++){const c=nodeC(i);const d=Math.hypot(c.x-x,c.y-y);if(d<bd){bd=d;best=i}}return best}
+function nearestNode(x,y){if(BBG){const q=nearHole(x,y);return q?q.n:null}let best=null,bd=40;for(let i=0;i<NN;i++){const c=nodeC(i);const d=Math.hypot(c.x-x,c.y-y);if(d<bd){bd=d;best=i}}return best}
+/* breadboard: the hole under a point (board coordinates), optionally only free ones / only some nodes */
+function nearHole(x,y,free,ok,r){const occ=free?occupied():null;return BBG.nearestHole(x-BX,y-BY,r||BBG.Q*0.9,n=>(!ok||ok(n))&&(!occ||BBG.nodes[n].holes.some((_,h)=>!occ.has(n+':'+h))))}
+function nearFreeHole(x,y,ok,r,skip){const occ=occupied(skip);let best=null,bd=r||BBG.Q*0.9;BBG.nodes.forEach((d,n)=>{if(ok&&!ok(n))return;d.holes.forEach((q,h)=>{if(occ.has(n+':'+h))return;const dd=Math.hypot(BX+q.x-x,BY+q.y-y);if(dd<bd){bd=dd;best={n,h}}})});return best}
+/* breadboard hook targets: the bare ends of standing jumpers (free ones), and the binding posts for banana plugs */
+function nearStub(x,y,skip){const occ=occupied();let best=null,bd=30;RT.S.wires.forEach(w=>{if(w.b!=null)return;const k=w.a+':j'+w.id;if(occ.has(k)&&k!==skip)return;const t=stubTip(w),d=Math.hypot(t.x-x,t.y-y);if(d<bd){bd=d;best=w}});return best}
+function nearPost(x,y){let best=null,bd=34;BBG.nodes.forEach((d,n)=>{if(d.kind!=='post')return;const c=nodeC(n),dd=Math.hypot(c.x-x,c.y-y);if(dd<bd){bd=dd;best=n}});return best}
+/* breadboard drop of a two-leg part: its legs go into the free holes nearest to where its ends are (a new part lies across
+   SPAN holes; a moved one keeps its own span), in two different connected groups */
+const SPAN=t=>({R:4,D:3,Z:3,GE:3,LED:2,C:3}[(PARTS[t]||{}).t]||3);
+function bbSpan(d){let vx=SPAN(d.type)*BBG.Q,vy=0;if(d.kind==='move'){const pr=RT.S.parts.find(q=>q.id===d.id);if(pr){const a=holeP(pr.a,legHole(pr,0)),b=holeP(pr.b,legHole(pr,1));vx=b.x-a.x;vy=b.y-a.y}}
+  const skip=d.kind==='move'?d.id:null;const a=nearFreeHole(d.x-vx/2,d.y-vy/2,null,BBG.Q*1.2,skip);if(!a)return null;const b=nearFreeHole(d.x+vx/2,d.y+vy/2,n=>n!==a.n,BBG.Q*1.2,skip);if(!b)return null;return [a,b]}
+/* where a dragged lead clip lands on the breadboard: a coax hook on the bare end of a standing jumper, a banana plug on a post */
+function bbClipTarget(d){const own=RT.S.pl[d.id].clips[d.j];const skip=own&&own.bn!=null?own.bn+':'+own.bh:null;
+  if(PL[d.id].kind==='banana'){const n=nearPost(d.x,d.y);if(n==null)return null;const h=freeHole(n);return h==null?null:{n,h}}
+  const w=nearStub(d.x,d.y,skip);return w?{stub:w,n:w.a,h:'j'+w.id}:null}
 function dragSVG(){if(!drag||!drag.active)return '';let s='';
   if(drag.kind==='head')GROUPS.filter(g=>fitsJ(drag.id,g)&&(jackFree(g)||plIn(g)===drag.id)).forEach(g=>{const a=jackAt(g),on=drag.snap===g;s+=`<circle cx="${a.x}" cy="${a.y}" r="24" fill="${on?'rgba(44,122,107,.25)':'none'}" stroke="${CH2}" stroke-width="3" stroke-dasharray="${on?'':'7 5'}" pointer-events="none"/>`});
   if((drag.kind==='new'||drag.kind==='move')&&MULTI(drag.type)){const n=nearestAnchor(drag.type,drag.x,drag.y,drag.id);
+    if(n!=null&&BBG)return s+`<g opacity=".8">${dipBB(drag.type,n,false,'x')}</g>`;
     if(n!=null)PARTS[drag.type].pins.forEach(q=>{const c=nodeC(n+q.dy*COLS+q.dx);s+=`<rect x="${c.x-32}" y="${c.y-32}" width="64" height="64" rx="9" fill="none" stroke="${CH2}" stroke-width="3" opacity=".6"/>`});
+    if(BBG)return s+`<g transform="translate(${drag.x} ${drag.y}) scale(.5)" opacity=".85">${pkgBody(drag.type,false,true)}</g>`;
     const c0=n!=null?nodeC(n):{x:drag.x-fpC(drag.type,0).x+nodeC(0).x,y:drag.y-fpC(drag.type,0).y+nodeC(0).y};return s+`<g transform="translate(${c0.x} ${c0.y})" opacity=".85">${pkgBody(drag.type,false)}</g>`}
+  if(BBG&&(drag.kind==='new'||drag.kind==='move')){const pl=bbSpan(drag);if(pl){const a=holeP(pl[0].n,pl[0].h),b=holeP(pl[1].n,pl[1].h);s+=`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${CH2}" stroke-width="5" opacity=".45" stroke-linecap="round"/>`}
+    return s+`<g transform="translate(${drag.x} ${drag.y})" opacity=".9">${partBody(drag.type,46,false)}</g>`}
   if(drag.kind==='new'||drag.kind==='move'){const e=nearestEdge(drag.x,drag.y);if(e){const a=nodeC(e[0]),b=nodeC(e[1]);s+=`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${CH2}" stroke-width="6" opacity=".5" stroke-linecap="round"/>`}
     s+=`<g transform="translate(${drag.x} ${drag.y}) rotate(${e&&e[1]-e[0]===COLS?90:0})" opacity=".9">${partBody(drag.type,52,false)}</g>`}
-  if(drag.kind==='clip'){const n=nearestNode(drag.x,drag.y);if(n!=null){const c=nodeC(n);s+=`<rect x="${c.x-32}" y="${c.y-32}" width="64" height="64" rx="9" fill="none" stroke="${CH2}" stroke-width="3"/>`}}
+  if(drag.kind==='clip'&&BBG){const t=bbClipTarget(drag);if(t){const q=t.stub?stubTip(t.stub):nodeC(t.n);s+=`<circle cx="${q.x}" cy="${q.y}" r="${t.stub?9:20}" fill="none" stroke="${CH2}" stroke-width="3"/>`}}
+  else if(drag.kind==='clip'){const n=nearestNode(drag.x,drag.y);if(n!=null){const c=nodeC(n);s+=`<rect x="${c.x-32}" y="${c.y-32}" width="64" height="64" rx="9" fill="none" stroke="${CH2}" stroke-width="3"/>`}}
   return s}
 
 /* ---------- moving instruments: a grab handle on top of each one; dragging it moves the instrument (never its controls) ---------- */
@@ -507,13 +569,18 @@ function lineDone(L){const N=RT.netOf;if(RT.dirty)recompute();
   /* alt: the manual does not name the unit / meter, so the same connection on the other one counts too */
   if(L.lead)return [L.lead,L.alt].some(k=>k&&RT.leadNet(k)!=null&&RT.leadNet(k)===N(L.at));
   if(L.wire){const [a,b]=L.wire;return N(a)!=null&&N(a)===N(b)}
+  /* breadboard: at least n standing jumpers (for hooks) in the group of node L.stub */
+  if(L.stub!=null)return RT.S.wires.filter(w=>w.b==null&&N(w.a)!=null&&N(w.a)===N(L.stub)).length>=(L.n||1);
   return true}
 function lineSpots(L){if(L.jack)return {nodes:[],jacks:[],jg:[L.jack]};if(L.part)return {nodes:L.part.slice(1,3),jacks:[]};if(L.ic)return {nodes:Object.values(L.pins),jacks:[]};
-  if(L.lead)return {nodes:[L.at],jacks:[L.lead]};if(L.wire)return {nodes:L.wire,jacks:[]};return {nodes:[],jacks:[]}}
+  if(L.lead)return {nodes:[L.at],jacks:[L.lead]};if(L.wire)return {nodes:L.wire,jacks:[]};if(L.stub!=null)return {nodes:[L.stub],jacks:[]};return {nodes:[],jacks:[]}}
 let GUIDE=null;
 /* the current line's node squares lie UNDER the parts and leads (a part on them is never covered); jack rings stay on top */
 function guideNodesSVG(){if(!GUIDE)return '';let s='';const pulse=GUIDE.flash?' class="gflash"':'';
-  GUIDE.nodes.forEach(n=>{if(n==null||n<0||n>=NN)return;const c=nodeC(n);s+=`<rect${pulse} x="${c.x-34}" y="${c.y-34}" width="68" height="68" rx="11" fill="rgba(44,122,107,.14)" stroke="#2c7a6b" stroke-width="4" stroke-dasharray="9 6"/>`+T(c.x,c.y-38,'node '+n,{size:11,fill:'#1f5b50',a:'middle',w:700})});return s}
+  GUIDE.nodes.forEach(n=>{if(n==null||n<0||n>=NN)return;if(BBG){const r=nodeRect(n);s+=`<rect${pulse} x="${r[0]-2}" y="${r[1]-2}" width="${r[2]+4}" height="${r[3]+4}" rx="5" fill="rgba(44,122,107,.16)" stroke="#2c7a6b" stroke-width="2.5" stroke-dasharray="5 4"/>`;return}
+    const c=nodeC(n);s+=`<rect${pulse} x="${c.x-34}" y="${c.y-34}" width="68" height="68" rx="11" fill="rgba(44,122,107,.14)" stroke="#2c7a6b" stroke-width="4" stroke-dasharray="9 6"/>`+T(c.x,c.y-38,'node '+n,{size:11,fill:'#1f5b50',a:'middle',w:700})});
+  /* breadboard: the exact holes of the current line glow too */
+  (GUIDE.holes||[]).forEach(([n,h])=>{const q=holeP(n,h);if(q)s+=`<circle${pulse} cx="${q.x}" cy="${q.y}" r="6" fill="rgba(44,122,107,.25)" stroke="#2c7a6b" stroke-width="2.2"/>`});return s}
 function guideSVG(){if(!GUIDE)return '';let s='';const pulse=GUIDE.flash?' class="gflash"':'';
   GUIDE.jacks.forEach(k=>{if(!LEADDEF[k])return;const a=termOf(k);s+=`<circle${pulse} cx="${a.x}" cy="${a.y}" r="22" fill="rgba(44,122,107,.16)" stroke="#2c7a6b" stroke-width="4" stroke-dasharray="8 5"/>`;
     const p=leadPos(k);if(p)s+=`<circle${pulse} cx="${p.x}" cy="${p.y}" r="17" fill="none" stroke="#2c7a6b" stroke-width="3"/>`});
@@ -580,6 +647,8 @@ svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;close
   if((S.armed||S.wireMode)&&el&&el.dataset.k.startsWith('clip:')){const [,id,j]=el.dataset.k.split(':');const c=S.pl[+id].clips[+j];if(c.bn!=null){if(S.armed){placeArmed(p);return}el={dataset:{k:'node:'+c.bn}}}}
   /* wire mode: a tap on a part standing over a node (e.g. the U-core's coils) is a tap on that node */
   if(S.wireMode&&el&&el.dataset.k.startsWith('part:')){const n=nearestNode(p.x,p.y);if(n!=null)el={dataset:{k:'node:'+n}}}
+  /* breadboard: placing a part or a jumper, a tap on a jumper or a part lying over a hole is a tap on that hole */
+  if(BBG&&(S.wireMode||S.armed)&&el&&/^(wire|part):/.test(el.dataset.k)){const n=nearestNode(p.x,p.y);if(n!=null)el={dataset:{k:'node:'+n}}}
   /* a lead picked by a tap: a lit jack plugs it, anything else cancels */
   if(S.pick!=null&&!(el&&el.dataset.k.startsWith('head:'))){const id=S.pick;S.pick=null;if(el&&el.dataset.k.startsWith('pj:')){if(plug(id,el.dataset.k.slice(3)))leadsChanged();else render(true)}else render(true);return}
   if(S.armed&&(!el||el.dataset.k.startsWith('node:'))){placeArmed(p);return}
@@ -592,8 +661,12 @@ svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;close
   if(k.startsWith('wire:')){S.sel=S.sel===+k.slice(5)?null:+k.slice(5);render(true);return}
   if(k.startsWith('head:')){LASTL=+k.slice(5);LASTP=null;drag={kind:'head',id:+k.slice(5),x:p.x,y:p.y,sx:p.x,sy:p.y,active:false,snap:null};svg.setPointerCapture(e.pointerId);return}
   if(k.startsWith('clip:')){const [,id,j]=k.split(':');LASTL=+id;LASTP=null;drag={kind:'clip',id:+id,j:+j,x:p.x,y:p.y,sx:p.x,sy:p.y,active:false};svg.setPointerCapture(e.pointerId);return}
-  if(k==='tb:flip'){const pr=S.parts.find(q=>q.id===S.sel);if(pr){const t=pr.a;pr.a=pr.b;pr.b=t;circuitChanged();render()}return}
-  if(k==='tb:del'){S.parts=S.parts.filter(q=>q.id!==S.sel);S.wires=S.wires.filter(w=>w.id!==S.sel);S.sel=null;circuitChanged();render();return}
+  if(k==='tb:flip'){const pr=S.parts.find(q=>q.id===S.sel);if(pr){const t=pr.a;pr.a=pr.b;pr.b=t;if(pr.ha!=null){const u=pr.ha;pr.ha=pr.hb;pr.hb=u}circuitChanged();render()}return}
+  if(k==='tb:del'){/* a hook on a standing jumper that goes comes off with it */S.pl.forEach(P=>P.clips.forEach(c=>{if(c.bh==='j'+S.sel){c.bn=c.bh=null}}));syncLeads();
+    S.parts=S.parts.filter(q=>q.id!==S.sel);S.wires=S.wires.filter(w=>w.id!==S.sel);S.sel=null;circuitChanged();render();return}
+  if(k.startsWith('node:')&&BBG&&S.wireMode){const q=nearFreeHole(p.x,p.y);if(!q){BENCH.say('الفتحة مشغولة، اختر فتحة فاضية');return}
+    if(S.wireStart==null){S.wireStart=q.n;S.wireHole=q.h}else if(S.wireStart!==q.n){S.wires.push({id:RT.uid,a:S.wireStart,ha:S.wireHole,b:q.n,hb:q.h});if(BENCH.paint)S.wcol[RT.uid]=BENCH.paint;RT.uid++;circuitChanged();S.wireStart=null;S.wireHole=null}
+    render();return}
   if(k.startsWith('node:')){const n=+k.slice(5);if(S.wireMode){if(S.wireStart==null)S.wireStart=n;else if(S.wireStart!==n){const pr=[0,2,6,8,4,1,3,5,7];const ha=freeHole(S.wireStart,pr),hb=freeHole(n,pr);if(ha!=null&&hb!=null){S.wires.push({id:RT.uid,a:S.wireStart,b:n,ha,hb});if(BENCH.paint)S.wcol[RT.uid]=BENCH.paint;RT.uid++;circuitChanged()}S.wireStart=null}render();return}
     if(S.sel){S.sel=null;render(true)}return}
   /* knobs on touch: drag on the knob (or its ring / arrows) to turn it one detent per ≈14 px; a tap on the knob shows big
@@ -626,6 +699,10 @@ function endDrag(){stopRep();if(press){clearTimeout(press.t);press=null}const S=
     if(MULTI(d.type)){const n=nearestAnchor(d.type,d.x,d.y,d.id);if(d.kind==='move'){const pr=S.parts.find(q=>q.id===d.id);if(n!=null)pr.n=n;else if(d.x<BX-20||d.x>BX+BW+20||d.y<BY-20||d.y>BY+BH+20)S.parts=S.parts.filter(q=>q.id!==d.id)}
       else if(n!=null)S.parts.push({id:RT.uid++,type:d.type,n});circuitChanged();render();return}
     if(jackDrop(d.type,d)){if(d.kind==='move'){S.parts=S.parts.filter(q=>q.id!==d.id);circuitChanged();render()}return}
+    if(BBG){if(d.type==='JP'){const q=nearFreeHole(d.x,d.y,n=>BBG.kind(n)!=='post');if(q){S.wires.push({id:RT.uid++,a:q.n,ha:q.h,b:null,hb:null});circuitChanged()}render();return}
+      const pl=bbSpan(d);const pr=d.kind==='move'?S.parts.find(q=>q.id===d.id):null;
+      if(pr){if(pl)Object.assign(pr,{a:pl[0].n,ha:pl[0].h,b:pl[1].n,hb:pl[1].h});else if(d.x<BX-20||d.x>BX+BW+20||d.y<BY-20||d.y>BY+BH+20)S.parts=S.parts.filter(q=>q.id!==d.id)}
+      else if(pl)S.parts.push({id:RT.uid++,type:d.type,a:pl[0].n,ha:pl[0].h,b:pl[1].n,hb:pl[1].h});circuitChanged();render();return}
     const e=nearestEdge(d.x,d.y);const taken=e&&(S.parts.some(q=>q.id!==d.id&&((q.a===e[0]&&q.b===e[1])||(q.a===e[1]&&q.b===e[0])))||!edgeFree(e,d.id));
     if(d.kind==='move'){const pr=S.parts.find(q=>q.id===d.id);if(e&&!taken){pr.a=e[0];pr.b=e[1]}else if(!e){S.parts=S.parts.filter(q=>q.id!==d.id)}}
     else if(e&&!taken){S.parts.push({id:RT.uid++,type:d.type,a:e[0],b:e[1]})}
@@ -634,6 +711,7 @@ function endDrag(){stopRep();if(press){clearTimeout(press.t);press=null}const S=
     if(!d.active){S.pick=S.pick===id?null:id;if(S.pick!=null)BENCH.say(`اختر وين يدخل الـ ${PNAME(PL[id])}: الـ jacks المناسبة منوّرة`);render(true);return}
     if(d.snap!=null){P.jack=null;plug(id,d.snap)}else if(inTray(d))toTray(id);else P.jack=null;leadsChanged();return}
   if(d.kind==='clip'){if(!d.active)return;const c=S.pl[d.id].clips[d.j];if(inTray(d)){toTray(d.id);leadsChanged();return}
+    if(BBG){const t=bbClipTarget(d);c.bn=null;c.bh=null;if(t){c.bn=t.n;c.bh=t.h}else if(d.x>BX&&d.x<BX+BW&&d.y>BY&&d.y<BY+BH)BENCH.say(PL[d.id].kind==='banana'?'الـ banana تدخل في الـ binding posts على يسار البريدبورد':'الـ hook يتعلّق على طرف سلك jumper واقف في البريدبورد (من «العلبة»: Jumper for a hook)');leadsChanged();return}
     const n=nearestNode(d.x,d.y);c.bn=null;c.bh=null;if(n!=null){const h=freeHole(n);if(h!=null){c.bn=n;c.bh=h}}
     leadsChanged()}}
 svg.addEventListener('pointerup',e=>{endDrag();if(e.pointerType!=='mouse')setTimeout(()=>showHL(null),220)});
@@ -666,11 +744,18 @@ document.addEventListener('pointerdown',e=>{const m=$('cabMenu');if(m&&!m.contai
 function jackDrop(t,p){if(!['D','Z','GE','LED'].includes((PARTS[t]||{}).t))return false;
   for(const i of INST){if(!i.jackSlot)continue;const P=POS[i.key],r=i.jackSlot;if(p.x>=P.x+r.x&&p.x<=P.x+r.x+r.w&&p.y>=P.y+r.y&&p.y<=P.y+r.y+r.h){i.insert(t);RT.dirty=true;render();return true}}
   return false}
-function placeArmed(p){const S=RT.S;if(MULTI(S.armed)){const n=nearestAnchor(S.armed,p.x,p.y,null,120);if(n!=null){S.parts.push({id:RT.uid++,type:S.armed,n});circuitChanged()}S.armed=null;BENCH.drawerSync();render();return}
+function placeArmed(p){const S=RT.S;
+  /* breadboard: a standing jumper goes in the tapped hole; a two-leg part takes two taps, one hole per leg */
+  if(BBG&&!MULTI(S.armed)){const q=nearFreeHole(p.x,p.y,S.armed==='JP'?(n=>BBG.kind(n)!=='post'):null);if(!q){BENCH.say('اضغط على فتحة فاضية');return}
+    if(S.armed==='JP'){S.wires.push({id:RT.uid++,a:q.n,ha:q.h,b:null,hb:null});circuitChanged();S.armed=null;BENCH.drawerSync();render();return}
+    if(!S.armA){S.armA=q;BENCH.say('الرجل الأولى هنا، اضغط على فتحة الرجل الثانية');render(true);return}
+    if(q.n===S.armA.n){BENCH.say('الرجلين في نفس العمود: يصير قصر. اختر عمود ثاني');return}
+    S.parts.push({id:RT.uid,type:S.armed,a:S.armA.n,ha:S.armA.h,b:q.n,hb:q.h});RT.uid++;S.armA=null;circuitChanged();S.armed=null;BENCH.drawerSync();render();return}
+  if(MULTI(S.armed)){const n=nearestAnchor(S.armed,p.x,p.y,null,120);if(n!=null){S.parts.push({id:RT.uid++,type:S.armed,n});circuitChanged()}S.armed=null;BENCH.drawerSync();render();return}
   let best=null,bd=70;EDGES.forEach(e=>{const a=nodeC(e[0]),b=nodeC(e[1]);const d=Math.hypot((a.x+b.x)/2-p.x,(a.y+b.y)/2-p.y);if(d<bd){bd=d;best=e}});
   if(best&&edgeFree(best)&&!S.parts.some(q=>(q.a===best[0]&&q.b===best[1])||(q.a===best[1]&&q.b===best[0]))){S.parts.push({id:RT.uid,type:S.armed,a:best[0],b:best[1]});if(BENCH.paint&&PARTS[S.armed].t==='BR')S.wcol['p'+RT.uid]=BENCH.paint;RT.uid++;circuitChanged()}
   S.armed=null;BENCH.drawerSync();render()}
-function trayDown(t,e){const S=RT.S;if(t==='W'){S.wireMode=!S.wireMode;S.wireStart=null;S.sel=null;S.armed=null;BENCH.drawerSync();render();return}
+function trayDown(t,e){const S=RT.S;S.armA=null;if(t==='W'){S.wireMode=!S.wireMode;S.wireStart=null;S.wireHole=null;S.sel=null;S.armed=null;BENCH.drawerSync();render();return}
   S.wireMode=false;if(S.armed===t){S.armed=null;BENCH.drawerSync();return}S.armed=null;const p=pt(e);drag={kind:'new',type:t,x:p.x,y:p.y,sx:p.x,sy:p.y,active:true,fromTray:true};try{svg.setPointerCapture(e.pointerId)}catch(_){}BENCH.drawerSync();render(true)}
 
 /* ---------- experiment hooks ---------- */
@@ -688,8 +773,9 @@ BENCH.register({
     m.press=it=>{if(it.act)it.act();else i.keyFn(it.key);render()};return m},
   bodyRect:k=>{const i=byKey[k],P=POS[k];return i?[P.x,P.y,i.size[0],i.size[1]]:null},
   tray:def.tray.map(([t,l])=>({t,l})),
-  icon:t=>t==='W'?'<svg viewBox="-34 -18 68 36"><path d="M-24 8 q24 -26 48 0" fill="none" stroke="#e0b000" stroke-width="5" stroke-linecap="round"/></svg>':`<svg viewBox="-36 -18 72 36">${partBody(t,40,false)}</svg>`,
-  trayDown,trayTap:t=>{const S=RT.S;if(t==='W')return trayDown(t);S.wireMode=false;S.armed=S.armed===t?null:t;BENCH.drawerSync();render(true)},isWire:()=>RT.S.wireMode,armed:()=>RT.S&&RT.S.armed,
+  icon:t=>t==='JP'?'<svg viewBox="-34 -18 68 36"><path d="M-14 12 Q-12 -8 10 -10" fill="none" stroke="#2f6bd9" stroke-width="4" stroke-linecap="round"/><line x1="10" y1="-10" x2="18" y2="-14" stroke="#d08a3a" stroke-width="2.6" stroke-linecap="round"/><path d="M14 -12 q-2 6 6 4" fill="none" stroke="#e2453b" stroke-width="3"/></svg>':
+    t==='W'?(BBG?'<svg viewBox="-34 -18 68 36"><path d="M-24 8 q24 -26 48 0" fill="none" stroke="#2f6bd9" stroke-width="3" stroke-linecap="round"/><circle cx="-24" cy="8" r="2.4" fill="#bbb"/><circle cx="24" cy="8" r="2.4" fill="#bbb"/></svg>':'<svg viewBox="-34 -18 68 36"><path d="M-24 8 q24 -26 48 0" fill="none" stroke="#e0b000" stroke-width="5" stroke-linecap="round"/></svg>'):`<svg viewBox="-36 -18 72 36">${partBody(t,40,false)}</svg>`,
+  trayDown,trayTap:t=>{const S=RT.S;if(t==='W')return trayDown(t);S.wireMode=false;S.armA=null;S.armed=S.armed===t?null:t;BENCH.drawerSync();render(true)},isWire:()=>RT.S.wireMode,armed:()=>RT.S&&RT.S.armed,
   status:X.status||(()=>({})),P:PX,rawSteps:X.steps||[],steps:jackLines((X.steps||[]).map(s=>({...s,lines:s.lines&&s.lines.slice()}))),prep:jackLines,
   reset(){fresh();X.onReset&&X.onReset();render()},
   render:()=>render(),RT,resetLayout,isDefault,crossings,lineDone,lineSpots,setGuide

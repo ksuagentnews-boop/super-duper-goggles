@@ -36,13 +36,18 @@ const SOLVER=(()=>{
   const diodeGe=junction({Is:1.5e-6,n:1.4,Rs:25,gl:2e-7,Vb:60,Ib:1e-4,nb:1});
   /* 5 mm green LED (GaP): ≈1.8 V @ 1 mA, ≈2.1 V @ 20 mA; reverse breakdown well above 5 V */
   const led=junction({Is:1e-18,n:2.0,Rs:10,Vb:15,Ib:1e-4,nb:0.3});
-  const MODELS={si:diodeSi,zener,ge:diodeGe,led};
+  /* 1N4729A Zener (3.6 V @ 69 mA): ≈3.3 V @ 1 mA, ≈3.5 V @ 10 mA (the EE312 Exp 5 lab reading vO+ ≈ 4.24 V = VD1 + VZ) */
+  const zener36=junction({Is:4e-14,n:1.1,Vb:3.30,Ib:1e-3,nb:0.09,Rs:4});
+  const MODELS={si:diodeSi,zener,ge:diodeGe,led,zener36};
   /* µA741 (TI / Fairchild datasheet, typical at ±15 V): Rin 2 MΩ, Avol 200 V/mV, GBW 1 MHz, SR 0.5 V/µs,
      output swing ≈ ±14 V into 10 kΩ and ≈ ±13 V into 2 kΩ, short-circuit current 25 mA, supply current 1.7 mA.
      Macro-model: a saturating transconductance stage (gm, ±Imax) drives the internal node y loaded by G1 ∥ Cc
      (dominant pole: GBW = gm/2πCc, slew rate = Imax/Cc); y is clamped Voff below / above the rails; the output
-     follows y through Rout with a current limit. Internal impedances are scaled (Cc = 300 pF) for conditioning. */
-  const UA741=(()=>{const Cc=300e-12,gbw=1e6,sr=0.5e6,A0=2e5;const gm=2*Math.PI*gbw*Cc;return {Rin:2e6,gm,Imax:sr*Cc,G1:gm/A0,Cc,Voff:1.0,Vc:0.03,Ic:1e-5,Rout:150,Ilim:0.025,Iq:1.7e-3}})();
+     follows y through Rout with a current limit. Internal impedances are scaled (Cc = 300 pF) for conditioning.
+     Output limits fitted to the EE312 lab's own readings (Exp 5 slides 30, 33): light load +14.2 / −14.0 V (VoffP 0.8, VoffN 1.0
+     below / above the rails), sourcing ≈ 9.5 mA +13.8 V (RoutP 42 Ω), sinking ≈ 12 mA −13.2 V (RoutN 68 Ω); slew rate 0.68 V/µs
+     (datasheet typ. 0.5) so the lab's measured bandwidth at G = 11 is met (≈ 69 kHz, slide 28). */
+  const UA741=(()=>{const Cc=300e-12,gbw=1e6,sr=0.68e6,A0=2e5;const gm=2*Math.PI*gbw*Cc;return {Rin:2e6,gm,Imax:sr*Cc,G1:gm/A0,Cc,Voff:1.0,VoffP:0.8,VoffN:1.0,Vc:0.03,Ic:1e-5,Rout:150,RoutP:42,RoutN:68,Ilim:0.025,Iq:1.7e-3}})();
   MODELS.ua741=UA741;
   /* Enhancement n-MOSFET, square law with channel-length modulation and a smooth (EKV-style) subthreshold
      transition: Veff = 2nVT·ln(1 + e^((vGS − Vt)/2nVT)); saturation iD = K/2·Veff²·(1 + λvDS),
@@ -121,9 +126,10 @@ const SOLVER=(()=>{
     const y=e.y;const vd=V(e.p)-V(e.m_);const th=Math.tanh(M.gm*vd/M.Imax);const it=M.Imax*th,gt=M.gm*(1-th*th);
     F[y]+=M.G1*V(y)-it;J(y,y,M.G1);J(y,e.p,-gt);J(y,e.m_,gt);
     if(ctx.dt){const g=M.Cc/ctx.dt;F[y]+=g*(V(y)-ctx.vprev[ei]);J(y,y,g)}
-    {const [ex]=xexp((V(y)-V(e.vp)+M.Voff)/M.Vc);const i=M.Ic*ex,g=i/M.Vc;F[y]+=i;J(y,y,g);J(y,e.vp,-g)}
-    {const [ex]=xexp((V(e.vn)+M.Voff-V(y))/M.Vc);const i=M.Ic*ex,g=i/M.Vc;F[y]-=i;J(y,y,g);J(y,e.vn,-g)}
-    const u=(V(y)-V(e.o))/M.Rout/M.Ilim,tu=Math.tanh(u);const io=M.Ilim*tu,go=(1-tu*tu)/M.Rout;
+    {const [ex]=xexp((V(y)-V(e.vp)+(M.VoffP??M.Voff))/M.Vc);const i=M.Ic*ex,g=i/M.Vc;F[y]+=i;J(y,y,g);J(y,e.vp,-g)}
+    {const [ex]=xexp((V(e.vn)+(M.VoffN??M.Voff)-V(y))/M.Vc);const i=M.Ic*ex,g=i/M.Vc;F[y]-=i;J(y,y,g);J(y,e.vn,-g)}
+    /* output stage: sourcing (y above the output) and sinking may have different output resistances, as on the real chip */
+    const Ro=V(y)>=V(e.o)?(M.RoutP??M.Rout):(M.RoutN??M.Rout);const u=(V(y)-V(e.o))/Ro/M.Ilim,tu=Math.tanh(u);const io=M.Ilim*tu,go=(1-tu*tu)/Ro;
     if(e.o>=0){F[e.o]-=io;J(e.o,y,-go);J(e.o,e.o,go)}}
   const dcI=(ck,x,cc)=>dcList(ck).map((ei,u)=>{const e=ck.els[ei];if(cc&&cc[u])return cc[u];const V=i=>i<0?0:x[i];return (e.v-(V(e.a)-V(e.b)))/e.r});
   /* dc operating point with CV/CC handling of every supply unit */

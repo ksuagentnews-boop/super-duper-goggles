@@ -24,7 +24,7 @@ const LABS=[
     {num:2,en:'Terminal Characteristics of Junction Diodes',ar:'خصائص أطراف الدايود',bench:['psu','dmm','dmm'],built:true},
     {num:3,en:'Limiting Circuits',ar:'دوائر التحديد (Clipping)',bench:['gen','scope'],built:true},
     {num:4,en:'Rectifiers and Voltage Regulation',ar:'التقويم وتنظيم الجهد',bench:['xf','scope'],built:true},
-    {num:5,en:'The Op Amp as an Amplifier and a Comparator',ar:'المضخّم العملياتي كمكبّر ومقارن',bench:['gen','psu','scope'],built:true},
+    {num:5,en:'The Op Amp as an Amplifier and a Comparator',ar:'المضخّم العملياتي كمكبّر ومقارن',bench:['gen','psu','scope','dmm','dmm'],built:true},
     {num:6,en:'SPICE Simulation I',ar:'محاكاة SPICE (١)',bench:['pc'],built:true},
     {num:7,en:'Terminal Characteristics of Enhancement N-MOSFET',ar:'خصائص N-MOSFET',bench:['psu','dmm','dmm'],built:true},
     {num:8,en:'SPICE Simulation II · MOS Switching Circuits',ar:'محاكاة SPICE (٢) · دوائر التبديل',bench:['pc'],built:true},

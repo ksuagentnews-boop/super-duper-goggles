@@ -63,18 +63,23 @@ Manual run: all steps ticked, sheet full marks.
 
 ## Exp 5 · Op Amp as Amplifier and Comparator
 
-Manual run: all steps ticked, sheet full marks.
+Manual run on the Digilent breadboard (batch 5): all steps ticked, sheet full marks. Expected values: the lab's own readings
+on the slides (the instructor's run), which win over the manual; the µA741 model's output stage and slew rate are fitted to them.
 
 | Quantity | Expected | Simulated | Δ | Result | Source of the expectation |
 |---|---|---|---|---|---|
-| non-inverting gain G (R2 = 10 kΩ) | 11.00 (±2 %) | 11.00 | 0.0 % | ✅ pass | theory 1 + R2/R1 |
-| bandwidth at 4.4 Vpp (kHz) | 36.00 … 91.00 | 57.50 | — | ✅ pass | µA741: slew-rate limit SR/2πV_p = 36 kHz, small-signal GBW/G = 91 kHz |
-| clipping V_O+ (R2 = 100 kΩ) | 14.00 (±5 %) | 14.05 | 0.4 % | ✅ pass | µA741 datasheet: ±14 V typ. into ≥10 kΩ at ±15 V |
-| clipping V_O− | -14.00 (±5 %) | -14.05 | -0.4 % | ✅ pass | µA741 datasheet |
-| comparator v_O+ (D1 + Zener) | 5.600 (±5 %) | 5.590 | -0.2 % | ✅ pass | theory V_D + V_Z (≈8 mA) |
-| comparator v_O− (D3 + D4) | -1.383 (±10 %) | -1.330 | 3.9 % | ✅ pass | theory −2V_D (≈12 mA) |
-| comparator v6 high (1 kΩ load) | 13.00 (±8 %) | 12.94 | -0.5 % | ✅ pass | µA741 datasheet ±13 V into 2 kΩ |
-| comparator v6 low | -13.00 (±8 %) | -12.31 | 5.3 % | ✅ pass | µA741 datasheet |
+| v_I(pp), R2 = 10 kΩ (mV) | 424 | 400 | −5.7 % | ✅ pass | slide 27 (the lab's generator gave 424 mVpp into the hook; the simulator delivers the set 400 mVpp) |
+| v_O(pp), R2 = 10 kΩ (V) | 4.56 | 4.40 | −3.5 % | ✅ pass | slide 27 (4.40 = 11 × 0.400) |
+| closed-loop gain G | 10.75 | 11.00 | +2.3 % | ✅ pass | slide 34 (4.56 / 0.424); theory 1 + R2/R1 = 11 |
+| bandwidth BW (kHz) | 69 | 69.2 | +0.3 % | ✅ pass | slide 28 (F = 69.00 kHz) |
+| G × BW (kHz) | 742 | 761 | +2.6 % | ✅ pass | slide 34 / 35 |
+| clipping V_O+ (R2 = 100 kΩ, V) | +14.2 | +14.26 | +0.4 % | ✅ pass | slide 30 |
+| clipping V_O− (V) | −14.0 | −14.06 | +0.4 % | ✅ pass | slide 30 |
+| comparator v6 high (V) | +13.8 | +13.86 | +0.4 % | ✅ pass | slide 33 |
+| comparator v6 low (V) | −13.2 | −13.21 | +0.1 % | ✅ pass | slide 33 |
+| comparator v_O+ (V) | +4.24 | +4.20 | −0.9 % | ✅ pass | slide 33 (D1 + 3.6 V Zener) |
+| comparator v_O− (V) | −1.44 | −1.33 | −7.6 % | ✅ pass (±10 %) | slide 33 (D3 + D4, 1N4001 model ≈ 0.67 V each at 12 mA) |
+| ±15 V rails on the MT3805 (V) | +15.00 / −15.00 | +15.0000 / −15.0000 | 0 % | ✅ pass | slides 19–20 |
 
 ## Exp 6 · SPICE Simulation I (PC)
 
