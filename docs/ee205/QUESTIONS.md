@@ -48,3 +48,8 @@ Small gaps resolved while building (the manual always wins; videos only for look
 ## Exp 4
 - The lamp + ballast is modelled as a linear R + L load (R = 263 Ω, L = 0.931 H: 22 W, PF 0.60 lagging, 0.29 A at 127 V), so the minimum current (PF = 1 at 4.84 µF) falls inside the table's 1–6 µF, as the manual's table implies. A real tube's harmonics are not modelled.
 - Source: the bench outlet at 127 V 60 Hz (PLAN). Switch S = the bridging plug joining the capacitor box to the load; dials at 0 = "C not connected".
+
+## Exp 5
+- One PX 120 on the table: the list says two wattmeters, but the second one belongs to the two-wattmeter method of the background; no procedure uses it.
+- Five Fluke 77s as the three ac ammeters and two ac voltmeters of Fig. 7 (M5 is also the ohmmeter that sets the rheostats to 100 Ω).
+- The transformer's star point is inside it: Fig. 7 and Fig. 9 are three-wire (n not wired), Fig. 8 joins the transformer's n to the load's n.

@@ -11,7 +11,7 @@ export async function run(page, vp, ok) {
   await H.focus('board'); await H.placeIC('UC', 16, [[0, 0], [0, 1], [1, 0], [1, 1]]); ok(await done(1), 'I U-core placed');
   await H.lead('h4v', 16); await H.lead('h4c', 23); await H.focus('hm4'); ok(await done(2), `I Rdc1 ${JSON.stringify((await status()).ST)}`);
   await H.lead('h4v', 17); await H.lead('h4c', 24); ok(await done(3), 'I Rdc2');
-  await H.lead('h4v', null); await H.place('BR', 15, 16); await H.place('BR', 22, 23); await H.lead('acL', 14); await H.lead('acN', 22); await H.lead('h4ma', 14); await H.lead('h4c', 15); await H.lead('h1v', 14); await H.lead('h1c', 22);
+  await H.unplug('h4v'); await H.place('BR', 15, 16); await H.place('BR', 22, 23); await H.lead('acL', 14); await H.lead('acN', 22); await H.lead('h4ma', 14); await H.lead('h4c', 15); await H.lead('h1v', 14); await H.lead('h1c', 22);
   ok(await done(4), 'I Fig. 7 built');
   await power(); ok(await done(5), 'I instructor check, power on');
   await H.focus('hm1'); await H.key('h1:SW-'); await H.focus('hm4'); await H.key('h4:SW+', 3); await set2(); ok(await done(6), `I coil 1 at 2 V ${JSON.stringify(await status())}`);

@@ -14,7 +14,7 @@ const LABS=[
     {num:2,en:'RMS, Peak and Peak-to-Peak Values · Measurements with the Oscilloscope',ar:'القيم الفعّالة والقمة · القياس بالأوسيلوسكوب',bench:['thandar','metrix','hameg','fluke','yew'],built:true},
     {num:3,en:"Thevenin's and Maximum Power Transfer Theorems",ar:'نظرية ثفنن ونقل أقصى قدرة',bench:['metrix','flukey','flukey','yew'],built:true},
     {num:4,en:'Power Factor Improvement',ar:'تحسين معامل القدرة',bench:['lamp','px120','fluke','fluke','capbox'],built:true},
-    {num:5,en:'Three-Phase AC Circuits',ar:'الدوائر ثلاثية الطور',bench:['xf3','px120','fluke','fluke','rheo']},
+    {num:5,en:'Three-Phase AC Circuits',ar:'الدوائر ثلاثية الطور',bench:['xf3','px120','fluke','fluke','fluke','fluke','fluke','rheo'],built:true},
     {num:6,en:'Transients in DC Circuits',ar:'الحالة العابرة في دوائر التيار المستمر',bench:['metrix','hameg','yew'],built:true},
     {num:7,en:'Magnetically Coupled Circuits',ar:'الدوائر المقترنة مغناطيسياً',bench:['variac','fluke','fluke','fluke','fluke'],built:true},
     {num:8,en:'Resonance in Series and Parallel Circuits',ar:'الرنين في دوائر التوالي والتوازي',bench:['metrix','hameg','fluke','bk'],built:true}

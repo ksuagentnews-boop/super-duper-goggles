@@ -87,3 +87,12 @@ frequency response or a semiconductor is involved.
 | PF without C | 0.600 lag | 0.602 | +0.3 % | – | ✓ |
 | I at 1 µF | 0.2526 A | 0.2522 A | −0.2 % | – | ✓ |
 | C for PF = 1 | 4.84 µF | minimum current at 4.8 µF | – | – | ✓ |
+
+## Exp 5 · Three-phase (Y 24 V phase, 60 Hz, R = 100 Ω per phase)
+| Quantity | Theory | Simulated | Diff | Video | Pass |
+|---|---|---|---|---|---|
+| IA = IB = IC | 24 / (100 + 0.6 + 1.8) = 234.4 mA | 234.4 mA | 0 | – | ✓ |
+| VP (a–n at the load) | 23.44 V | 23.44 V | 0 | ≈ 24 V | ✓ |
+| VL (L1–L2 at the transformer) | √3 × (24 − drop) ≈ 41.3 V | 41.3 V | 0 | ≈ 41 V | ✓ |
+| PA (voltage coil after the current coil, includes M1's 1.8 Ω) | 5.49 + 0.10 W | 5.59 W | – | – | ✓ |
+| PT with the 3Φ key | 3 PA = 16.78 W | 16.78 W | 0 | – | ✓ |

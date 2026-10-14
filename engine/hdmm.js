@@ -140,7 +140,7 @@ function keyFn(k){const d=RT.S[KEY];const n=D0.pos.length;
     if(!list||list.length<2)return;const cur=d.rng!=null?d.rng:Math.max(0,list.indexOf(RD.fs));d.rng=d.rng!=null&&d.rng>=list.length-1?null:(cur+1)%list.length;RT.dirty=true;return}
   if(k==='MM'){d.mm=d.mm==null?'MAX':d.mm==='MAX'?'MIN':null;d.mmv=null;return}
   if(k==='AC'){d.ac=!d.ac;sync(d);RT.dirty=true}}
-const LEADS=JX.map(q=>({k:LK(q.j),label:()=>`${q.lab} M${N}`,from:{x:q.x,y:q.y},banana:true,circuit:q.sh!==undefined||q.j==='v',pol:q.col==='black'?'-':'+',tray:`M${N} ${q.lab}`,jn:`M${N} ${q.lab}`}));
+const LEADS=JX.map(q=>({k:LK(q.j),label:()=>`${q.lab} M${N}`,from:{x:q.x,y:q.y},banana:true,circuit:q.sh!==undefined||q.j==='v',pol:q.col==='black'?'-':'+',tray:`M${N} ${q.lab}`,jn:`M${N} ${q.lab}`,spare:q.j==='ma'||q.j==='a'}));
 const RJ=()=>{const d=RT.S&&RT.S[KEY];return d&&d.jack==='A'?LK(curJack()):LK('v')};
 return {key:KEY,prefix:PFX,size:[W,H],name:[D0.name+(opt.n?' · M'+N:''),MODEL==='goldstar'?'الملتيميتر الأصفر (GoldStar)':'ملتيميتر يدوي'],fresh,svg,keyFn,measure,
   wheel:['SW'],knobInfo:()=>{const d=RT.S[KEY];return D0.pos[d.pos][1]},

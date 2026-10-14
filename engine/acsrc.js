@@ -89,7 +89,7 @@ ENGINE.xf3=function(RT,opt){const KEY='x3',P='x',W=360,H=320,F=60,VP=opt.vp||24,
   function keyFn(k){if(k==='PWR')L.power();if(k==='CHK')L.check()}
   return {key:KEY,prefix:P,size:[W,H],name:['Three-phase transformer','المحوّل ثلاثي الطور'],fresh,svg,keyFn,
     leads:['a','b','c','n'].map(k=>({k:'x3'+k,label:k==='n'?'n':k.toUpperCase()+' (L'+(k.charCodeAt(0)-96)+')',from:J[k],banana:true,circuit:true,pol:k==='n'?'-':'+',tray:'3φ '+k,jn:'3φ '+k})),
-    stamp(ck){const d=RT.S[KEY],l=RT.S.leads;if(!d.pwr||l.x3n.node==null)return;const n=ck.idx(l.x3n.node);ck.x3=[];
+    stamp(ck){const d=RT.S[KEY],l=RT.S.leads;if(!d.pwr)return;/* the star point is inside the transformer: n is a terminal on it, wired or not */const n=l.x3n.node!=null?ck.idx(l.x3n.node):ck.inner();ck.x3=[];
       ['a','b','c'].forEach(k=>{const q=l['x3'+k];if(q.node==null)return;const a=ck.idx(q.node);ck.els.push({t:'XS',a,b:n,s:1,vp:VP*Math.SQRT2,f:F,r:R,ph:PH[k]});ck.x3.push({a,b:n,ph:PH[k]})})},
     measure(){L.watch();const c=RT.TB&&RT.TB.ck&&RT.TB.ck.x3;if(c)c.forEach(q=>L.trip(srcI(RT,q.a,q.b,R,VP*Math.SQRT2,q.ph)))},VP};
 };

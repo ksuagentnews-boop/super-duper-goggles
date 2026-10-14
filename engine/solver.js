@@ -84,7 +84,7 @@ const SOLVER=(()=>{
         else if(e.t==='D'){const [i,g]=e.f(V(e.a)-V(e.b));st(e.a,e.b,i,g)}
         else if(e.t==='VS'){const g=1/e.r;const i=g*(V(e.a)-ctx.vs);if(e.a>=0){F[e.a]+=i;A[e.a*n+e.a]+=g}}
         else if(e.t==='DC'){const u=dcs.indexOf(ei),cc=ctx.cc&&ctx.cc[u];if(cc)st(e.a,e.b,-cc,0);else{const g=1/e.r;st(e.a,e.b,g*(V(e.a)-V(e.b)-e.v),g)}}
-        else if(e.t==='XS'){const v=e.s*e.vp*Math.sin(2*Math.PI*e.f*ctx.t+(e.ph||0));const g=1/e.r;st(e.a,e.b,g*(V(e.a)-V(e.b)-v),g)}
+        else if(e.t==='XS'){const v=ctx.noXS?0:e.s*e.vp*Math.sin(2*Math.PI*e.f*ctx.t+(e.ph||0));const g=1/e.r;st(e.a,e.b,g*(V(e.a)-V(e.b)-v),g)}
         else if(e.t==='C'){if(ctx.dt){const g=e.c/ctx.dt;st(e.a,e.b,g*(V(e.a)-V(e.b)-ctx.vprev[ei]),g)}else if(ctx.leak)st(e.a,e.b,ctx.leak*(V(e.a)-V(e.b)),ctx.leak)}
         else if(e.t==='CCS'){const [i,g]=ccs(e,V(e.a)-V(e.b));st(e.a,e.b,-i,g)}
         else if(e.t==='OA')stampOA(e,V,F,A,n,st,ctx,ei);
@@ -180,7 +180,7 @@ const SOLVER=(()=>{
       const pr=Ar[r*n+r],pi=Ai[r*n+r],pd=pr*pr+pi*pi;if(pd<1e-60){xr[r]=xi[r]=0;continue}xr[r]=(sr*pr+si*pi)/pd;xi[r]=(si*pr-sr*pi)/pd}
     return [xr,xi]}
   function phasor(ck,f,A,off){const n=ck.n,w=2*Math.PI*f;const vprev=ck.els.map(()=>0);
-    const dc=solveCC(ck,{t:0,dt:0,vprev,leak:1e-7,vs:off||0},null,300,0.4,1e-9);const cc=dc.ccs,dcs=dcList(ck);
+    const dc=solveCC(ck,{t:0,dt:0,vprev,leak:1e-7,vs:off||0,noXS:true},null,300,0.4,1e-9);/* the sine sources have no dc part */const cc=dc.ccs,dcs=dcList(ck);
     const Ar=new Float64Array(n*n),Ai=new Float64Array(n*n),br=new Float64Array(n),bi=new Float64Array(n);
     const add=(r,c,gr,gi)=>{if(r>=0&&c>=0){Ar[r*n+c]+=gr;Ai[r*n+c]+=gi}};
     const y=(a,b,gr,gi)=>{add(a,a,gr,gi);add(b,b,gr,gi);add(a,b,-gr,-gi);add(b,a,-gr,-gi)};

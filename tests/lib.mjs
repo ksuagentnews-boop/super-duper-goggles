@@ -70,6 +70,9 @@ export function bench(page) {
     toOv: async () => { if (await page.evaluate(() => { if (BENCH.view === 'ov') return false; BENCH.back(); return true; })) await page.waitForTimeout(60); },
     lead: async (k, node) => { await H.toOv(); if (node != null) await H.plugJack(k); const p = await page.evaluate(k => BENCH.sim.RT.lead.leadPos(k), k); if (!p) return;
       const to = node == null ? await page.evaluate(() => { const L = BENCH.sim.RT.layout; return { x: L.BX - 40, y: L.parkY - 30 }; }) : await H.node(node); await H.drag(p, to); },
+    /* pull the lead out of the jack of lead key k and drop it back in the tray (drag its head) */
+    unplug: async k => { await H.toOv(); const j = await page.evaluate(k => { const R = BENCH.sim.RT, g = R.lead.grpOf(k), id = R.lead.plIn(g); if (id < 0) return null; const T = R.layout.TRAY; return { a: R.lead.headPos(id), b: { x: T.x + T.w / 2, y: T.y + T.h / 2 } }; }, k);
+      if (j) await H.drag(j.a, j.b); },
     leadAt: k => page.evaluate(k => BENCH.sim.RT.S.leads[k].node, k),
     select: async (a, b) => { const sel = await page.evaluate(([a, b]) => { const S = BENCH.sim.RT.S; const p = S.parts.find(q => (q.a === a && q.b === b) || (q.a === b && q.b === a)); return p && S.sel === p.id; }, [a, b]);
       if (sel) return; const A = await H.node(a), B = await H.node(b); await H.tap((A.x + B.x) / 2, (A.y + B.y) / 2); },

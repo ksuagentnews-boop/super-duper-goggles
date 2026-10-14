@@ -38,7 +38,9 @@ const jackRel=g=>LEADDEF[g].jat||fromOf(g);
    CH1, DC +, HI … shows once it is plugged). One lead per jack of the table. */
 const JKIND=g=>LEADDEF[g].coax?'coax':'banana';
 const KORD={coax:0,banana:1};
-const PL=GROUPS.map(g=>({kind:JKIND(g),col:JKIND(g)==='banana'?(LEADDEF[g].pol==='-'?'black':'red'):null,n:GMEM[g].length}))
+/* a spare jack (a meter's current inputs) takes any lead of its kind but brings none to the tray: a handheld meter comes
+   with one red and one black lead, moved between its VΩ / mA / 10 A sockets */
+const PL=GROUPS.filter(g=>!LEADDEF[g].spare).map(g=>({kind:JKIND(g),col:JKIND(g)==='banana'?(LEADDEF[g].pol==='-'?'black':'red'):null,n:GMEM[g].length}))
   .sort((a,b)=>KORD[a.kind]-KORD[b.kind]||(a.col==='black')-(b.col==='black')).map((q,i)=>({...q,id:i}));
 const PNAME=q=>q.kind==='coax'?'coax':q.col+' lead';
 const KNAME=g=>JKIND(g)==='coax'?'coax':(LEADDEF[g].pol==='-'?'black':'red')+' lead';
@@ -58,8 +60,8 @@ function parkFor(list){const want=list.map(w=>({k:w.k,x:w.x})).sort((a,b)=>a.x-b
   /* crowded rack (many jacks on the table): spread the plugs evenly over it, in order, so none falls off its left end */
   if(want.length>1&&want[0].x<lo-0.5)want.forEach((w,i)=>w.x=lo+i*(hi-lo)/(want.length-1));
   const out={};want.forEach(w=>out[w.k]={x:Math.round(w.x),y:parkY});return out}
-const TRAY={x:0,y:0,w:0,h:0,cols:1,on:GROUPS.length>0};const SW=150,SH=78;
-function setTray(mode){const n=GROUPS.length;if(!n)return;let cols;
+const TRAY={x:0,y:0,w:0,h:0,cols:1,on:PL.length>0};const SW=150,SH=78;
+function setTray(mode){const n=PL.length;if(!n)return;let cols;
   if(mode==='below'){TRAY.w=BW+132;cols=Math.max(1,Math.floor((TRAY.w-16)/SW));TRAY.x=BX-66;TRAY.y=BY+BH+34}
   else{cols=n>5?2:1;TRAY.w=cols*SW+16;TRAY.x=mode==='right'?BX+BW+CG:BX-CG-TRAY.w;TRAY.y=BY}
   TRAY.cols=cols;TRAY.h=34+Math.ceil(n/cols)*SH+6;TRAY.mode=mode}
@@ -71,7 +73,10 @@ const DEF={};{
      then the shortest cables. */
   const T=[],L=[],R=[];INST.forEach(i=>{const f=FACE[i.key];(f==='right'?L:f==='left'?R:T).push(i)});
   const GT=120;const av=BENCH.availArea?BENCH.availArea():{W:1200,H:700};
-  const perms=a=>a.length<2?[a]:a.flatMap((x,i)=>perms([...a.slice(0,i),...a.slice(i+1)]).map(p=>[x,...p]));
+  /* every order of the top row up to 5 instruments; beyond that (EE205 Exp 5: eight) a few natural orders, or the search
+     (n! orders × crossing checks) would freeze the page */
+  const perms=a=>{if(a.length>5){const w=i=>i.size[0];return [a,[...a].reverse(),[...a].sort((x,y)=>w(x)-w(y)),[...a].sort((x,y)=>w(y)-w(x))]}
+    return a.length<2?[a]:a.flatMap((x,i)=>perms([...a.slice(0,i),...a.slice(i+1)]).map(p=>[x,...p]))};
   const place=(colL,colR,rowL,ord,rowR)=>{for(const k in DEF)delete DEF[k];
     let y=BY;colL.forEach(i=>{DEF[i.key]={x:BX-CG-i.size[0],y};y+=i.size[1]+RG});y=BY;colR.forEach(i=>{DEF[i.key]={x:BX+BW+CG,y};y+=i.size[1]+RG});
     const items=[...rowL.map(i=>[i,GT]),...ord.map((i,j)=>[i,j===ord.length-1&&rowR.length?GT:RG]),...rowR.map(i=>[i,RG])];
