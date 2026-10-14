@@ -167,6 +167,7 @@ Updated after every finished item (commit + push each time).
 - Batch 2 engine: ac sources with the instructor check (bench socket, variable ac supply, 3-phase transformer), fluorescent lamp, PX 120 wattmeter, BC05 capacitor box, rheostats, coupled coils (MC) in the solver, U-core part.
 - Exp 7 built (Procedures I–IV, 12 steps); test `tests/exp/ee205-exp7.mjs` desktop + phone.
 - Exp 4 built (6 steps, instructor check, 19 rows of Table 1); test `tests/exp/ee205-exp4.mjs` desktop + phone.
+- Robustness sweep (tests/robust.mjs) covers the EE205 benches: 120 random actions each, no error / NaN; a Fluke mA jack across the supply blows its fuse; the mains sources refuse power before the instructor check and refuse an ammeter across the source.
 - Exp 5 built (Procedures I–III, 10 steps); test `tests/exp/ee205-exp5.mjs`. Engine: phasor dc part ignores the mains sources (3-phase phases leaked a dc offset), the transformer's star point is internal, the layout search caps the top-row orders beyond 5 instruments (Exp 5 froze), meters bring one red + one black lead to the tray (their current jacks are spare sockets).
 - Tests: hall knows EE205 is built (8 tables, 2 × 4); the pan & zoom test wheels over empty desk (EE312 Exp 9 layout moved when the crowded rack fix spread its plugs).
 

@@ -3,7 +3,7 @@
 // (DMM OL / FUSE, supply CC lamp, reversed electrolytic bursts, clipping).  Run:  THREE_JS=… node tests/robust.mjs [n] [desktop]
 import { chromium, openPage, sit, bench } from './lib.mjs';
 const N = +(process.argv[2] || 160), VP = process.argv[3] || 'desktop';
-const EXPS = [1, 2, 3, 4, 5, 7, 9, 10];
+const EXPS = [...[1, 2, 3, 4, 5, 7, 9, 10].map(n => `ee312/exp${n}`), ...[1, 2, 3, 4, 5, 6, 7, 8].map(n => `ee205/exp${n}`)].filter(id => !process.argv[4] || id.startsWith(process.argv[4]));
 let seed = 12345; const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648; const pick = a => a[Math.floor(rnd() * a.length)];
 const browser = await chromium.launch(); const errors = [], fails = [], notes = [];
 const ok = (c, m) => { if (!c) fails.push(m); console.log((c ? '  ✓ ' : '  ✗ ') + m); return c; };
@@ -11,8 +11,8 @@ const BAD = /NaN|Infinity|undefined|null/;
 const scan = page => page.evaluate(bad => [...document.querySelectorAll('#bench text, #bench tspan')].map(t => t.textContent).filter(t => new RegExp(bad).test(t)), BAD.source);
 
 for (const n of EXPS) {
-  const { ctx, page } = await openPage(browser, VP, errors, `exp${n}`); const e0 = errors.length;
-  await sit(page, `ee312/exp${n}`, 'free'); const H = bench(page); H.touch = false;
+  const { ctx, page } = await openPage(browser, VP, errors, n); const e0 = errors.length;
+  await sit(page, n, 'free'); const H = bench(page); H.touch = false;
   console.log(`[${VP}] exp${n} · ${N} random actions`);
   const L = await page.evaluate(() => { const R = BENCH.sim.RT; return { NN: R.layout.ROWS * R.layout.COLS, COLS: R.layout.COLS, groups: R.layout.GROUPS, tray: BENCH.sim.tray.map(t => t.t).filter(t => t !== 'W') }; });
   const counts = {}; const bad = new Set();
@@ -76,6 +76,19 @@ for (const n of EXPS) {
   const keys = await page.evaluate(() => [...document.querySelectorAll('#bench .Linst [data-k^="s:"]')].map(e => e.dataset.k).filter(k => /[+-]$/.test(k)));
   for (const kk of keys) { await H.key(kk, 25); } await page.waitForTimeout(300);
   ok(!(await scan(page)).length, `scope: ${keys.length} knobs turned to their ends, no NaN on the screen`); await ctx.close(); }
+
+/* EE205: a handheld meter's mA jack straight across the Thandar blows its fuse; the jack then reads 0 until the fuse is replaced;
+   the mains-level sources stay off until the instructor checks */
+{ const { ctx, page } = await openPage(browser, VP, errors, 'ee205-fuse'); await sit(page, 'ee205/exp1', 'free'); const H = bench(page); H.touch = false;
+  await H.lead('h1ma', 2); await H.lead('h1c', 9); await H.lead('Lp', 2); await H.lead('Lm', 9);
+  await H.focus('hm1'); await H.key('h1:SW+', 4); await H.focus('psu'); await H.key('p:PWR'); await H.key('p:LI+', 100); await H.key('p:LON'); await page.waitForTimeout(200);
+  const f = await page.evaluate(() => ({ fuse: BENCH.sim.RT.S.hm1.fuse.ma, shown: BENCH.sim.RT.inst.hm1.reading().shown, toast: document.getElementById('toast').textContent }));
+  ok(!f.fuse && /فيوز/.test(f.toast), `Fluke 300 mA jack across the supply: the fuse blows (${f.toast.slice(0, 30)}…)`);
+  ok(f.shown && +f.shown.main === 0, `with the fuse blown the A~/A⎓ reading is 0 (${f.shown && f.shown.main})`); await ctx.close(); }
+{ const { ctx, page } = await openPage(browser, VP, errors, 'ee205-lock'); await sit(page, 'ee205/exp4', 'free'); const H = bench(page); H.touch = false;
+  await H.focus('ac'); await H.key('a:PWR'); ok(!(await page.evaluate(() => BENCH.sim.RT.S.ac.pwr)), 'mains source: POWER does nothing before the instructor check');
+  await H.lead('acL', 1); await H.lead('acN', 8); await H.lead('h1ma', 1); await H.lead('h1c', 8); await H.focus('ac'); await H.key('a:CHK');
+  ok(!(await page.evaluate(() => BENCH.sim.RT.S.ac.ok)), 'the instructor refuses an ammeter straight across the source'); await ctx.close(); }
 
 await browser.close();
 console.log(`\n${fails.length ? fails.length + ' FAILED' : 'ALL PASSED'} · console errors: ${errors.length}`); errors.slice(0, 10).forEach(e => console.log('  ' + e));
