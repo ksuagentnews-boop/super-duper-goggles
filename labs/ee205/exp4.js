@@ -67,7 +67,7 @@ setup(RT){
         lines:[{t:'AC L → node 1',lead:'acL',at:1},{t:'AC N → node 10',lead:'acN',at:10},{t:'W 10A → node 1',lead:'w1i',at:1},{t:'W COM (A) → node 2',lead:'w1ic',at:2},{t:'W 600V → node 1',lead:'w1v',at:1},{t:'W COM (V) → node 10',lead:'w1vc',at:10},
           {t:'M2 300mA (red) → node 2',lead:'h2ma',at:2},{t:'M2 COM → node 3',lead:'h2c',at:3},{t:'lamp L → node 3',lead:'lpL',at:3},{t:'lamp N → node 10',lead:'lpN',at:10},
           {t:'M1 VΩ → node 1',lead:'h1v',at:1},{t:'M1 COM → node 10',lead:'h1c',at:10},{t:'C box → node 4',lead:'qa',at:4},{t:'C box → node 11',lead:'qb',at:11},{t:'bridging plug: node 10 ↔ node 11',wire:[10,11]},{t:'switch S: bridging plug node 3 ↔ node 4',wire:[3,4]}],ok:s=>s.fig4},
-      {dev:'ac',t:'⚠ «Get the connection checked by the instructor»: اضغط «المشرف يتأكد» على المصدر، وإذا التوصيل سليم شغّل الـ POWER. شغّل الـ PX 120، و M1 على V~، و M2 على A~.',ok:s=>s.fig4&&s.on},
+      {dev:'ac',t:'⚠ «Get the connection checked by the instructor»: اضغط «المشرف يتأكد من التوصيل» في هذي البطاقة، وإذا التوصيل سليم شغّل الـ POWER. شغّل الـ PX 120، و M1 على V~، و M2 على A~.',ok:s=>s.fig4&&s.on},
       {dev:'cb',t:'2. بدون مكثف (صفّر كل أقراص الصندوق): سجّل V و I و P.',ok:s=>!!ST[key(0)]},
       {dev:'cb',t:'3. حط C = 1.0 µF على الصندوق (قرص ×1µF على 1) وسجّل V و I و P، وبعدين 2.0 و 3.0 µF.',ok:s=>[1,2,3].every(c=>ST[key(c)])},
       {dev:'cb',t:'4. زِد C من 3.2 لـ 6.0 µF كل 0.2 µF (قرص ×0.1µF) وسجّل القراءات: لاحظ وين يصير التيار أقل شي.',ok:s=>s.done},

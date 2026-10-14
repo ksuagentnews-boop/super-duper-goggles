@@ -73,6 +73,8 @@ export function bench(page) {
     /* pull the lead out of the jack of lead key k and drop it back in the tray (drag its head) */
     unplug: async k => { await H.toOv(); const j = await page.evaluate(k => { const R = BENCH.sim.RT, g = R.lead.grpOf(k), id = R.lead.plIn(g); if (id < 0) return null; const T = R.layout.TRAY; return { a: R.lead.headPos(id), b: { x: T.x + T.w / 2, y: T.y + T.h / 2 } }; }, k);
       if (j) await H.drag(j.a, j.b); },
+    /* «المشرف يتأكد من التوصيل»: the button in the Manual step card */
+    chk: async () => { const b = await page.$('#stepCard #scChk'); if (!b) return; await b.evaluate(e => e.scrollIntoView({ block: 'nearest' })); const r = await b.boundingBox(); if (H.touch) await page.touchscreen.tap(r.x + r.width / 2, r.y + r.height / 2); else await page.mouse.click(r.x + r.width / 2, r.y + r.height / 2); await page.waitForTimeout(40); },
     leadAt: k => page.evaluate(k => BENCH.sim.RT.S.leads[k].node, k),
     select: async (a, b) => { const sel = await page.evaluate(([a, b]) => { const S = BENCH.sim.RT.S; const p = S.parts.find(q => (q.a === a && q.b === b) || (q.a === b && q.b === a)); return p && S.sel === p.id; }, [a, b]);
       if (sel) return; const A = await H.node(a), B = await H.node(b); await H.tap((A.x + B.x) / 2, (A.y + B.y) / 2); },

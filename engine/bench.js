@@ -269,7 +269,10 @@ const BENCH={
     const nd=done.filter(Boolean).length;if(!this._sub||this._sub.i!==i||this._sub.nd!==nd)this._sub={i,nd,j:null};
     const sj=L?(this._sub.j!=null?this._sub.j:cur>=0?cur:L.length-1):-1;
     if(this.sim.setGuide)this.sim.setGuide(L&&sj>=0&&!done[sj]?this.sim.lineSpots(L[sj]):null);
-    const key=this.built+'|'+all+'|'+i+'|'+this.view+'|'+done.join('')+'|'+min+'|'+sj;if(c.dataset.key===key)return;c.dataset.key=key;
+    /* the instructor check of the mains sources (EE205): a button in the card, Manual only, while a source waits for it */
+    const LK=((this.sim.RT&&this.sim.RT.locks)||[]).filter(l=>this.sim.RT.S[l.key]),lkOk=LK.length&&LK.every(l=>l.isOk());
+    const chk=!all&&LK.length&&(!lkOk||/المشرف/.test(s.t))?(lkOk?'<span class="chkok">✓ المشرف شيّك التوصيل</span>':'<button class="chk" id="scChk">👨‍🏫 المشرف يتأكد من التوصيل</button>'):'';
+    const key=this.built+'|'+all+'|'+i+'|'+this.view+'|'+done.join('')+'|'+min+'|'+sj+'|'+chk;if(c.dataset.key===key)return;c.dataset.key=key;
     if(all){c.innerHTML=`<div class="num done">✓</div><div class="body"><div class="k">خلصت خطوات المانيوال 🎉</div><div class="t">كل الخطوات تمت. كمّل الـ sheet (الشاشات والقراءات والأسئلة) واضغط "صحّح" عشان تشوف درجتك.</div><div class="acts"><button class="go" id="scSheet">افتح الـ sheet</button></div></div>`;
       BIDI.fix(c);c.querySelector('#scSheet').onclick=()=>{this.togglePanel(true);const r=$q('#submit');if(r)r.scrollIntoView({block:'center'})};return}
     const here=this.view===(L?'board':s.dev)&&!this.sim.pc;const CN='①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮';
@@ -278,11 +281,12 @@ const BENCH={
     const fig=s.fig?`<div class="sfig"><img class="figimg" src="${s.fig}" alt="${s.figCap||'Figure'}"><span>🔍</span></div>`:'';
     c.classList.toggle('has-lines',!!L);const h0=c.offsetHeight;
     const PS=s.proc?S.filter(x=>x.proc===s.proc):S,pi=PS.indexOf(s)+1;
-    c.innerHTML=`<div class="num">${pi}</div><div class="body"><div class="k">${s.proc&&this.procs.length>1?`Procedure ${s.proc} · `:''}الخطوة ${pi} من ${PS.length}</div><div class="t">${s.t}</div>${lines}<div class="acts"><button class="go" id="scGo">وريني وين</button><button id="scAll">كل الخطوات</button></div></div>${fig}<button class="mini" id="scMin" aria-label="${min?'توسيع':'تصغير'}">${min?'▴':'▾'}</button><button class="mini" id="scHide" title="أخفِ الصفحة، خلّ المعمل بس" aria-label="أخفِ الصفحة">⟩</button>`;
+    c.innerHTML=`<div class="num">${pi}</div><div class="body"><div class="k">${s.proc&&this.procs.length>1?`Procedure ${s.proc} · `:''}الخطوة ${pi} من ${PS.length}</div><div class="t">${s.t}</div>${lines}<div class="acts">${chk}<button class="go" id="scGo">وريني وين</button><button id="scAll">كل الخطوات</button></div></div>${fig}<button class="mini" id="scMin" aria-label="${min?'توسيع':'تصغير'}">${min?'▴':'▾'}</button><button class="mini" id="scHide" title="أخفِ الصفحة، خلّ المعمل بس" aria-label="أخفِ الصفحة">⟩</button>`;
     BIDI.fix(c);{const wl=c.querySelector('.wl'),cl=wl&&wl.querySelector('li.cur');if(cl)wl.scrollTop=Math.max(0,cl.offsetTop-wl.offsetTop-30)}if(Math.abs(c.offsetHeight-h0)>8&&this.view)requestAnimationFrame(()=>this.refit(true));
     const small=()=>innerHeight<=500||innerWidth<=600;
     c.querySelector('#scGo').onclick=()=>{if(small()&&!c.classList.contains('min')){c.classList.add('min');c.dataset.key='';this.drawStepCard()}if(L){const ln=sj>=0&&(L[sj].lead||L[sj].jack);if(ln){if(this.view!=='ov')this.back()}else if(!here)this.focus('board');if(sj>=0)setTimeout(()=>this.sim.setGuide({...this.sim.lineSpots(L[sj]),flash:true}),reduceMotion?0:420)}else this.focus(s.dev)};
     c.querySelector('#scAll').onclick=()=>this.togglePanel(true);
+    {const b=c.querySelector('#scChk');if(b)b.onclick=()=>{LK.filter(l=>!l.isOk()).forEach(l=>l.check());c.dataset.key='';this.sim.RT.render()}}
     const pv=c.querySelector('#scPrev'),nx=c.querySelector('#scNext');if(pv)pv.onclick=()=>{this._sub.j=Math.max(0,sj-1);c.dataset.key='';this.drawStepCard()};
     if(nx)nx.onclick=()=>{const j=sj+1;this._sub.j=j>=cur?null:j;c.dataset.key='';this.drawStepCard()};
     c.querySelector('#scHide').onclick=()=>this.labOnly(true);

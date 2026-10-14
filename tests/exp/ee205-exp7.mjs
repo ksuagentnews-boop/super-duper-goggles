@@ -5,7 +5,7 @@ export async function run(page, vp, ok) {
   const H = bench(page); H.touch = vp !== 'desktop';
   const status = () => page.evaluate(() => { const s = BENCH.sim.status(); return { ST: s.ST, Vs: s.Vs, on: s.on }; });
   const done = async n => (await H.steps()).done >= n;
-  const power = async () => { await H.focus('ac'); await H.key('a:CHK'); await H.key('a:PWR'); };
+  const power = async () => { await H.chk(); await H.focus('ac'); await H.key('a:PWR'); };
   const off = async () => { if (await page.evaluate(() => BENCH.sim.RT.S.ac.pwr)) { await H.focus('ac'); await H.key('a:PWR'); } };
   const set2 = async () => { await H.focus('ac'); for (let k = 0; k < 80; k++) { const { Vs } = await status(); if (Vs != null && Math.abs(Vs - 2) <= 0.02) return; await H.key(Vs == null || Vs < 2 ? 'a:V+' : 'a:V-'); } };
   await H.focus('board'); await H.placeIC('UC', 16, [[0, 0], [0, 1], [1, 0], [1, 1]]); ok(await done(1), 'I U-core placed');

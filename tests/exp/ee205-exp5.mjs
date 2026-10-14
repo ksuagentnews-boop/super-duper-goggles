@@ -5,7 +5,7 @@ export async function run(page, vp, ok) {
   const H = bench(page); H.touch = vp !== 'desktop';
   const status = () => page.evaluate(() => { const s = BENCH.sim.status(); return { ST: s.ST, r: s.r, on: s.on, star: s.star, fig7: s.fig7, fig8: s.fig8, fig9: s.fig9 }; });
   const done = async n => (await H.steps()).done >= n;
-  const power = async () => { await H.focus('x3'); await H.key('x:CHK'); await H.key('x:PWR'); };
+  const power = async () => { await H.chk(); await H.focus('x3'); await H.key('x:PWR'); };
   const off = async () => { if (await page.evaluate(() => BENCH.sim.RT.S.x3.pwr)) { await H.focus('x3'); await H.key('x:PWR'); } };
   await H.focus('board'); for (const [k, n] of [['r1a', 4], ['r1b', 20], ['r2a', 18], ['r2b', 20], ['r3a', 32], ['r3b', 20]]) await H.lead(k, n);
   ok(await done(1), 'I star load');

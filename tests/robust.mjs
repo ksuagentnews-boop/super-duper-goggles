@@ -85,10 +85,14 @@ for (const n of EXPS) {
   const f = await page.evaluate(() => ({ fuse: BENCH.sim.RT.S.hm1.fuse.ma, shown: BENCH.sim.RT.inst.hm1.reading().shown, toast: document.getElementById('toast').textContent }));
   ok(!f.fuse && /فيوز/.test(f.toast), `Fluke 300 mA jack across the supply: the fuse blows (${f.toast.slice(0, 30)}…)`);
   ok(f.shown && +f.shown.main === 0, `with the fuse blown the A~/A⎓ reading is 0 (${f.shown && f.shown.main})`); await ctx.close(); }
-{ const { ctx, page } = await openPage(browser, VP, errors, 'ee205-lock'); await sit(page, 'ee205/exp4', 'free'); const H = bench(page); H.touch = false;
-  await H.focus('ac'); await H.key('a:PWR'); ok(!(await page.evaluate(() => BENCH.sim.RT.S.ac.pwr)), 'mains source: POWER does nothing before the instructor check');
-  await H.lead('acL', 1); await H.lead('acN', 8); await H.lead('h1ma', 1); await H.lead('h1c', 8); await H.focus('ac'); await H.key('a:CHK');
+{ const { ctx, page } = await openPage(browser, VP, errors, 'ee205-lock'); await sit(page, 'ee205/exp4', 'manual'); const H = bench(page); H.touch = false;
+  await H.focus('ac'); await H.key('a:PWR'); ok(!(await page.evaluate(() => BENCH.sim.RT.S.ac.pwr)), 'Manual: mains source POWER does nothing before the instructor check');
+  ok(!(await page.$('#bench [data-k="a:CHK"]')) && !!(await page.$('#stepCard #scChk')), 'Manual: «المشرف يتأكد من التوصيل» is in the step card, not on the instrument');
+  await H.lead('acL', 1); await H.lead('acN', 8); await H.lead('h1ma', 1); await H.lead('h1c', 8); await H.chk();
   ok(!(await page.evaluate(() => BENCH.sim.RT.S.ac.ok)), 'the instructor refuses an ammeter straight across the source'); await ctx.close(); }
+{ const { ctx, page } = await openPage(browser, VP, errors, 'ee205-free'); await sit(page, 'ee205/exp4', 'free'); const H = bench(page); H.touch = false;
+  ok(!(await page.$('#stepCard #scChk')) && !(await page.$('#bench [data-k="a:CHK"]')), 'Free: no instructor-check button');
+  await H.focus('ac'); await H.key('a:PWR'); ok(await page.evaluate(() => BENCH.sim.RT.S.ac.pwr), 'Free: the mains POWER switches without a check'); await ctx.close(); }
 
 await browser.close();
 console.log(`\n${fails.length ? fails.length + ' FAILED' : 'ALL PASSED'} · console errors: ${errors.length}`); errors.slice(0, 10).forEach(e => console.log('  ' + e));

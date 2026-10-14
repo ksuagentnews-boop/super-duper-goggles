@@ -17,16 +17,20 @@ function sig(RT){const S=RT.S;const meterV=new Set();const L=S.leads;
   Object.keys(L).forEach(k=>{const m=k.match(/^(h\d+)c$/);if(!m)return;const p=m[1];if(!(L[p+'ma']&&L[p+'ma'].node!=null)&&!(L[p+'a']&&L[p+'a'].node!=null)){meterV.add(p+'v');meterV.add(p+'c')}});
   Object.keys(S.leads).forEach(k=>{if(/^w\d+vc?$/.test(k))meterV.add(k)});
   return JSON.stringify([S.parts.map(p=>[p.type,p.a,p.b,p.n]),S.wires.map(w=>[w.a,w.b]),Object.keys(S.leads).filter(k=>!meterV.has(k)).map(k=>[k,S.leads[k].node])])}
-function lock(RT,key,name){return {
+/* Manual mode only: in Free mode there is no instructor at the table and the source switches freely (the breaker still trips).
+   The «المشرف يتأكد من التوصيل» button lives in the Manual step card (bench.js reads RT.locks), not on the instrument. */
+const manual=()=>typeof BENCH!=='undefined'&&BENCH.mode==='manual';
+function lock(RT,key,name){const L={
+  key,name,isOk:()=>!!(RT.S[key]&&RT.S[key].ok),
   check(){const d=RT.S[key];if(d.ok){BENCH.say('المشرف شيّك قبل، تقدر تشغّل');return}
     const r=RT.instructor?RT.instructor():{ok:true,msg:''};
     if(!r.ok){BENCH.say('👨‍🏫 المشرف: '+(r.msg||'التوصيل مو صحيح، راجعه مع الشكل'));return}
     d.ok=true;d.sig=sig(RT);BENCH.say('👨‍🏫 المشرف: التوصيل سليم، شغّل '+name)},
-  power(){const d=RT.S[key];if(!d.ok){BENCH.say('⚠ لازم المشرف يتأكد من التوصيل قبل التشغيل: اضغط «المشرف يتأكد»');return}d.pwr=!d.pwr;RT.dirty=true},
-  watch(){const d=RT.S[key];if(!d.ok)return;if(sig(RT)!==d.sig){const was=d.pwr;d.ok=false;d.pwr=false;RT.dirty=true;
+  power(){const d=RT.S[key];if(!d.ok&&manual()){BENCH.say('⚠ لازم المشرف يتأكد من التوصيل قبل التشغيل: اضغط «المشرف يتأكد من التوصيل» في بطاقة الخطوة');return}d.pwr=!d.pwr;RT.dirty=true},
+  watch(){const d=RT.S[key];if(!d.ok||!manual())return;if(sig(RT)!==d.sig){const was=d.pwr;d.ok=false;d.pwr=false;RT.dirty=true;
       if(was)BENCH.say('⚠ غيّرت التوصيل والمصدر شغّال: انطفى للسلامة، اطلب من المشرف يتأكد مرة ثانية');setTimeout(()=>RT.render(),0)}},
-  trip(I){const d=RT.S[key];if(d.pwr&&I>10){d.pwr=false;RT.dirty=true;BENCH.say('💥 فصل القاطع: تيار كبير (short circuit)');setTimeout(()=>RT.render(),0)}}}}
-const chkBtn=(x,y,ok,pfx)=>`<g data-k="${pfx}:CHK" style="cursor:pointer"><rect x="${x}" y="${y}" width="128" height="30" rx="8" fill="${ok?'#d6efe0':'#fff4dc'}" stroke="${ok?'#2c7a6b':'#c58a1a'}" stroke-width="1.6"/>`+T(x+64,y+19.5,ok?'✓ المشرف شيّك':'👨‍🏫 المشرف يتأكد',{size:11,a:'middle',w:700,fill:ok?'#1f5b50':'#7a5200'})+'</g>';
+  trip(I){const d=RT.S[key];if(d.pwr&&I>10){d.pwr=false;RT.dirty=true;BENCH.say('💥 فصل القاطع: تيار كبير (short circuit)');setTimeout(()=>RT.render(),0)}}};
+  (RT.locks=RT.locks||[]).push(L);return L}
 const rms=a=>{const m=a.reduce((s,v)=>s+v,0)/a.length;return Math.sqrt(a.reduce((s,v)=>s+(v-m)*(v-m),0)/a.length)};
 const post=(x,y,col,lab)=>`<circle cx="${x}" cy="${y}" r="11" fill="${col}" stroke="#111" stroke-width="2"/><circle cx="${x}" cy="${y}" r="4" fill="#555"/>`+(lab?T(x,y+24,lab,{size:9,a:'middle',w:700,fill:'#2f3128'}):'');
 /* source current of an XS element (for the breaker): from the solve */
@@ -41,7 +45,6 @@ ENGINE.mains=function(RT,opt){const KEY='ac',P='a',W=300,H=210,V=opt.v||127,F=60
     s+=T(22,34,`AC SOURCE · ${V} V ~ ${F} Hz`,{size:12,w:700,fill:'#2f3128'})+T(22,52,'Bench outlet (instructor controlled)',{size:9,fill:'#5c584d'});
     s+=`<rect x="24" y="70" width="70" height="104" rx="8" fill="#b9b4a6" stroke="#77736a"/><rect x="38" y="${d.pwr?82:122}" width="42" height="40" rx="5" fill="${d.pwr?'#e74c3c':'#5c5f60'}" stroke="#222" data-k="${P}:PWR" style="cursor:pointer"/>`+T(59,190,d.pwr?'ON':'OFF',{size:10,a:'middle',w:700,fill:d.pwr?'#b0281a':'#3b3f42'});
     s+=`<circle cx="120" cy="96" r="7" fill="${d.pwr?'#ff4433':'#6b3a3a'}"/>`+(d.pwr?`<circle cx="120" cy="96" r="13" fill="#ff4433" opacity=".25"/>`:'');
-    s+=chkBtn(150,64,d.ok,P);
     s+=post(J.N.x,J.N.y,'#1d1f20','N')+post(J.L.x,J.L.y,'#d43a2c','L')+T(205,128,'OUTPUT',{size:8,a:'middle',fill:'#5c584d'});return s}
   function keyFn(k){if(k==='PWR')L.power();if(k==='CHK')L.check()}
   return {key:KEY,prefix:P,size:[W,H],name:['AC source 127 V 60 Hz','مصدر التيار المتردد'],fresh,svg,keyFn,
@@ -64,8 +67,7 @@ ENGINE.variac=function(RT,opt){const KEY='ac',P='a',W=460,H=250,F=60,VMAX=24;con
     for(let i=0;i<=12;i++){const a=(i/12*270-135)*Math.PI/180;s+=`<line x1="${300+Math.sin(a)*28}" y1="${90-Math.cos(a)*28}" x2="${300+Math.sin(a)*33}" y2="${90-Math.cos(a)*33}" stroke="#3b372d" stroke-width="1" pointer-events="none"/>`;if(i%3===0)s+=T(300+Math.sin(a)*42,90-Math.cos(a)*42+3,String(i*2),{size:7.5,a:'middle',fill:'#3b372d'})}
     s+=T(300,134,'0 … 24 V ~',{size:8.5,a:'middle',fill:'#3b372d'});
     s+=post(J.N.x,J.N.y,'#2f5fd0','')+post(J.L.x,J.L.y,'#d43a2c','')+T(378,170,'VARIABLE OUTPUT',{size:8.5,a:'middle',w:700,fill:'#3b372d'});
-    s+=`<circle cx="62" cy="64" r="6" fill="${d.pwr?'#ff4433':'#6b3a3a'}"/>`;
-    s+=chkBtn(150,148,d.ok,P);return s}
+    s+=`<circle cx="62" cy="64" r="6" fill="${d.pwr?'#ff4433':'#6b3a3a'}"/>`;return s}
   function keyFn(k){const d=RT.S[KEY];if(k==='PWR')L.power();if(k==='CHK')L.check();if(k==='V+'||k==='V-'){d.v=clamp(Math.round((d.v+(k==='V+'?0.05:-0.05))*100)/100,0,VMAX);RT.dirty=true}}
   return {key:KEY,prefix:P,size:[W,H],name:['Variable AC supply','مصدر الجهد المتردد المتغيّر'],fresh,svg,keyFn,wheel:['V'],knobInfo:()=>'≈ '+RT.S[KEY].v.toFixed(2)+' V ~',
     leads:[{k:'acL',label:'~ OUT',from:J.L,banana:true,circuit:true,pol:'+',tray:'AC out (red)',jn:'VAR OUT'},{k:'acN',label:'~ OUT',from:J.N,banana:true,circuit:true,pol:'-',tray:'AC out (blue)',jn:'VAR OUT −'}],
@@ -84,7 +86,6 @@ ENGINE.xf3=function(RT,opt){const KEY='x3',P='x',W=360,H=320,F=60,VP=opt.vp||24,
     /* the Y symbol */const cx=150,cy=150;['a','b','c'].forEach((k,i)=>{const ang=-Math.PI/2+i*2*Math.PI/3;s+=`<line x1="${cx}" y1="${cy}" x2="${cx+Math.cos(ang)*58}" y2="${cy+Math.sin(ang)*58}" stroke="#2f3128" stroke-width="2"/>`+T(cx+Math.cos(ang)*72,cy+Math.sin(ang)*72+4,k,{size:12,a:'middle',w:700,fill:'#2f3128'})});
     s+=`<circle cx="${cx}" cy="${cy}" r="4" fill="#2f3128"/>`+T(cx+14,cy+16,'n',{size:12,w:700,fill:'#2f3128'});
     s+=`<circle cx="${W-52}" cy="118" r="6" fill="${d.pwr?'#ff4433':'#6b3a3a'}"/>`;
-    s+=chkBtn(W-158,190,d.ok,P);
     s+=post(J.a.x,J.a.y,'#1d1f20','a (L1)')+post(J.b.x,J.b.y,'#1d1f20','b (L2)')+post(J.c.x,J.c.y,'#1d1f20','c (L3)')+post(J.n.x,J.n.y,'#2f5fd0','n');return s}
   function keyFn(k){if(k==='PWR')L.power();if(k==='CHK')L.check()}
   return {key:KEY,prefix:P,size:[W,H],name:['Three-phase transformer','المحوّل ثلاثي الطور'],fresh,svg,keyFn,

@@ -98,7 +98,7 @@ setup(RT){
       {dev:'board',fig:F7,figCap:'Fig. 7',t:'4. ركّب Fig. 7 لـ coil 1: مخرج الـ variac، والأميتر M4 على التوالي (300mA → node 14، COM → node 15)، و bridging plug بين node 15 و node 16. الرجوع من node 23 للـ variac عن طريق node 22. والـ voltmeter M1 على المصدر.',
         lines:[{t:'bridging plug: node 15 ↔ node 16',wire:[15,16]},{t:'bridging plug: node 22 ↔ node 23',wire:[22,23]},{t:'VAR OUT (red) → node 14',lead:'acL',at:14},{t:'VAR OUT (blue) → node 22',lead:'acN',at:22},
           {t:'M4 300mA (red) → node 14',lead:'h4ma',at:14},{t:'M4 COM → node 15',lead:'h4c',at:15},{t:'M1 VΩ → node 14',lead:'h1v',at:14},{t:'M1 COM → node 22',lead:'h1c',at:22}],ok:s=>RT.instructor().ok&&s.uc},
-      {dev:'ac',t:'⚠ اضغط «المشرف يتأكد» على الـ variac: المشرف يشيّك التوصيل. بعدها شغّل الـ POWER.',ok:s=>s.on&&RT.S.ac.ok},
+      {dev:'ac',t:'⚠ اضغط «المشرف يتأكد من التوصيل» في هذي البطاقة: المشرف يشيّك التوصيل. بعدها شغّل الـ POWER.',ok:s=>s.on&&RT.S.ac.ok},
       {dev:'ac',t:'5. حوّل M1 على V~ و M4 على A~، واضبط الـ variac لين M1 يقرا 2.00 V. سجّل V و I واحسب Z<sub>1</sub> و X<sub>1</sub> و L<sub>1</sub>.',ok:s=>ST.va!=null},
       {dev:'board',t:'7. كرّر لـ coil 2: طفّ المصدر، انقل COM حق M4 لـ node 17 (A)، وشيل plug node 22 ↔ 23 وانقل الطرف الأزرق للـ variac لـ node 24 (B) مع COM حق M1. اطلب المشرف، شغّل، اضبط 2 V، وسجّل.',ok:s=>ST.vb!=null},
       {dev:'board',fig:F8,figCap:'Fig. 8',t:'Procedure II: رجّع توصيل coil 1 (M4 COM → node 15، plug 15 ↔ 16، plug 22 ↔ 23، الأزرق و M1 COM → node 22)، وحط M2 على V~ على coil 2 (node 17 ↔ node 24). عند 2 V سجّل V<sub>1</sub> و I<sub>1</sub> و V<sub>2</sub>.',

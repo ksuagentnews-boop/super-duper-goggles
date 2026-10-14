@@ -9,7 +9,7 @@ export async function run(page, vp, ok) {
   for (const [k, n] of [['acL', 1], ['acN', 10], ['w1i', 1], ['w1ic', 2], ['w1v', 1], ['w1vc', 10], ['h2ma', 2], ['h2c', 3], ['lpL', 3], ['lpN', 10], ['h1v', 1], ['h1c', 10], ['qa', 4], ['qb', 11]]) await H.lead(k, n);
   await H.place('BR', 10, 11); await H.place('BR', 3, 4); ok(await done(1), `Fig. 4 built ${JSON.stringify(await status())}`);
   await H.focus('ac'); await H.key('a:PWR'); ok(!(await done(2)), 'the source stays off until the instructor checks');
-  await H.key('a:CHK'); await H.key('a:PWR'); await H.focus('pw1'); await H.key('w1:PWR'); await H.focus('hm1'); await H.key('h1:SW-'); await H.focus('hm2'); await H.key('h2:SW+', 7);
+  await H.chk(); await H.focus('ac'); await H.key('a:PWR'); await H.focus('pw1'); await H.key('w1:PWR'); await H.focus('hm1'); await H.key('h1:SW-'); await H.focus('hm2'); await H.key('h2:SW+', 7);
   ok(await done(2), 'instructor checked, energized');
   const setC = async c => { await H.focus('cb'); const want = [0, 0, 0, Math.round(c * 10) % 10, Math.floor(c + 1e-9)]; const d = await page.evaluate(() => BENCH.sim.RT.S.cb.d.slice());
     for (let j = 0; j < 5; j++) while (d[j] !== want[j]) { await H.key(`q:D${j}${d[j] < want[j] ? '+' : '-'}`); d[j] += d[j] < want[j] ? 1 : -1; } };

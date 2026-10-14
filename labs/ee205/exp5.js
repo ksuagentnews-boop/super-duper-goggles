@@ -83,7 +83,7 @@ setup(RT){
         lines:[{t:'3φ a (L1) → node 0',lead:'x3a',at:0},{t:'3φ b (L2) → node 14',lead:'x3b',at:14},{t:'3φ c (L3) → node 28',lead:'x3c',at:28},
           {t:'M1 300mA → node 0',lead:'h1ma',at:0},{t:'M1 COM → node 4 (a)',lead:'h1c',at:4},{t:'M2 300mA → node 14',lead:'h2ma',at:14},{t:'M2 COM → node 18 (b)',lead:'h2c',at:18},{t:'M3 300mA → node 28',lead:'h3ma',at:28},{t:'M3 COM → node 32 (c)',lead:'h3c',at:32},
           {t:'M4 VΩ → node 0',lead:'h4v',at:0},{t:'M4 COM → node 14',lead:'h4c',at:14}],ok:s=>s.fig7},
-      {dev:'x3',t:'3. ⚠ اضغط «المشرف يتأكد» على المحوّل، وبعدين شغّل الـ supply. M1–M3 على A~، و M4 و M5 على V~.',ok:s=>s.fig7&&s.on},
+      {dev:'x3',t:'3. ⚠ اضغط «المشرف يتأكد من التوصيل» في هذي البطاقة، وبعدين شغّل الـ supply. M1–M3 على A~، و M4 و M5 على V~.',ok:s=>s.fig7&&s.on},
       {dev:'board',t:'4–5. سجّل قراءات الأميترات الثلاثة و V<sub>L</sub> و V<sub>P</sub> (M5: VΩ → node 4، COM → node 20).',ok:s=>ST.ia!=null},
       {dev:'x3',fig:F8,figCap:'Fig. 8',t:'Procedure II: طفّ المحوّل. الأميترات M2 و M3 والفولتميترات راحت من الطاولة: وصّل خط B مباشرة لـ b (node 18) وخط C لـ c (node 32). حط ملف التيار للـ PX 120 في الخط A (10A → node 0، COM → node 2) و M1 بعده (300mA → node 2، COM → node 4)، وملف الجهد من node 2 للـ n (node 20)، ووصّل n المحوّل بـ node 20.',
         lines:[{t:'3φ b (L2) → node 18 (b)',lead:'x3b',at:18},{t:'3φ c (L3) → node 32 (c)',lead:'x3c',at:32},{t:'W 10A → node 0',lead:'w1i',at:0},{t:'W COM (A) → node 2',lead:'w1ic',at:2},{t:'M1 300mA → node 2',lead:'h1ma',at:2},{t:'W 600V → node 2',lead:'w1v',at:2},{t:'W COM (V) → node 20 (n)',lead:'w1vc',at:20},{t:'3φ n → node 20',lead:'x3n',at:20}],ok:s=>s.fig8},
