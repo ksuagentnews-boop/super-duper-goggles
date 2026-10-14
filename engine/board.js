@@ -764,6 +764,43 @@ function trayDown(t,e){const S=RT.S;S.armA=null;if(t==='W'){S.wireMode=!S.wireMo
 function jackLines(steps){const seen=new Set();steps.forEach(st=>{if(!st.lines)return;const out=[];
   st.lines.forEach(L=>{if(L.jack)seen.add(L.jack);const g=L.lead&&LEADDEF[L.lead]?grpOf(L.lead):null;
     if(g&&!seen.has(g)){seen.add(g);out.push({altJack:L.alt?grpOf(L.alt):undefined,t:JKIND(g)==='banana'?`${KNAME(g)} → ${jackName(g)}`:`${KNAME(g)}: BNC → ${jackName(g)}`,note:'من «Coaxial cables & wires»'+(L.alt?` · أو ${jackName(grpOf(L.alt))}`:''),jack:g})}out.push(L)});st.lines=out});return steps}
+/* ---------- circuit equivalence (engine/match.js): figures are compared by circuit, never by node numbers ---------- */
+const TRAYLAB={};(def.tray||[]).forEach(([t,l])=>TRAYLAB[t]=l);
+const MATCH=ENGINE.matcher({PARTS,polar:t=>POLAR(t),leadDef:k=>LEADDEF[k],label:t=>TRAYLAB[t]||(PARTS[t]&&PARTS[t].lab)||t,
+  leadName:k=>LEADDEF[k]?(LEADDEF[k].jn?valOf(LEADDEF[k].jn):labelOf(k)):k,
+  bench:()=>{if(RT.dirty)recompute();const N=RT.netOf;return {
+    parts:RT.S.parts.filter(p=>PARTS[p.type]&&PARTS[p.type].t!=='BR').map(p=>{const d=PARTS[p.type];if(d.pins){const pins={};pinNodes(p).forEach((nd,k)=>{const q=d.pins[k],n=N(nd);pins[q.n]=n;if(q.role)pins[q.role]=n});return {id:p.id,type:p.type,pins}}return {id:p.id,type:p.type,ends:partNets(p)}}),
+    leadNet:k=>LEADDEF[k]?RT.leadNet(k):null,circuitLeads:()=>LEADS.filter(k=>LEADDEF[k].circuit),
+    /* the same instrument's lead of the same colour plugged in another jack (a meter's red lead in the wrong input) */
+    siblingAt:k=>{const d=LEADDEF[k];if(!d)return null;return LEADS.find(q=>q!==k&&LEADDEF[q].inst===d.inst&&LEADDEF[q].pol===d.pol&&!LEADDEF[q].earth&&RT.leadNet(q)!=null)||null}}}});
+/* a figure: def.figs[id] = {img, cap, lines}, or a step that still carries its own lines */
+const figOf=f=>typeof f==='string'?(def.figs||{})[f]:f;
+let MCACHE=new Map(),MTB=null;
+RT.match=f=>{const F=figOf(f);if(!F)return {ok:false,net:()=>null};if(RT.dirty)recompute();if(MTB!==RT.TB){MTB=RT.TB;MCACHE=new Map()}const key=typeof f==='string'?f:F;if(!MCACHE.has(key))MCACHE.set(key,MATCH.match(F));return MCACHE.get(key)};
+RT.hint=f=>{const F=figOf(f);return F?MATCH.hint(F):null};
+RT.figs=def.figs||{};
+/* «وصّل لي» (Batch 6 item 4): the figure built on the board, part by part, from its reference wiring (the standard lab layout):
+   the board is cleared (parts, wires, every clip off the board), then parts, plugs and wires, the ICs, then each lead
+   plugged into its instrument and clipped to its point. actions(fig) lists the steps; buildFig plays them. */
+function figActions(F){const acts=[];const lines=F.lines||[];
+  acts.push(()=>{const S=RT.S;S.parts=[];S.wires=[];S.pl.forEach(P=>P.clips.forEach(c=>{c.bn=c.bh=null}));S.sel=null;S.armed=null;S.armA=null;S.wireMode=false;syncLeads();circuitChanged()});
+  const hole=(n,pref)=>freeHole(n,pref);
+  lines.forEach(L=>{
+    if(L.part)acts.push(()=>{const [t,a,b]=L.part;if(BBG){const ha=hole(a),hb=hole(b);if(ha!=null&&hb!=null)RT.S.parts.push({id:RT.uid++,type:t,a,ha,b,hb})}else RT.S.parts.push({id:RT.uid++,type:t,a,b});circuitChanged()});
+    else if(L.wire)acts.push(()=>{const [a,b]=L.wire;if(BBG){const ha=hole(a),hb=hole(b);if(ha!=null&&hb!=null)RT.S.wires.push({id:RT.uid++,a,ha,b,hb})}
+      else{/* adjacent nodes take a bridging plug when the bench has them, else a wire */const br=Object.keys(PARTS).find(t=>PARTS[t].t==='BR');const adj=Math.abs(a-b)===1&&Math.floor(a/COLS)===Math.floor(b/COLS)||Math.abs(a-b)===COLS;
+        if(br&&adj)RT.S.parts.push({id:RT.uid++,type:br,a,b});else{const pr=[0,2,6,8,4,1,3,5,7];const ha=hole(a,pr),hb=hole(b,pr);if(ha!=null&&hb!=null)RT.S.wires.push({id:RT.uid++,a,b,ha,hb})}}circuitChanged()});
+    else if(L.ic)acts.push(()=>{const t=L.ic,d=PARTS[t];let n=null;for(let i=0;i<NN&&n==null;i++){if(!fits(t,i))continue;const pn=d.pins.map(q=>i+q.dy*COLS+q.dx);if(Object.entries(L.pins).every(([k,v])=>{const j=d.pins.findIndex(q=>q.n===k||q.role===k);return j>=0&&pn[j]===v}))n=i}
+      if(n!=null){RT.S.parts.push({id:RT.uid++,type:t,n});circuitChanged()}});
+    else if(L.stub!=null)acts.push(()=>{const have=RT.S.wires.filter(w=>w.b==null&&w.a===L.stub).length;for(let k=have;k<(L.n||1);k++){const h=hole(L.stub);if(h!=null)RT.S.wires.push({id:RT.uid++,a:L.stub,ha:h,b:null,hb:null})}circuitChanged()});
+    else if(L.lead)acts.push(()=>{const k=L.lead,g=grpOf(k);let id=plIn(g);if(id<0){id=leadFor(g);if(id<0)return;plug(id,g)}const j=GMEM[g].indexOf(k),c=RT.S.pl[id].clips[j];
+      if(BBG&&BBG.kind(L.at)!=='post'&&PL[id].kind!=='banana'){/* a hook goes on a free standing jumper of that group (one is added when none is free) */const occ=occupied();let w=RT.S.wires.find(w=>w.b==null&&w.a===L.at&&!occ.has(w.a+':j'+w.id));
+        if(!w){const h=hole(L.at);if(h==null)return;w={id:RT.uid++,a:L.at,ha:h,b:null,hb:null};RT.S.wires.push(w)}c.bn=w.a;c.bh='j'+w.id}
+      else{const h=hole(L.at);if(h!=null){c.bn=L.at;c.bh=h}}syncLeads();circuitChanged()})});
+  return acts}
+let BUILDING=null;
+RT.buildFig=(f,ms=110)=>new Promise(res=>{const F=figOf(f);if(!F){res(false);return}const acts=figActions(F);if(BUILDING)clearTimeout(BUILDING);
+  const run=i=>{if(i>=acts.length){BUILDING=null;render();res(true);return}acts[i]();render();BUILDING=ms?setTimeout(()=>run(i+1),ms):null;if(!ms)run(i+1)};run(0)});
 RT.lead={grpOf,trayName,jackName,PL,PNAME,jackAt:g=>jackAt(g),headPos:id=>headPos(id),clipPos:(id,j)=>clipPos(id,j),leadPos:k=>leadPos(k),leadFor:g=>leadFor(g),plIn:g=>plIn(g),
   sync:()=>syncLeads(),unplug:gs=>{gs.forEach(g=>{const i=plIn(g);if(i>=0)RT.S.pl[i].jack=null});syncLeads()}};
 const X=def.setup(RT);

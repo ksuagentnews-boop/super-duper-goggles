@@ -261,7 +261,7 @@ const BENCH={
       if(R.procOf()!==p&&R.setProc(p)!==false&&R.procOf()===p)return}}
     this.drawerSync();this.syncTouchMenu();if(!this.guided())return;
     const st=this.sim.status(),S=this.sim.steps;let just=-1;
-    for(let i=0;i<S.length;i++){if(this.done[i])continue;if(S[i].ok(st)){this.done[i]=true;just=i;
+    for(let i=0;i<S.length;i++){if(this.done[i])continue;if(this.stepOk(S[i],st)){this.done[i]=true;just=i;
         /* a build step that ticks with one of its lines not matching the board means the lines are wrong (tests read this) */
         if(S[i].lines){const miss=S[i].lines.filter(l=>!this.sim.lineDone(l)).map(l=>l.t);if(miss.length)this.lineLog.push({step:i+1,miss})}}else break}
     this.drawSteps();this.drawStepCard();
@@ -271,36 +271,61 @@ const BENCH={
     el.innerHTML=`<div class="sh"><b>خطوات التجربة</b><span dir="ltr">${n} / ${S.length}</span></div><div class="prog"><i style="width:${n/S.length*100}%"></i></div>`+
       S.map((s,i)=>(s.proc&&this.procs.length>1&&(i===0||S[i-1].proc!==s.proc)?`<div class="ph">Procedure ${s.proc}${((this.procs.find(p=>p.id===s.proc)||{}).title)?' · '+this.procs.find(p=>p.id===s.proc).title:''}</div>`:'')+`<div class="step ${this.done[i]?'done':i===c?'cur':'todo'}"><span class="m">${this.done[i]?'✓':i+1}</span><span class="x">${s.t}</span>${i===c?`<button class="eye" data-dev="${s.dev}">وريني</button>`:''}</div>`).join('');
     el.querySelectorAll('.eye').forEach(b=>b.onclick=()=>{this.focus(b.dataset.dev);if(BENCH.sheetOverlay())this.togglePanel(false)})},
-  /* step card: header, text, for build steps one connection per line (ticks itself, the current one glows on the
-     board), the manual figure beside it (tap → full screen); folded to one line by default on small screens */
+  /* ---- Batch 6: a step ticks from the live state; a build step («وصّل الدائرة Fig. X», step.build = figure id) when the
+     bench IS the figure's circuit (engine/match.js); in Manual a recording step (step.rec) when its captures are taken ---- */
+  stepKey(s){return (s.proc||'')+'|'+s.t},
+  capsOf(s){return this.caps[this.stepKey(s)]||(this.caps[this.stepKey(s)]=[])},
+  capsDone(s){const c=this.capsOf(s);return c.enough||c.length>=s.rec.length},
+  stepOk(s,st){if(s.skipped)return true;if(this.mode==='manual'&&s.rec)return this.capsDone(s)&&(!s.build||!this.sim.RT||!this.sim.RT.match||this.sim.RT.match(s.build).ok);let ok=s.ok?!!s.ok(st):true;
+    if(s.build&&this.sim.RT&&this.sim.RT.match)ok=ok&&this.sim.RT.match(s.build).ok;return ok},
+  /* Capture: the next target of the step — the scope screen into its figure box, or a reading into its table cell */
+  capture(s){const RT=this.sim.RT,c=this.capsOf(s),t=s.rec[c.length];if(!t){this.say('سجّلت كل المطلوب في هذي الخطوة');return}
+    if(t.scope){ENGINE.sheet.capture(RT,t.scope);const el=document.getElementById(t.scope);c.push({html:`<div class="capsc">${el?el.innerHTML:''}</div>`+(t.label?`<span>${t.label}</span>`:'')})}
+    else{const v=t.val?t.val():null;if(v==null||(typeof v==='number'&&!isFinite(v))){this.say(t.none||'ما فيه قراءة الحين: شغّل الجهاز ووصّله مثل المطلوب');return}
+      const txt=typeof v==='number'?(t.dec!=null?v.toFixed(t.dec):+v.toPrecision(4)+''):String(v);const el=t.to&&document.getElementById(t.to);if(el){el.value=typeof v==='number'?txt:v;el.classList.add('captured')}
+      c.push({html:`${t.label?`<span>${t.label}</span> `:''}<bdi dir="ltr">${t.txt?t.txt(v):txt}${t.unit?' '+t.unit:''}</bdi>`})}
+    this.say('📸 تسجيل '+c.length);const k=this.el.card;k.dataset.key='';this.onRender()},
+  /* the figure the current step works on: its own, or the last build step's before it (same procedure) */
+  figFor(i){const S=this.sim.steps;for(let j=i;j>=0;j--){if(S[j].build)return S[j].build;if(j<i&&S[j].proc!==S[i].proc)break}return null},
+  /* «تلميح»: what is wrong with the circuit (and where), or what the step still wants */
+  hintFor(i){const S=this.sim.steps,s=S[i],RT=this.sim.RT;this.helpers.hint++;const f=RT&&RT.hint?this.figFor(i):null;
+    const h=f?RT.hint(f):null;if(h){this.say('💡 '+h.msg);this.showSpot(h.at);return}
+    const m=typeof s.hint==='function'?s.hint(this.sim.status()):s.hint;if(m){this.say('💡 '+m);if(s.dev&&s.dev!=='board')this.focus(s.dev);return}
+    this.say(f?'💡 الدائرة صحيحة ✓ — باقي: '+(s.t||'').replace(/<[^>]+>/g,'').slice(0,90):'💡 '+(s.t||'').replace(/<[^>]+>/g,'').slice(0,110));if(s.dev&&s.dev!=='board'&&!s.build)this.focus(s.dev)},
+  showSpot(at){const sim=this.sim;if(!at||!sim.setGuide)return;const RT=sim.RT;let g=null;
+    if(at.lead)g={nodes:[],jacks:[at.lead],flash:true};
+    else if(at.part!=null||at.type){const p=RT.S.parts.find(q=>at.part!=null?q.id===at.part:q.type===at.type);if(p)g={nodes:p.n!=null?[p.n]:[p.a,p.b],jacks:[],flash:true}}
+    if(g){if(this.view!=='ov'&&this.view!=='board')this.back();setTimeout(()=>sim.setGuide(g),reduceMotion?0:300);clearTimeout(this._spot);this._spot=setTimeout(()=>sim.setGuide(null),4200)}},
+  /* step card: header, the manual's step text (its actions line by line), the figure under it for a build step, the
+     captures of a recording step (Manual), the helpers; folded to one line by default on small screens */
   drawStepCard(){const c=this.el.card;setTimeout(()=>this.labChip());if(!this.sim||!this.guided()){c.hidden=true;return}c.hidden=false;
-    const S=this.sim.steps,i=this.cur(),all=i>=S.length;const min=c.classList.contains('min');
-    const s=S[i],L=!all&&s.lines&&!this.sim.pc?s.lines:null;const done=L?L.map(l=>this.sim.lineDone(l)):[];const cur=L?done.indexOf(false):-1;
-    /* a build step is a tutorial: one connection per card (sub-step), «رجوع» shows the previous one; the card follows the
-       first connection not made yet, and moves on by itself when it is made */
-    const nd=done.filter(Boolean).length;if(!this._sub||this._sub.i!==i||this._sub.nd!==nd)this._sub={i,nd,j:null};
-    const sj=L?(this._sub.j!=null?this._sub.j:cur>=0?cur:L.length-1):-1;
-    if(this.sim.setGuide)this.sim.setGuide(L&&sj>=0&&!done[sj]?this.sim.lineSpots(L[sj]):null);
-    /* the instructor check of the mains sources (EE205): a button in the card, Manual only, while a source waits for it */
-    const LK=((this.sim.RT&&this.sim.RT.locks)||[]).filter(l=>this.sim.RT.S[l.key]),lkOk=LK.length&&LK.every(l=>l.isOk());
+    const S=this.sim.steps,i=this.cur(),all=i>=S.length;const min=c.classList.contains('min');const RT=this.sim.RT||{};const s=S[i];
+    /* the instructor check of the mains sources (EE205): a button in the card while a source waits for it */
+    const LK=((RT&&RT.locks)||[]).filter(l=>RT.S[l.key]),lkOk=LK.length&&LK.every(l=>l.isOk());
     const chk=!all&&LK.length&&(!lkOk||/المشرف/.test(s.t))?(lkOk?'<span class="chkok">✓ المشرف شيّك التوصيل</span>':'<button class="chk" id="scChk">👨‍🏫 المشرف يتأكد من التوصيل</button>'):'';
-    const key=this.built+'|'+all+'|'+i+'|'+this.view+'|'+done.join('')+'|'+min+'|'+sj+'|'+chk;if(c.dataset.key===key)return;c.dataset.key=key;
-    if(all){c.innerHTML=`<div class="num done">✓</div><div class="body"><div class="k">خلصت خطوات المانيوال 🎉</div><div class="t">كل الخطوات تمت. كمّل الـ sheet (الشاشات والقراءات والأسئلة) واضغط "صحّح" عشان تشوف درجتك.</div><div class="acts"><button class="go" id="scSheet">افتح الـ sheet</button></div></div>`;
-      BIDI.fix(c);c.querySelector('#scSheet').onclick=()=>{this.togglePanel(true);const r=$q('#submit');if(r)r.scrollIntoView({block:'center'})};return}
-    const here=this.view===(L?'board':s.dev)&&!this.sim.pc;const CN='①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮';
-    const lines=L?`<ol class="wl sub">${[sj].map(j=>{const l=L[j];return `<li class="${done[j]?'ok':'cur'}"><span class="n">${CN[j]||j+1}</span><span class="lt"><bdi dir="ltr">${l.t}</bdi>${l.note?` <span class="nt">(${l.note})</span>`:''}</span>${done[j]?'<span class="tk">✓</span>':''}</li>`}).join('')}</ol>`
-      +`<div class="subnav"><button id="scPrev" ${sj>0?'':'disabled'}>→ رجوع</button><span class="dots">${L.map((l,j)=>`<i class="${done[j]?'ok':''}${j===sj?' on':''}"></i>`).join('')}</span><span class="cnt">توصيلة ${sj+1} من ${L.length}</span>${this._sub.j!=null&&cur>=0&&sj!==cur?'<button id="scNext">التالي ←</button>':''}</div>`:'';
-    const fig=s.fig?`<div class="sfig"><img class="figimg" src="${s.fig}" alt="${s.figCap||'Figure'}"><span>🔍</span></div>`:'';
-    c.classList.toggle('has-lines',!!L);const h0=c.offsetHeight;
-    const PS=s.proc?S.filter(x=>x.proc===s.proc):S,pi=PS.indexOf(s)+1;
-    c.innerHTML=`<div class="num">${pi}</div><div class="body"><div class="k">${s.proc&&this.procs.length>1?`Procedure ${s.proc} · `:''}الخطوة ${pi} من ${PS.length}</div><div class="t">${s.t}</div>${lines}<div class="acts">${chk}<button class="go" id="scGo">وريني وين</button><button id="scAll">كل الخطوات</button></div></div>${fig}<button class="mini" id="scMin" aria-label="${min?'توسيع':'تصغير'}">${min?'▴':'▾'}</button><button class="mini" id="scHide" title="أخفِ الصفحة، خلّ المعمل بس" aria-label="أخفِ الصفحة">⟩</button>`;
-    BIDI.fix(c);{const wl=c.querySelector('.wl'),cl=wl&&wl.querySelector('li.cur');if(cl)wl.scrollTop=Math.max(0,cl.offsetTop-wl.offsetTop-30)}if(Math.abs(c.offsetHeight-h0)>8&&this.view)requestAnimationFrame(()=>this.refit(true));
-    const small=()=>innerHeight<=500||innerWidth<=600;
-    c.querySelector('#scGo').onclick=()=>{if(small()&&!c.classList.contains('min')){c.classList.add('min');c.dataset.key='';this.drawStepCard()}if(L){const ln=sj>=0&&(L[sj].lead||L[sj].jack);if(ln){if(this.view!=='ov')this.back()}else if(!here)this.focus('board');if(sj>=0)setTimeout(()=>this.sim.setGuide({...this.sim.lineSpots(L[sj]),flash:true}),reduceMotion?0:420)}else this.focus(s.dev)};
-    c.querySelector('#scAll').onclick=()=>this.togglePanel(true);
-    {const b=c.querySelector('#scChk');if(b)b.onclick=()=>{LK.filter(l=>!l.isOk()).forEach(l=>l.check());c.dataset.key='';this.sim.RT.render()}}
-    const pv=c.querySelector('#scPrev'),nx=c.querySelector('#scNext');if(pv)pv.onclick=()=>{this._sub.j=Math.max(0,sj-1);c.dataset.key='';this.drawStepCard()};
-    if(nx)nx.onclick=()=>{const j=sj+1;this._sub.j=j>=cur?null:j;c.dataset.key='';this.drawStepCard()};
+    const caps=!all&&s.rec&&this.mode==='manual'?this.capsOf(s):[];
+    const key=this.built+'|'+all+'|'+i+'|'+this.view+'|'+min+'|'+chk+'|'+caps.length+'|'+(this._skipAsk===i?1:0);if(c.dataset.key===key)return;c.dataset.key=key;
+    if(all){const man=this.mode==='manual';c.innerHTML=`<div class="num done">✓</div><div class="body"><div class="k">خلصت خطوات ${man?'المانيوال':'الاختبار'} 🎉</div><div class="t">${man?'كل الخطوات تمت، والـ sheet تعبّت من تسجيلاتك: افتحها واقراها.':'كل الخطوات تمت. كمّل الـ sheet (الشاشات والقراءات والأسئلة) واضغط "صحّح" عشان تشوف درجتك.'}</div><div class="acts"><button class="go" id="scSheet">افتح الـ sheet</button></div></div>`;
+      BIDI.fix(c);c.querySelector('#scSheet').onclick=()=>{this.togglePanel(true);const r=$q('#submit');if(r&&!man)r.scrollIntoView({block:'center'})};return}
+    if(this.sim.setGuide&&!this._spot)this.sim.setGuide(null);
+    const F=s.build&&RT.figs?RT.figs[s.build]:null,img=F?F.img:s.fig,cap=F?F.cap:s.figCap;
+    const acts=s.acts&&s.acts.length?`<ol class="sacts">${s.acts.map(a=>`<li>${a}</li>`).join('')}</ol>`:'';
+    const fig=img?`<div class="sfig in"><img class="figimg" src="${img}" alt="${cap||'Figure'}"><span>🔍</span>${cap?`<div class="fcap"><bdi dir="ltr">${cap}</bdi></div>`:''}</div>`:'';
+    const rec=s.rec&&this.mode==='manual'?`<div class="caps">${caps.map((q,j)=>`<div class="capi"><b>تسجيل ${j+1}</b>${q.html}</div>`).join('')}</div><div class="acts cap-acts"><button class="go" id="scCap">📸 Capture${s.rec.length>1?` (${Math.min(caps.length+1,s.rec.length)} من ${s.rec.length})`:''}</button>${caps.length&&caps.length<s.rec.length?'<button id="scEnough">اكتفِ بهذه التسجيلات وانتقل</button>':''}</div>`:'';
+    const ex=this.mode==='exam',cost=v=>ex?` <small>(−${v})</small>`:'';
+    const help=`<div class="acts help">${s.build?`<button id="scBuild">🔧 وصّل لي${cost(1)}</button>`:''}<button id="scHint">💡 تلميح${cost(0.5)}</button><button id="scSkip">${this._skipAsk===i?'⚠ متأكد؟ تخطّي':'⏭ تخطّي'+cost(1)}</button></div>`;
+    const h0=c.offsetHeight;const PS=s.proc?S.filter(x=>x.proc===s.proc):S,pi=PS.indexOf(s)+1;
+    c.innerHTML=`<div class="num">${pi}</div><div class="body"><div class="k">${s.proc&&this.procs.length>1?`Procedure ${s.proc} · `:''}الخطوة ${pi} من ${PS.length}</div><div class="t">${s.t}</div>${acts}${fig}${rec}<div class="acts">${chk}<button class="go" id="scGo">وريني وين</button><button id="scAll">كل الخطوات</button></div>${help}</div><button class="mini" id="scMin" aria-label="${min?'توسيع':'تصغير'}">${min?'▴':'▾'}</button><button class="mini" id="scHide" title="أخفِ الصفحة، خلّ المعمل بس" aria-label="أخفِ الصفحة">⟩</button>`;
+    BIDI.fix(c);if(Math.abs(c.offsetHeight-h0)>8&&this.view)requestAnimationFrame(()=>this.refit(true));
+    const small=()=>innerHeight<=500||innerWidth<=600;const on=(id,f)=>{const b=c.querySelector(id);if(b)b.onclick=f};
+    on('#scGo',()=>{if(small()&&!c.classList.contains('min')){c.classList.add('min');c.dataset.key='';this.drawStepCard()}this.focus(s.build?'board':s.dev)});
+    on('#scAll',()=>this.togglePanel(true));
+    on('#scChk',()=>{LK.filter(l=>!l.isOk()).forEach(l=>l.check());c.dataset.key='';RT.render()});
+    on('#scCap',()=>this.capture(s));on('#scEnough',()=>{this.capsOf(s).enough=true;c.dataset.key='';this.onRender()});
+    on('#scBuild',()=>{this.helpers.build++;this.say('🔧 «وصّل لي»: الدائرة تتركّب قدامك');if(this.view!=='board')this.focus('board');RT.buildFig(s.build).then(()=>{c.dataset.key='';this.onRender()})});
+    on('#scHint',()=>this.hintFor(i));
+    on('#scSkip',()=>{if(this._skipAsk!==i){this._skipAsk=i;c.dataset.key='';this.drawStepCard();clearTimeout(this._sk);this._sk=setTimeout(()=>{this._skipAsk=null;c.dataset.key='';this.drawStepCard()},3500);return}
+      this._skipAsk=null;this.helpers.skip++;s.skipped=true;this.say('⏭ تخطّيت الخطوة');c.dataset.key='';this.onRender()});
     c.querySelector('#scHide').onclick=()=>this.labOnly(true);
     c.querySelector('#scMin').onclick=()=>{c.classList.toggle('min');c.dataset.key='';this.drawStepCard();this.refit(true)}}
 };

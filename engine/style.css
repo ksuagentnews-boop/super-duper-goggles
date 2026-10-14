@@ -461,3 +461,16 @@ bdi{unicode-bidi:isolate}
 #stepCard .subnav .dots i.ok{background:var(--ok)}#stepCard .subnav .dots i.on{outline:2px solid var(--accent);outline-offset:1px}
 #stepCard .subnav .cnt{font-weight:600;color:var(--accent-ink,var(--accent))}
 #benchView.devzoom #stepCard .subnav{display:none}
+
+/* Batch 6: the step card — actions of one manual step, the figure under the text, captures, helpers */
+#stepCard .sacts{margin:4px 0 2px;padding-inline-start:20px;font-size:13px;line-height:1.5}#stepCard .sacts li{margin:1px 0}
+#stepCard .sfig.in{position:relative;margin:6px 0 2px;max-width:100%;background:#fff;border:1px solid var(--line);border-radius:8px;padding:4px;text-align:center;cursor:zoom-in}
+#stepCard .sfig.in img{max-width:100%;max-height:150px;object-fit:contain;display:block;margin:0 auto}#stepCard .sfig.in>span{position:absolute;top:4px;inset-inline-start:6px;font-size:12px;opacity:.7}
+#stepCard .sfig.in .fcap{font-size:11px;color:var(--muted)}
+#stepCard .caps{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}#stepCard .capi{background:#eef6f3;border:1px solid #cfe3dc;border-radius:8px;padding:3px 8px;font-size:12px;display:flex;gap:6px;align-items:center}
+#stepCard .capi .capsc{width:84px;height:68px;overflow:hidden;background:#111;border-radius:4px}#stepCard .capi .capsc svg{width:100%;height:100%}
+#stepCard .acts.help button{background:#f6f3ff;border-color:#d9d2f3}#stepCard .acts.help small{color:#8a5a00;font-weight:600}
+#stepCard.min .sacts,#stepCard.min .sfig.in,#stepCard.min .caps,#stepCard.min .acts.help{display:none}
+#stepCard.min .acts.cap-acts{display:flex}#stepCard.min .acts.cap-acts #scEnough{display:none}
+input.captured{background:#e7f5ee!important}
+#benchView[data-mode="manual"] .cap>button{display:none}
