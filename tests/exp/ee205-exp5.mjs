@@ -9,7 +9,18 @@ export async function run(page, vp, ok) {
   const off = async () => { if (await page.evaluate(() => BENCH.sim.RT.S.x3.pwr)) { await H.focus('x3'); await H.key('x:PWR'); } };
   await H.focus('board'); for (const [k, n] of [['r1a', 4], ['r1b', 20], ['r2a', 18], ['r2b', 20], ['r3a', 32], ['r3b', 20]]) await H.lead(k, n);
   ok(await done(1), 'I star load');
-  const setR = async i => { await H.focus('rh'); for (let k = 0; k < 40; k++) { const r = (await status()).r[i - 1]; if (r === 100) return; const d = 100 - r; await H.key(`r:${Math.abs(d) >= 10 ? 'T' : 'S'}${i}${d > 0 ? '+' : '-'}`); } };
+  /* set a rheostat to 100 Ω like a student: drag its slider along the rail, then the last ohms with the wheel (mouse) or the ◀ ▶ pad (touch) */
+  const setR = async i => { await H.focus('rh');
+    const sl = () => page.evaluate(i => { const e = document.querySelector(`#bench [data-k="slide:r:S${i}"]`); const r = e.getBoundingClientRect(); const m = document.getElementById('bench').getScreenCTM(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, k: m.d }; }, i);
+    for (let k = 0; k < 4; k++) { const r = (await status()).r[i - 1]; if (r === 100) break; const a = await sl(); const dy = (r - 100) * (310 / 330) * a.k;
+      if (H.touch) { const cdp = await page.context().newCDPSession(page); const T = (type, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: a.x, y }] }); await T('touchStart', a.y); for (let j = 1; j <= 6; j++) await T('touchMove', a.y + dy * j / 6); await T('touchEnd'); await cdp.detach(); }
+      else { await page.mouse.move(a.x, a.y); await page.mouse.down(); await page.mouse.move(a.x, a.y + dy, { steps: 6 }); await page.mouse.up(); }
+      await page.waitForTimeout(40); }
+    for (let k = 0; k < 12; k++) { const r = (await status()).r[i - 1]; if (r === 100) return; const a = await sl();
+      if (!H.touch) { await page.mouse.move(a.x, a.y); await page.mouse.wheel(0, r < 100 ? -100 : 100); }
+      else { await page.touchscreen.tap(a.x, a.y); await page.waitForTimeout(60); const b = await page.evaluate(d => { const e = document.querySelector(`#kpad:not([hidden]) .kb[data-d="${d}"]`); if (!e) return null; const q = e.getBoundingClientRect(); return [q.x + q.width / 2, q.y + q.height / 2]; }, r < 100 ? '+' : '-');
+        if (b) { await page.touchscreen.tap(b[0], b[1]); await page.evaluate(() => BENCH.sim.RT.closePad()); } }
+      await page.waitForTimeout(30); } };
   for (const [i, x] of [[1, 4], [2, 18], [3, 32]]) { await setR(i); await H.lead('h5v', x); await H.lead('h5c', 20); }
   ok(await done(2), `I rheostats at 100 Ω ${JSON.stringify(await status())}`);
   for (const [k, n] of [['x3a', 0], ['x3b', 14], ['x3c', 28], ['h1ma', 0], ['h1c', 4], ['h2ma', 14], ['h2c', 18], ['h3ma', 28], ['h3c', 32], ['h4v', 0], ['h4c', 14]]) await H.lead(k, n);

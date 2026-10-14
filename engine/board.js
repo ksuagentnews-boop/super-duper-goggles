@@ -576,6 +576,8 @@ svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;close
   if(S.armed&&(!el||el.dataset.k.startsWith('node:'))){placeArmed(p);return}
   if(!el){BENCH.panStart(e,()=>{const r=BENCH.regionAt(p);if(r&&r!==BENCH.view){BENCH.focus(r);return}if(S.sel){S.sel=null;render(true)}});return}
   const k=el.dataset.k;
+  /* a slider that follows the pointer along its rail (rheostats): the instrument's slideTo(name, point in its own coordinates) */
+  if(k.startsWith('slide:')){const base=k.slice(6),ins=byPrefix[base.split(':')[0]];if(ins&&ins.slideTo){drag={kind:'slide',ins,b:base.slice(base.indexOf(':')+1),x:p.x,y:p.y,sx:p.x,sy:p.y,active:true};svg.setPointerCapture(e.pointerId)}return}
   if(k.startsWith('mv:')){const ik=k.slice(3);if(TOP!==ik||LASTL!=null||LASTP!=null){TOP=ik;LASTL=LASTP=null;render()}drag={kind:'inst',key:ik,x:p.x,y:p.y,sx:p.x,sy:p.y,ox:POS[ik].x,oy:POS[ik].y,active:false};svg.setPointerCapture(e.pointerId);svg.classList.add('grabbing');BENCH.clearHover();return}
   if(k.startsWith('part:')){const id=+k.slice(5);LASTP=id;LASTL=null;const pr=S.parts.find(q=>q.id===id);drag={kind:'move',id,type:pr.type,x:p.x,y:p.y,sx:p.x,sy:p.y,active:false};svg.setPointerCapture(e.pointerId);return}
   if(k.startsWith('wire:')){S.sel=S.sel===+k.slice(5)?null:+k.slice(5);render(true);return}
@@ -601,11 +603,13 @@ svg.addEventListener('pointermove',e=>{if(press&&Math.hypot(e.clientX-press.x,e.
   const p=pt(e);drag.x=p.x;drag.y=p.y;if(!drag.active&&Math.hypot(p.x-drag.sx,p.y-drag.sy)>6){drag.active=true;if(drag.kind==='move')RT.S.sel=null}
   /* the head snaps into the nearest compatible free jack as it comes close */
   if(drag.active&&drag.kind==='head'){let best=null,bd=56;GROUPS.forEach(g=>{if(!fitsJ(drag.id,g)||!(jackFree(g)||plIn(g)===drag.id))return;const a=jackAt(g),d=Math.hypot(p.x-a.x,p.y-a.y);if(d<bd){bd=d;best=g}});drag.snap=best}
+  if(drag.kind==='slide'){const P=POS[drag.ins.key];if(drag.ins.slideTo(drag.b,{x:p.x-P.x,y:p.y-P.y})!==false)render();return}
   if(drag.kind==='knob'){const dx=e.clientX-drag.sx,dy=e.clientY-drag.sy;if(!drag.active&&Math.hypot(dx,dy)>8){drag.active=true;stopRep()}
     if(drag.active){const d=Math.abs(dx)>=Math.abs(dy)?dx:-dy,n=Math.trunc(d/14)-drag.acc;if(n){const ins=byPrefix[drag.base.split(':')[0]],b=drag.base.slice(drag.base.indexOf(':')+1);
       for(let i=0;i<Math.abs(n);i++)ins.keyFn(b+(n>0?'+':'-'));drag.acc+=n;tick(drag.base);render()}}return}
   if(drag.active&&drag.kind==='inst'){moveInst(drag.key,drag.ox+p.x-drag.sx,drag.oy+p.y-drag.sy);return}if(drag.active)render(true)});
 function endDrag(){stopRep();if(press){clearTimeout(press.t);press=null}const S=RT.S;if(!drag)return;if(drag.fromTray&&Math.hypot(drag.x-drag.sx,drag.y-drag.sy)<8){S.armed=drag.type;drag=null;BENCH.drawerSync();render(true);return}const d=drag;drag=null;svg.classList.remove('grabbing');
+  if(d.kind==='slide')return;
   if(d.kind==='knob'){if(!d.active&&d.tap){KPAD=KPAD===d.base?null:d.base;render(true)}return}
   if(d.kind==='inst'){showHL(null);if(d.active){settle(d.key);savePos();BENCH.layoutChanged(false,d.key)}return}
   if(d.kind==='new'||d.kind==='move'){
