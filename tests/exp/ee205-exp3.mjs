@@ -1,7 +1,7 @@
 import { sit, bench } from '../lib.mjs';
 /* EE205 Exp 3: Thevenin (Fig. 6a/6b) and maximum power transfer (Fig. 7, Table 1), full-marks grading */
 export async function run(page, vp, ok) {
-  await sit(page, 'ee205/exp3', 'manual');
+  await sit(page, 'ee205/exp3', 'exam');
   const H = bench(page); H.touch = vp !== 'desktop';
   const st = () => page.evaluate(() => BENCH.sim.status().ST);
   const done = async n => (await H.steps()).done >= n;

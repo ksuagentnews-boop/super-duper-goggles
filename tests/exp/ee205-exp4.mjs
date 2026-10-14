@@ -1,7 +1,7 @@
 import { sit, bench } from '../lib.mjs';
 /* EE205 Exp 4: power factor improvement of the fluorescent lamp with the capacitor box (instructor check), full marks */
 export async function run(page, vp, ok) {
-  await sit(page, 'ee205/exp4', 'manual');
+  await sit(page, 'ee205/exp4', 'exam');
   const H = bench(page); H.touch = vp !== 'desktop';
   const status = () => page.evaluate(() => { const s = BENCH.sim.status(); return { ST: s.ST, fig4: s.fig4, on: s.on, C: s.C }; });
   const done = async n => (await H.steps()).done >= n;

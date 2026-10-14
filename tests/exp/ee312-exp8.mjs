@@ -1,7 +1,7 @@
 import { sit, bench } from '../lib.mjs';
 import { pcDriver } from '../pc.mjs';
 export async function run(page, vp, ok) {
-  await sit(page, 'ee312/exp8', 'manual');
+  await sit(page, 'ee312/exp8', 'exam');
   const H = bench(page); const P = pcDriver(page, vp === 'phone');
   const done = async n => (await H.steps()).done >= n;
   const V = () => P.view(-3, -6, vp === 'phone' ? 0.3 : 0.8);

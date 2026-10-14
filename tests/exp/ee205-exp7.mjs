@@ -1,7 +1,7 @@
 import { sit, bench } from '../lib.mjs';
 /* EE205 Exp 7: coupled coils on the U-core from the variable ac supply (instructor check), full-marks grading */
 export async function run(page, vp, ok) {
-  await sit(page, 'ee205/exp7', 'manual');
+  await sit(page, 'ee205/exp7', 'exam');
   const H = bench(page); H.touch = vp !== 'desktop';
   const status = () => page.evaluate(() => { const s = BENCH.sim.status(); return { ST: s.ST, Vs: s.Vs, on: s.on }; });
   const done = async n => (await H.steps()).done >= n;

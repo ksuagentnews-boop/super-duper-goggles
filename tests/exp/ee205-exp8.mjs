@@ -1,7 +1,7 @@
 import { sit, bench } from '../lib.mjs';
 /* EE205 Exp 8: series / parallel RLC at 1 kHz, series and parallel resonance sweeps, full-marks grading */
 export async function run(page, vp, ok) {
-  await sit(page, 'ee205/exp8', 'manual');
+  await sit(page, 'ee205/exp8', 'exam');
   const H = bench(page); H.touch = vp !== 'desktop';
   const status = () => page.evaluate(() => { const s = BENCH.sim.status(); return { ST: s.ST, v: s.v }; });
   const done = async n => (await H.steps()).done >= n;

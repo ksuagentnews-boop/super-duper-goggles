@@ -1,7 +1,7 @@
 import { sit, bench } from '../lib.mjs';
 import { pcDriver } from '../pc.mjs';
 export async function run(page, vp, ok) {
-  await sit(page, 'ee312/exp6', 'manual');
+  await sit(page, 'ee312/exp6', 'exam');
   const H = bench(page); const P = pcDriver(page, vp === 'phone');
   const done = async n => (await H.steps()).done >= n;
   await P.act('new'); ok(await done(1), 'A1 New Schematic');

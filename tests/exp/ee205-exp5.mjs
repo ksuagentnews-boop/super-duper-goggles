@@ -1,7 +1,7 @@
 import { sit, bench } from '../lib.mjs';
 /* EE205 Exp 5: balanced Y load on the three-phase transformer, single wattmeter, the 3Φ key; full-marks grading */
 export async function run(page, vp, ok) {
-  await sit(page, 'ee205/exp5', 'manual');
+  await sit(page, 'ee205/exp5', 'exam');
   const H = bench(page); H.touch = vp !== 'desktop';
   const status = () => page.evaluate(() => { const s = BENCH.sim.status(); return { ST: s.ST, r: s.r, on: s.on, star: s.star, fig7: s.fig7, fig8: s.fig8, fig9: s.fig9 }; });
   const done = async n => (await H.steps()).done >= n;

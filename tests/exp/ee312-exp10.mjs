@@ -1,7 +1,7 @@
 import { sit, bench } from '../lib.mjs';
 import { measureText } from './ee312-exp3.mjs';
 export async function run(page, vp, ok) {
-  await sit(page, 'ee312/exp10', 'manual');
+  await sit(page, 'ee312/exp10', 'exam');
   const H = bench(page); H.touch = vp === 'phone';
   const done = async n => (await H.steps()).done >= n;
   const rd = (k = 0) => page.evaluate(k => BENCH.sim.RT.meters()[k].r.val, k);

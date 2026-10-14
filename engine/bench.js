@@ -1,9 +1,14 @@
 /* ======================= BENCH SHELL =======================
    Seated view of one table: overview of the instruments, tap a device to zoom on it, parts bag, live step checker.
-   Two modes: 'manual' (follows the lab manual step by step, live checks, manual sheet graded at the end)
+   Three modes (Batch 6): 'manual' (follows the lab manual step by step, live checks, readings recorded by «Capture», no grading),
+   'exam' (the same steps; the student types the readings and answers, graded; the helpers cost marks) and
    and 'free' (same table and instruments, no steps and no checks). */
 const BENCH={
-  view:'ov',mode:'manual',paint:null,lineLog:[],exp:null,sim:null,done:[],drawer:false,vb:null,anim:0,built:null,
+  view:'ov',mode:'manual',lastGuided:'manual',helpers:{build:0,hint:0,skip:0},
+  /* Manual and Exam both follow the steps; Free has none */
+  guided(){return this.mode!=='free'},
+  /* Exam: the score is out of the experiment's graded steps (the steps that record something), else def.marks / 10 */
+  marks(){const d=EXP_DEFS[this.exp]||{};if(d.marks)return d.marks;const n=((this.sim&&this.sim.steps)||[]).filter(s=>s.rec).length;return n||10},paint:null,lineLog:[],exp:null,sim:null,done:[],drawer:false,vb:null,anim:0,built:null,
   el:{},
   init(){
     const E=this.el={view:$q('#benchView'),stage:$q('#bstage'),svgHost:$q('#svgHost'),paperHost:$q('#paperHost'),zoomUI:$q('#zoomUI'),zEn:$q('#zEn'),zAr:$q('#zAr'),
@@ -15,7 +20,7 @@ const BENCH={
     $q('#bPanelClose').onclick=()=>this.togglePanel(false);
     $q('#bLabOnly').onclick=()=>this.labOnly(true);$q('#labShow').onclick=()=>this.labOnly(false);
     $q('#bReset').onclick=()=>{this.sim.reset();this.done=[];this.sim.render();this.say('بدأت من جديد')};
-    $q('#bSwitch').onclick=()=>{this.enter(this.exp,this.mode==='free'?'manual':'free',true)};
+    $q('#bSwitch').onclick=()=>{this.enter(this.exp,this.mode==='free'?this.lastGuided:'free',true)};
     /* paint bucket: open → pick a swatch → tap wires; ✕ or the bucket again leaves the mode */
     $q('#pBucket').onclick=()=>this.setPaint(this.paint===null?(this.lastPaint||'red'):null);
     $q('#pSw').querySelectorAll('button').forEach(b=>b.onclick=()=>this.setPaint(b.dataset.c==='x'?null:b.dataset.c));
@@ -45,13 +50,13 @@ const BENCH={
     v.classList.toggle('lab-only',on);if(on)v.classList.remove('panel-open');if(!this.sheetOverlay())v.classList.toggle('panel-closed',on);
     this.labChip();if(!quiet){this.refit(false);setTimeout(()=>this.refit(false),320)}},
   labChip(){const b=$q('#labShow'),t=$q('#labShowT'),on=this.el.view.classList.contains('lab-only');b.hidden=!on||!this.sim||!!this.sim.pc&&this.mode!=='manual';if(!on||!this.sim)return;
-    if(this.mode==='manual'&&this.sim.steps){const i=this.cur(),n=this.sim.steps.length,k=this.el.card.querySelector('.num');t.textContent=i>=n?'خلصت الخطوات':`الخطوة ${k?k.textContent:i+1}`}else t.textContent='المانيوال'},
+    if(this.guided()&&this.sim.steps){const i=this.cur(),n=this.sim.steps.length,k=this.el.card.querySelector('.num');t.textContent=i>=n?'خلصت الخطوات':`الخطوة ${k?k.textContent:i+1}`}else t.textContent='المانيوال'},
   /* exp = registry id, e.g. 'ee312/exp3'; the experiment file is loaded on first use */
   enter(exp,mode,force){
     const E=this.el;E.view.hidden=false;HALL.pause();
     if(!force&&this.built===exp+'|'+mode){this.refit(false);return}
     if(!EXP_DEFS[exp]){REGISTRY.load(exp).then(()=>this.enter(exp,mode,true)).catch(()=>{this.say('تعذّر تحميل التجربة');this.leave()});return}
-    this.exp=exp;this.mode=mode;this.built=exp+'|'+mode;this.lineLog=[];STATS.start(exp,mode);this.view='ov';this.setUser(false);this.done=[];this.sim=null;this.setMove(false);this.devZoom();
+    this.exp=exp;this.mode=mode;if(mode!=='free')this.lastGuided=mode;this.helpers={build:0,hint:0,skip:0};this.caps={};this.built=exp+'|'+mode;this.lineLog=[];STATS.start(exp,mode);this.view='ov';this.setUser(false);this.done=[];this.sim=null;this.setMove(false);this.devZoom();
     E.view.dataset.mode=mode;
     /* the parts box stays open next to the board (its arrow collapses it); none on PC tables or benches without parts */
     const hasBag=!EXP_DEFS[exp].pc&&!!(EXP_DEFS[exp].tray&&EXP_DEFS[exp].tray.length);E.view.classList.toggle('no-wires',!(EXP_DEFS[exp].tray||[]).some(t=>t[0]==='W'||(EXP_DEFS[exp].parts[t[0]]||{}).t==='BR'));this.setPaint(null,true);E.view.classList.toggle('no-bag',!hasBag);/* portrait phones: the box starts folded (its arrow opens it) so the desk keeps the width */const bagOpen=hasBag&&innerWidth>=520;this.drawer=bagOpen;E.view.classList.toggle('drawer-open',bagOpen);$q('#dClose').textContent=bagOpen?'◂':'▸';
@@ -59,8 +64,10 @@ const BENCH={
     if(!PC)E.svgHost.appendChild(document.getElementById('tpl-svg').content.cloneNode(true));
     E.paperHost.innerHTML=EXP_DEFS[exp].sheet;
     const X=REGISTRY.exp(exp);$q('#bTitle').textContent=X.lab.code+' · تجربة '+X.num;$q('#bSub').textContent=X.en;
-    const chip=$q('#bChip');chip.textContent=mode==='free'?'الطور الحر':'المانيوال';chip.classList.toggle('exam',mode==='free');
-    $q('#bSwitch').textContent=mode==='free'?'بدّل للمانيوال':'بدّل للحر';
+    const chip=$q('#bChip');chip.textContent={free:'الطور الحر',exam:'الاختبار',manual:'المانيوال'}[mode];chip.classList.toggle('exam',mode==='free');chip.classList.toggle('test',mode==='exam');
+    $q('#bSwitch').textContent=mode==='free'?(this.lastGuided==='exam'?'بدّل للاختبار':'بدّل للمانيوال'):'بدّل للحر';
+    /* Manual: the sheet fills itself from the captures (read-only, no grading); Exam: the student types and it is graded */
+    if(mode==='manual')E.paperHost.querySelectorAll('input,select,textarea').forEach(i=>{if(i.tagName==='SELECT')i.disabled=true;else i.readOnly=true;i.classList.add('capin')});
     this.svg=PC?null:document.getElementById('bench');this.hl=PC?{innerHTML:''}:document.getElementById('Lhl');
     if(!PC){this.svg.addEventListener('pointermove',e=>this.hover(e));this.svg.addEventListener('pointerleave',()=>{if(this.view==='ov')this.hl.innerHTML=''})}
     this._bagShown=false;
@@ -129,12 +136,12 @@ const BENCH={
   tools(){const t=$q('#benchView .btools');if(!t||this.el.view.classList.contains('devzoom')||(this.sim&&this.sim.pc)||getComputedStyle(t).display==='none')return {right:0,top:0};
     const tall=this.el.view.classList.contains('tall'),r=t.getBoundingClientRect();return tall?{right:0,top:r.height+10}:{right:r.width+10,top:0}},
   pads(){const T=this.tools();let top=this.view==='ov'?8:this.el.view.classList.contains('devzoom')?(this.stageSize().H<520?40:56):60;top=Math.max(top,T.top);let bottom=8;
-    if(this.mode==='manual'&&!this.el.card.hidden)bottom+=this.el.card.offsetHeight+8;
+    if(this.guided()&&!this.el.card.hidden)bottom+=this.el.card.offsetHeight+8;
     const left=this.el.view.classList.contains('no-bag')||this.el.view.classList.contains('devzoom')?0:this.el.drawer.offsetWidth+8;
     return {top,bottom,left,right:T.right}},
   /* free area of the overview in px (used by the layout search before anything is drawn) */
   availArea(){const {W,H}=this.stageSize();const small=innerHeight<=500||innerWidth<=600;const bag=!this.el.view.classList.contains('no-bag');
-    const left=bag?(this.drawer?(small?104:136)+(matchMedia('(pointer:coarse)').matches?12:0):42):0;const card=this.mode==='manual'&&!this.el.view.classList.contains('lab-only')?(small?64:150):0;const tall=H>W*1.1,tr=tall?0:(small?70:96),tt=tall?52:0;return {W:Math.max(200,W-left-16-tr),H:Math.max(150,H-16-card-tt)}},
+    const left=bag?(this.drawer?(small?104:136)+(matchMedia('(pointer:coarse)').matches?12:0):42):0;const card=this.guided()&&!this.el.view.classList.contains('lab-only')?(small?64:150):0;const tall=H>W*1.1,tr=tall?0:(small?70:96),tt=tall?52:0;return {W:Math.max(200,W-left-16-tr),H:Math.max(150,H-16-card-tt)}},
   fit(r){const {W,H}=this.stageSize();if(!W||!H)return null;const {top,bottom,left,right}=this.pads();const m=Math.min(12,W*0.015);
     /* ≈4 % margin around what is on the desk */
     const mg=this.el.view.classList.contains('devzoom')?0:0.02,mx=r[2]*mg,my=r[3]*mg;r=[r[0]-mx,r[1]-my,r[2]+2*mx,r[3]+2*my];
@@ -226,7 +233,7 @@ const BENCH={
     ph.querySelectorAll('table,li.plq').forEach(e=>{if(e.dataset.proc||e.closest('[data-proc]'))return;const t=(e.tagName==='TABLE'?(e.caption?e.caption.textContent:''):e.textContent.trim().slice(0,24))||'';
       const m=(e.tagName==='TABLE'?/\bProcedure\s+([IVX]+|[A-Z])\b/:/^Procedure\s+([IVX]+|[A-Z])\b/).exec(t);if(m&&ids.includes(m[1]))e.dataset.proc=m[1]});
     this.procs=ids.map(id=>({id,title:((def.procs||[]).find(p=>p.id===id)||{}).title||''}));this.rawSteps=raw;this.procSel=new Set(ids);this.applyProcs();
-    const pp=$q('#procPick');pp.hidden=true;if(this.mode==='manual'&&ids.length>1)this.showProcPick()},
+    const pp=$q('#procPick');pp.hidden=true;if(this.guided()&&ids.length>1)this.showProcPick()},
   applyProcs(){const sim=this.sim,sel=this.procSel;const keep=this.rawSteps.filter(s=>!s.proc||sel.has(s.proc)).map(s=>({...s,lines:s.lines&&s.lines.slice()}));
     sim.steps=sim.prep?sim.prep(keep):keep;this.done=[];
     this.el.paperHost.querySelectorAll('[data-proc]').forEach(e=>e.classList.toggle('proc-off',!sel.has(e.dataset.proc)))},
@@ -250,9 +257,9 @@ const BENCH={
     el.hidden=false},
   onRender(){if(!this.sim)return;
     /* per-procedure instruments: the current step's procedure decides what stands on the table (Free mode: everything) */
-    {const R=this.sim.RT;if(R&&R.setProc){const S=this.sim.steps||[];const s=this.mode==='manual'&&S.length?S[Math.min(this.cur(),S.length-1)]:null;const p=s&&s.proc||null;
+    {const R=this.sim.RT;if(R&&R.setProc){const S=this.sim.steps||[];const s=this.guided()&&S.length?S[Math.min(this.cur(),S.length-1)]:null;const p=s&&s.proc||null;
       if(R.procOf()!==p&&R.setProc(p)!==false&&R.procOf()===p)return}}
-    this.drawerSync();this.syncTouchMenu();if(this.mode!=='manual')return;
+    this.drawerSync();this.syncTouchMenu();if(!this.guided())return;
     const st=this.sim.status(),S=this.sim.steps;let just=-1;
     for(let i=0;i<S.length;i++){if(this.done[i])continue;if(S[i].ok(st)){this.done[i]=true;just=i;
         /* a build step that ticks with one of its lines not matching the board means the lines are wrong (tests read this) */
@@ -266,7 +273,7 @@ const BENCH={
     el.querySelectorAll('.eye').forEach(b=>b.onclick=()=>{this.focus(b.dataset.dev);if(BENCH.sheetOverlay())this.togglePanel(false)})},
   /* step card: header, text, for build steps one connection per line (ticks itself, the current one glows on the
      board), the manual figure beside it (tap → full screen); folded to one line by default on small screens */
-  drawStepCard(){const c=this.el.card;setTimeout(()=>this.labChip());if(!this.sim||this.mode!=='manual'){c.hidden=true;return}c.hidden=false;
+  drawStepCard(){const c=this.el.card;setTimeout(()=>this.labChip());if(!this.sim||!this.guided()){c.hidden=true;return}c.hidden=false;
     const S=this.sim.steps,i=this.cur(),all=i>=S.length;const min=c.classList.contains('min');
     const s=S[i],L=!all&&s.lines&&!this.sim.pc?s.lines:null;const done=L?L.map(l=>this.sim.lineDone(l)):[];const cur=L?done.indexOf(false):-1;
     /* a build step is a tutorial: one connection per card (sub-step), «رجوع» shows the previous one; the card follows the

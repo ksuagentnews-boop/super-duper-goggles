@@ -4,7 +4,7 @@ export async function measureText(page, label) {
     const m = t.match(/(-?[\d.]+)(mV|V)$/); return m ? +m[1] * (m[2] === 'mV' ? 1e-3 : 1) : null; }, label);
 }
 export async function run(page, vp, ok) {
-  await sit(page, 'ee312/exp3', 'manual');
+  await sit(page, 'ee312/exp3', 'exam');
   const H = bench(page); H.touch = vp === 'phone';
   const done = async n => (await H.steps()).done >= n;
   { // one kind of coax cable, like the lab: every coax lead fits every free BNC (scope CH1–CH4 and the generator OUT)

@@ -2,7 +2,7 @@ import { sit, bench } from '../lib.mjs';
 const REV = [25, 20, 15, 10, 7, 5, 4, 3], FWD = [0.3, 0.4, 0.5, 0.55, 0.6, 0.65, 0.75, 1.7, 10.7, 20.7];
 const key = (t, b, v) => `${t}_${b}_${String(v).replace('.', 'p')}`;
 export async function run(page, vp, ok) {
-  await sit(page, 'ee312/exp2', 'manual');
+  await sit(page, 'ee312/exp2', 'exam');
   const H = bench(page); H.touch = vp === 'phone';
   const rd = (k = 0) => page.evaluate(k => BENCH.sim.RT.meters()[k].r.val, k);
   const done = async n => (await H.steps()).done >= n;

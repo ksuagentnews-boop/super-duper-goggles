@@ -1,7 +1,7 @@
 import { sit, bench } from '../lib.mjs';
 /* EE205 Exp 6: RC charging / discharging and RLC damping on the Hameg, full-marks grading */
 export async function run(page, vp, ok) {
-  await sit(page, 'ee205/exp6', 'manual');
+  await sit(page, 'ee205/exp6', 'exam');
   const H = bench(page); H.touch = vp !== 'desktop';
   const status = () => page.evaluate(() => { const s = BENCH.sim.status(); return { ST: s.ST, os: s.os, tr: s.tr, box: s.box }; });
   const done = async n => (await H.steps()).done >= n;

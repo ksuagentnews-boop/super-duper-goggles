@@ -1,7 +1,7 @@
 import { sit, bench } from '../lib.mjs';
 /* EE205 Exp 2: full Manual run (Procedures I–III) on the Hameg / Metrix / Fluke and full-marks grading */
 export async function run(page, vp, ok) {
-  await sit(page, 'ee205/exp2', 'manual');
+  await sit(page, 'ee205/exp2', 'exam');
   const H = bench(page); H.touch = vp !== 'desktop';
   const st = () => page.evaluate(() => BENCH.sim.status().ST);
   const done = async n => (await H.steps()).done >= n;

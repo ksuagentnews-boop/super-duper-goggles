@@ -19,7 +19,7 @@ function sig(RT){const S=RT.S;const meterV=new Set();const L=S.leads;
   return JSON.stringify([S.parts.map(p=>[p.type,p.a,p.b,p.n]),S.wires.map(w=>[w.a,w.b]),Object.keys(S.leads).filter(k=>!meterV.has(k)).map(k=>[k,S.leads[k].node])])}
 /* Manual mode only: in Free mode there is no instructor at the table and the source switches freely (the breaker still trips).
    The «المشرف يتأكد من التوصيل» button lives in the Manual step card (bench.js reads RT.locks), not on the instrument. */
-const manual=()=>typeof BENCH!=='undefined'&&BENCH.mode==='manual';
+const manual=()=>typeof BENCH!=='undefined'&&BENCH.mode!=='free';   // Manual and Exam: the instructor checks
 function lock(RT,key,name){const L={
   key,name,isOk:()=>!!(RT.S[key]&&RT.S[key].ok),
   check(){const d=RT.S[key];if(d.ok){BENCH.say('المشرف شيّك قبل، تقدر تشغّل');return}

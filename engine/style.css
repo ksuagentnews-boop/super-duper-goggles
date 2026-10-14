@@ -82,7 +82,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .tb:hover{border-color:var(--accent)}
 .tb.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .mchip{font-size:12.5px;font-weight:600;border-radius:999px;padding:4px 10px;background:var(--accent-soft);color:var(--accent-ink);white-space:nowrap}
-.mchip.exam{background:#fbe9d0;color:#7a4a0c}
+.mchip.exam{background:#fbe9d0;color:#7a4a0c}.mchip.test{background:#e4e3fb;color:#3b2f8a}
+#benchView[data-mode="manual"] #submit,#benchView[data-mode="manual"] #result{display:none}.capin{background:#f4f7f6}
 .bmain{flex:1;min-height:0;display:flex;direction:rtl;position:relative}
 #bpanel{width:400px;flex:none;background:var(--panel);border-inline-start:1px solid var(--line);overflow:auto;direction:rtl}
 #bpanel{position:relative;transition:width .28s ease,opacity .2s}

@@ -4,7 +4,7 @@ import { measureText } from './ee312-exp3.mjs';
    the µA741 across the channel, parts and jumpers hole to hole, mini-grabber hooks on standing jumpers. Full Manual run
    with full-marks grading. Every connection is made through the UI, as a student would. */
 export async function run(page, vp, ok) {
-  await sit(page, 'ee312/exp5', 'manual');
+  await sit(page, 'ee312/exp5', 'exam');
   const H = bench(page); H.touch = vp !== 'desktop';
   const done = async n => (await H.steps()).done >= n;
   const cap = id => page.evaluate(id => document.querySelector(`[data-cap="${id}"]`).click(), id);

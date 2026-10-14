@@ -1,7 +1,7 @@
 import { sit, bench } from '../lib.mjs';
 const VO = [4.9, 4.5, 3.5, 3.4, 2, 1, 0.5, 0.2, 0.1];
 export async function run(page, vp, ok) {
-  await sit(page, 'ee312/exp9', 'manual');
+  await sit(page, 'ee312/exp9', 'exam');
   const H = bench(page); H.touch = vp === 'phone';
   const done = async n => (await H.steps()).done >= n;
   const rd = (k = 0) => page.evaluate(k => BENCH.sim.RT.meters()[k].r.val, k);

@@ -1,6 +1,6 @@
 import { sit, bench } from '../lib.mjs';
 export async function run(page, vp, ok) {
-  await sit(page, 'ee312/exp1', 'manual');
+  await sit(page, 'ee312/exp1', 'exam');
   const H = bench(page); H.touch = vp === 'phone';
   const rd = (k = 0) => page.evaluate(k => { const r = BENCH.sim.RT.meters()[k].r; return { val: r.val, ol: r.ol, shown: r.shown && r.shown.main.trim() }; }, k);
   const rd2 = () => rd(1);
@@ -56,5 +56,5 @@ export async function run(page, vp, ok) {
   const full = /النتيجة: (\d+) \/ \1/.test(res); ok(full, 'manual sheet graded full marks: ' + res.split('\n')[0]); if (!full) console.log(res);
   await page.click('#bStand'); await page.waitForTimeout(300);
   const tr = await page.evaluate(() => STATS.trace.join());
-  ok(['exp/ee312/exp1/start/manual', 'exp/ee312/exp1/done', 'exp/ee312/exp1/graded/100', 'time/ee312/exp1/'].every(p => tr.includes(p)), 'usage events: start, done, graded/100, time bucket');
+  ok(['exp/ee312/exp1/start/exam', 'exp/ee312/exp1/done', 'exp/ee312/exp1/graded/100', 'time/ee312/exp1/'].every(p => tr.includes(p)), 'usage events: start, done, graded/100, time bucket');
 }

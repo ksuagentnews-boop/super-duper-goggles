@@ -149,7 +149,7 @@ Standing rules for EVERY experiment of every lab (EE312, EE205 and every lab bui
 - The site code (e.g. `ee-labs`) lives in `labs/site.js` as `goatcounter: ''`. Empty = analytics off (also off on localhost, in tests and in the Claude preview). Never block or slow the site if the script fails to load.
 - Count page views of the corridor, plus these events (path style, no names, no IDs):
   - `lab/<lab>` entering a lab room;
-  - `exp/<lab>/expN/start/<manual|free>` sitting at a table and picking a mode;
+  - `exp/<lab>/expN/start/<manual|exam|free>` sitting at a table and picking a mode;
   - `exp/<lab>/expN/done` all Manual steps ticked; `exp/<lab>/expN/graded/<0-49|50-79|80-99|100>` sheet graded (score bucket);
   - `time/<lab>/expN/<0-5|5-15|15-30|30-60|60+>min` time seated, sent once when the student stands up or leaves the page (`visibilitychange`/`pagehide`).
 - No notice on the welcome card (the owner's decision): the counts are anonymous and aggregate only.

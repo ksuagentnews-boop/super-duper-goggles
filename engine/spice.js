@@ -294,7 +294,7 @@ function render(){const s=S();VW=sch.clientWidth||600;VH=sch.clientHeight||400;
   if(s.dlg){const key=JSON.stringify(s.dlg);if(dlgEl.dataset.key!==key){dlgEl.dataset.key=key;dlgEl.hidden=false;dlgEl.innerHTML=`<div class="pc-dbox">${dlgHTML(s.dlg)}</div>`;const i=dlgEl.querySelector('input,textarea');if(i&&!matchMedia('(pointer:coarse)').matches)setTimeout(()=>i.focus(),0)}}
   else if(dlgEl.dataset.key){dlgEl.dataset.key='';dlgEl.hidden=true;dlgEl.innerHTML=''}
   layoutCard()}
-function layoutCard(){const c=BENCH.el.card;const h=BENCH.mode==='manual'&&!c.hidden?c.offsetHeight+16:8;app.style.bottom=h+'px'}
+function layoutCard(){const c=BENCH.el.card;const h=BENCH.guided()&&!c.hidden?c.offsetHeight+16:8;app.style.bottom=h+'px'}
 /* ---------- schematic pointer input ---------- */
 function hit(e){const t=document.elementFromPoint(e.clientX,e.clientY);if(!t)return {};const c=t.closest('[data-comp]'),w=t.closest('[data-wire]'),l=t.closest('[data-label]'),d=t.closest('[data-dir]');
   return {comp:c&&+c.dataset.comp,wire:w&&+w.dataset.wire,label:l&&+l.dataset.label,dir:d&&+d.dataset.dir}}

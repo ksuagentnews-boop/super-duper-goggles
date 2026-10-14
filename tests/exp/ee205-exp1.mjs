@@ -1,7 +1,7 @@
 import { sit, bench } from '../lib.mjs';
 /* EE205 Exp 1: full Manual run (Procedures I–IV) and full-marks grading */
 export async function run(page, vp, ok) {
-  await sit(page, 'ee205/exp1', 'manual');
+  await sit(page, 'ee205/exp1', 'exam');
   const H = bench(page); H.touch = vp !== 'desktop';
   const st = () => page.evaluate(() => BENCH.sim.status().ST);
   const steps = async () => (await H.steps()).done;
