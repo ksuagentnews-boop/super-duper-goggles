@@ -53,3 +53,9 @@ Small gaps resolved while building (the manual always wins; videos only for look
 - One PX 120 on the table: the list says two wattmeters, but the second one belongs to the two-wattmeter method of the background; no procedure uses it.
 - Five Fluke 77s as the three ac ammeters and two ac voltmeters of Fig. 7 (M5 is also the ohmmeter that sets the rheostats to 100 Ω).
 - The transformer's star point is inside it: Fig. 7 and Fig. 9 are three-wire (n not wired), Fig. 8 joins the transformer's n to the load's n.
+
+## Batch 5 (redraws, 14 Oct)
+- **Three-phase transformer, socket names:** the L1 / L2 / L3 / N prints under the sockets are too blurry in every photo to read with certainty; drawn as top L1, bottom-right L2, bottom-left L3, N inside on both triangles. A close straight-on photo of the panel would settle it. The rating's first line reads «4 A» with a small mark after it, drawn as the star sign ⅄ (pairs with «2.3 A Δ»).
+- **Three-phase transformer, rocker:** the owner's note said "black rocker"; the photos show a white rocker in a black frame. Drawn as the photos.
+- **Hameg colours:** the reference photo and the lab unit differ in key and knob colours (lab: black keys, dark grey knobs, blue LEVEL, black dial skirts). Drawn as the lab unit; layout and labels from the reference photo. The lab's BNC→banana adaptors on CH I / CH II are not drawn (the coax lead plugs into the BNC).
+- **Rheostats:** the lab's end panels show no black round element top-left (the ref photo's newer print has one); drawn as the lab units: red socket at the top, the round recessed element in the middle.

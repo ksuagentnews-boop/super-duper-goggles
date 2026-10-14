@@ -77,22 +77,55 @@ ENGINE.variac=function(RT,opt){const KEY='ac',P='a',W=460,H=250,F=60,VMAX=24;con
 ENGINE.variac.size=[460,250];
 
 /* ---------- three-phase transformer, Y secondary (Exp 5) ---------- */
-ENGINE.xf3=function(RT,opt){const KEY='x3',P='x',W=360,H=320,F=60,VP=opt.vp||24,R=0.6;const L=lock(RT,KEY,'المحوّل');
-  const J={a:{x:70,y:270},b:{x:140,y:270},c:{x:210,y:270},n:{x:290,y:270}};const PH={a:0,b:-2*Math.PI/3,c:2*Math.PI/3};
+ENGINE.xf3=function(RT,opt){const KEY='x3',P='x',W=300,H=345,F=60,VP=opt.vp||24,R=0.6;const L=lock(RT,KEY,'المحوّل');
+  /* Leybold-Heraeus three-phase extra-low voltage transformer (old red housing, docs/ee205/instruments/threephase-notes.md):
+     two printed star / delta diagrams, each with four black 4 mm sockets L1 · L2 · L3 · N. Right: 23 V / 40 V (the experiment's
+     leads x3a, x3b, x3c, x3n); left: 6 V / 10 V (spare sockets: any banana lead plugs in, leads x3a6 … x3n6). The two N are joined. */
+  const TRI=[{t:{x:92,y:196},bl:{x:46,y:258},br:{x:124,y:272},n:{x:86,y:238},vl:'6 V',vd:'10 V',suf:'6',vp:VP*6/23},
+             {t:{x:200,y:208},bl:{x:150,y:272},br:{x:232,y:282},n:{x:192,y:250},vl:'23 V',vd:'40 V',suf:'',vp:VP}];
+  const J={};TRI.forEach(t=>{J['a'+t.suf]=t.t;J['b'+t.suf]=t.br;J['c'+t.suf]=t.bl;J['n'+t.suf]=t.n});
+  const PH={a:0,b:-2*Math.PI/3,c:2*Math.PI/3};const INK='#1d1d1b';
   function fresh(){return {pwr:false,ok:false,sig:''}}
-  function svg(){const d=RT.S[KEY];let s=`<rect width="${W}" height="${H}" rx="12" fill="#e2482f" stroke="#8e2414" stroke-width="2.5"/><rect x="14" y="14" width="${W-28}" height="${H-28}" rx="6" fill="#f2f0ea" stroke="#b9b3a5"/>`;
-    s+=T(28,40,'3-PHASE TRANSFORMER',{size:12,w:700,fill:'#2f3128'})+T(28,58,`Y secondary · ${VP} V phase · ${(VP*Math.sqrt(3)).toFixed(1)} V line · 60 Hz`,{size:9,fill:'#5c584d'});
-    s+=`<rect x="${W-70}" y="28" width="36" height="52" rx="5" fill="#3b3f42" stroke="#111" data-k="${P}:PWR" style="cursor:pointer"/><rect x="${W-65}" y="${d.pwr?32:54}" width="26" height="22" rx="3" fill="${d.pwr?'#e74c3c':'#7a2a22'}" pointer-events="none"/>`+T(W-52,94,'POWER',{size:7.5,a:'middle',fill:'#2f3128'});
-    /* the Y symbol */const cx=150,cy=150;['a','b','c'].forEach((k,i)=>{const ang=-Math.PI/2+i*2*Math.PI/3;s+=`<line x1="${cx}" y1="${cy}" x2="${cx+Math.cos(ang)*58}" y2="${cy+Math.sin(ang)*58}" stroke="#2f3128" stroke-width="2"/>`+T(cx+Math.cos(ang)*72,cy+Math.sin(ang)*72+4,k,{size:12,a:'middle',w:700,fill:'#2f3128'})});
-    s+=`<circle cx="${cx}" cy="${cy}" r="4" fill="#2f3128"/>`+T(cx+14,cy+16,'n',{size:12,w:700,fill:'#2f3128'});
-    s+=`<circle cx="${W-52}" cy="118" r="6" fill="${d.pwr?'#ff4433':'#6b3a3a'}"/>`;
-    s+=post(J.a.x,J.a.y,'#1d1f20','a (L1)')+post(J.b.x,J.b.y,'#1d1f20','b (L2)')+post(J.c.x,J.c.y,'#1d1f20','c (L3)')+post(J.n.x,J.n.y,'#2f5fd0','n');return s}
+  const sock=p=>`<circle cx="${p.x}" cy="${p.y}" r="10" fill="#d9d3c0"/><circle cx="${p.x}" cy="${p.y}" r="8.6" fill="#1a1a1a" stroke="#000" stroke-width="1"/><circle cx="${p.x-2.5}" cy="${p.y-3}" r="3.5" fill="#fff" opacity=".12"/><circle cx="${p.x}" cy="${p.y}" r="3.4" fill="#4b4b4b"/>`;
+  const seg=(a,b,dash)=>`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${INK}" stroke-width="1.6"${dash?' stroke-dasharray="5 3.5"':''}/>`;
+  const vlab=(a,b,t,dx=0,dy=0)=>T(((a.x+b.x)/2+dx).toFixed(1),((a.y+b.y)/2+dy+2).toFixed(1),t,{size:5.6,fill:INK,a:'middle',w:700});
+  function svg(){const d=RT.S[KEY];let s='';
+    // red housing seen from the front, the grey carrying handle in its recess on top
+    s+=`<rect x="100" y="-12" width="100" height="22" rx="6" fill="#55595b" stroke="#2c2e2f"/><rect x="108" y="-8" width="84" height="8" rx="3" fill="#7b8082"/>`;
+    s+=`<rect width="${W}" height="${H}" rx="16" fill="#e8452c" stroke="#9c2716" stroke-width="2"/><rect x="5" y="4" width="${W-10}" height="10" rx="5" fill="#f26a4f" opacity=".6"/>`;
+    s+=`<rect x="13" y="20" width="${W-26}" height="${H-34}" rx="4" fill="#ebe6d4" stroke="#b5ad97" stroke-width="1.5"/>`;
+    // mains rocker: white rocker in a black square frame
+    s+=`<rect x="28" y="38" width="26" height="60" rx="2.5" fill="#121212" data-k="${P}:PWR" style="cursor:pointer"/><rect x="32.5" y="43" width="17" height="50" rx="2" fill="#f2f1ec" stroke="#9b9a95" pointer-events="none"/>`+
+       (d.pwr?`<rect x="32.5" y="43" width="17" height="23" rx="2" fill="#d2d0c8" pointer-events="none"/>`:`<rect x="32.5" y="70" width="17" height="23" rx="2" fill="#d2d0c8" pointer-events="none"/>`);
+    // three-phase supply mark and the transformer symbol, top right
+    s+=T(232,58,'~',{size:10,fill:INK,a:'middle',w:700})+T(232,65,'~',{size:10,fill:INK,a:'middle',w:700})+T(232,72,'~',{size:10,fill:INK,a:'middle',w:700})+T(250,68,'∼V',{size:9,fill:INK,a:'middle',w:700});
+    const tc=(x,y,dir)=>{let q=`<line x1="${x}" y1="${y}" x2="${x+dir*26}" y2="${y}" stroke="${INK}" stroke-width="1.4"/>`;for(let k=0;k<3;k++)q+=`<line x1="${x+dir*(6+k*6)-3}" y1="${y+5}" x2="${x+dir*(6+k*6)+3}" y2="${y-5}" stroke="${INK}" stroke-width="1.3"/>`;return q};
+    s+=`<circle cx="224" cy="106" r="9" fill="none" stroke="${INK}" stroke-width="1.4"/><circle cx="237" cy="106" r="9" fill="none" stroke="${INK}" stroke-width="1.4"/>`+tc(215,106,-1)+tc(246,106,1);
+    // rating
+    s+=T(118,150,'I',{size:8,fill:INK,w:700})+T(123,152,'max',{size:4.8,fill:INK,w:700})+T(160,146,'4 A',{size:7,fill:INK,a:'end',w:700})+
+       `<path d="M163 140 l3.5 3.5 l3.5 -3.5 M166.5 143.5 v3.5" fill="none" stroke="${INK}" stroke-width="1"/>`+T(160,156,'2.3 A',{size:7,fill:INK,a:'end',w:700})+`<path d="M163 156 l3.5 -6 l3.5 6 z" fill="none" stroke="${INK}" stroke-width="1"/>`;
+    // the two printed star / delta diagrams, N joined across, ⚠ and the pilot lamp between them
+    s+=seg(TRI[0].n,TRI[1].n,false);
+    TRI.forEach(t=>{s+=seg(t.t,t.bl,false)+seg(t.t,t.br,false)+seg(t.bl,t.br,true)+seg(t.n,t.t,true)+seg(t.n,t.bl,true)+seg(t.n,t.br,true);
+      s+=vlab(t.t,t.bl,t.vd,-13,-1)+vlab(t.t,t.br,t.vd,13,-1)+vlab(t.bl,t.br,t.vd,0,10)+vlab(t.n,t.t,t.vl,8,0)+vlab(t.n,t.bl,t.vl,-1,-7)+vlab(t.n,t.br,t.vl,4,-8);
+      const lb=(p,q,dy)=>T(p.x,p.y+dy,q,{size:5.4,fill:INK,a:'middle',w:700});s+=lb(t.t,'L1',-12)+lb(t.br,'L2',16)+lb(t.bl,'L3',16)+lb(t.n,'N',16);
+      [t.t,t.bl,t.br,t.n].forEach(p=>s+=sock(p))});
+    s+=`<path d="M142 214 l9 15 h-18 z" fill="none" stroke="${INK}" stroke-width="1.5" stroke-linejoin="round"/>`+T(142,227,'!',{size:9,fill:INK,a:'middle',w:800});
+    s+=`<circle cx="142" cy="242" r="3.8" fill="${d.pwr?'#ff3020':'#6a1d16'}" stroke="#3a0d08"/>`+(d.pwr?`<circle cx="142" cy="242" r="9" fill="#ff3020" opacity=".3"/>`:'');
+    // black name band: Leybold-Heraeus mark at the left, the product name at the right
+    s+=`<rect x="13" y="${H-42}" width="${W-26}" height="28" fill="#121212"/><rect x="20" y="${H-38}" width="15" height="15" rx="1" fill="#f4f4f0"/><path d="M23.5 ${H-26} v-8.5 l4 5 l4 -5 v8.5" fill="none" stroke="#121212" stroke-width="1.4"/>`;
+    s+=T(40,H-27,'LEYBOLD-HERAEUS',{size:6,fill:'#f4f4f0',w:700})+T(W-20,H-29,'Drehstrom-Kleinspannungs-Transformator  521 29',{size:5,fill:'#f4f4f0',a:'end',w:700})+T(W-20,H-20,'three-phase extra-low voltage transformer',{size:5,fill:'#f4f4f0',a:'end',w:700});
+    return s}
   function keyFn(k){if(k==='PWR')L.power();if(k==='CHK')L.check()}
+  const LK=['a','b','c','n'].flatMap(k=>['',  '6'].map(sf=>({k:'x3'+k+sf,sf,ph:k})));
   return {key:KEY,prefix:P,size:[W,H],name:['Three-phase transformer','المحوّل ثلاثي الطور'],fresh,svg,keyFn,
-    leads:['a','b','c','n'].map(k=>({k:'x3'+k,label:k==='n'?'n':k.toUpperCase()+' (L'+(k.charCodeAt(0)-96)+')',from:J[k],banana:true,circuit:true,pol:k==='n'?'-':'+',tray:'3φ '+k,jn:'3φ '+k})),
-    stamp(ck){const d=RT.S[KEY],l=RT.S.leads;if(!d.pwr)return;/* the star point is inside the transformer: n is a terminal on it, wired or not */const n=l.x3n.node!=null?ck.idx(l.x3n.node):ck.inner();ck.x3=[];
-      ['a','b','c'].forEach(k=>{const q=l['x3'+k];if(q.node==null)return;const a=ck.idx(q.node);ck.els.push({t:'XS',a,b:n,s:1,vp:VP*Math.SQRT2,f:F,r:R,ph:PH[k]});ck.x3.push({a,b:n,ph:PH[k]})})},
-    measure(){L.watch();const c=RT.TB&&RT.TB.ck&&RT.TB.ck.x3;if(c)c.forEach(q=>L.trip(srcI(RT,q.a,q.b,R,VP*Math.SQRT2,q.ph)))},VP};
+    leads:LK.map(({k,sf,ph})=>({k,label:(ph==='n'?'N':'L'+(ph.charCodeAt(0)-96))+(sf?' 6 V':''),from:J[ph+sf],banana:true,circuit:true,pol:ph==='n'?'-':'+',tray:'3φ '+ph,jn:'3φ '+ph+(sf?' (6 V)':''),spare:!!sf})),
+    stamp(ck){const d=RT.S[KEY],l=RT.S.leads;if(!d.pwr)return;ck.x3=[];
+      /* the star point is inside: N is a terminal on it, wired or not; the two N sockets are joined on the panel */
+      const nn=[l.x3n,l.x3n6].map(q=>q&&q.node!=null?ck.idx(q.node):null).filter(x=>x!=null);const n=nn.length?nn[0]:ck.inner();
+      if(nn.length>1&&nn[1]!==n)ck.els.push({t:'G',a:n,b:nn[1],g:1e3});
+      TRI.forEach(t=>['a','b','c'].forEach(k=>{const q=l['x3'+k+t.suf];if(!q||q.node==null)return;const a=ck.idx(q.node);ck.els.push({t:'XS',a,b:n,s:1,vp:t.vp*Math.SQRT2,f:F,r:R,ph:PH[k]});ck.x3.push({a,b:n,ph:PH[k],vp:t.vp})}))},
+    measure(){L.watch();const c=RT.TB&&RT.TB.ck&&RT.TB.ck.x3;if(c)c.forEach(q=>L.trip(srcI(RT,q.a,q.b,R,q.vp*Math.SQRT2,q.ph)))},VP};
 };
 ENGINE.xf3.size=[360,320];
 
