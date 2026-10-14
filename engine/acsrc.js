@@ -1,6 +1,6 @@
 /* Mains-level sources of the EE205 lab and the fluorescent lamp, with the instructor check of the manual
    («Get the connection checked by the instructor and let him energize the circuit for you»):
-     ENGINE.mains   the bench socket with a switched outlet, 127 V 60 Hz (Exp 4). Leads acL (L, red) / acN (N, black).
+     ENGINE.mains   the wall socket, 127 V 60 Hz (Exp 4): the mains lead's plug (tap = in / out) and its L / N sockets. Leads acL / acN.
      ENGINE.variac  the variable ac supply (beige box, 60 Hz): 0 … 24 V on the variable output (knob), the two fixed
                     12 V~ jacks drawn (Exp 7). Leads acL / acN on the variable output.
      ENGINE.xf3     the red three-phase transformer, Y secondary a · b · c · n, 24 V phase (41.6 V line), 60 Hz (Exp 5).
@@ -38,16 +38,33 @@ function srcI(RT,a,b,r,vp,ph){const TB=RT.TB;if(!TB||!TB.X||a==null||b==null)ret
   for(let k=0;k<N;k++){const x=TB.X[k],va=a<0?0:x[a],vb=b<0?0:x[b];const v=vp*Math.sin(2*Math.PI*k/N+(ph||0));mx=Math.max(mx,Math.abs((va-vb-v)/r))}return mx/Math.SQRT2}
 
 /* ---------- bench socket 127 V 60 Hz ---------- */
-ENGINE.mains=function(RT,opt){const KEY='ac',P='a',W=300,H=210,V=opt.v||127,F=60;const L=lock(RT,KEY,'المصدر');
-  const J={L:{x:230,y:150},N:{x:180,y:150}};
+ENGINE.mains=function(RT,opt){const KEY='ac',P='a',W=250,H=250,V=opt.v||127,F=60;const L=lock(RT,KEY,'المصدر');
+  /* EE205 Exp 4 has no ac supply on the table (docs/ee205/instruments/exp4-table.jpg): the circuit takes 127 V 60 Hz from the
+     wall socket behind the bench. Drawn: the stainless wall plate with its duplex outlet; the lab's black mains lead, whose plug
+     the student pushes into the outlet (tap the plug: in = live, out = dead; the instructor checks before it goes in, Manual),
+     ending in a black junction with the L and N 4 mm sockets that the banana leads take to the panel (Fig. 4). */
+  const J={L:{x:200,y:196},N:{x:160,y:196}};const PX=62,PY=92;
   function fresh(){return {pwr:false,ok:false,sig:''}}
-  function svg(){const d=RT.S[KEY];let s=`<rect width="${W}" height="${H}" rx="10" fill="#d7d2c4" stroke="#8f8a7c" stroke-width="2"/><rect x="10" y="10" width="${W-20}" height="${H-20}" rx="6" fill="#e9e5da" stroke="#b6b0a2"/>`;
-    s+=T(22,34,`AC SOURCE · ${V} V ~ ${F} Hz`,{size:12,w:700,fill:'#2f3128'})+T(22,52,'Bench outlet (instructor controlled)',{size:9,fill:'#5c584d'});
-    s+=`<rect x="24" y="70" width="70" height="104" rx="8" fill="#b9b4a6" stroke="#77736a"/><rect x="38" y="${d.pwr?82:122}" width="42" height="40" rx="5" fill="${d.pwr?'#e74c3c':'#5c5f60'}" stroke="#222" data-k="${P}:PWR" style="cursor:pointer"/>`+T(59,190,d.pwr?'ON':'OFF',{size:10,a:'middle',w:700,fill:d.pwr?'#b0281a':'#3b3f42'});
-    s+=`<circle cx="120" cy="96" r="7" fill="${d.pwr?'#ff4433':'#6b3a3a'}"/>`+(d.pwr?`<circle cx="120" cy="96" r="13" fill="#ff4433" opacity=".25"/>`:'');
-    s+=post(J.N.x,J.N.y,'#1d1f20','N')+post(J.L.x,J.L.y,'#d43a2c','L')+T(205,128,'OUTPUT',{size:8,a:'middle',fill:'#5c584d'});return s}
+  const outlet=(x,y)=>`<rect x="${x-30}" y="${y-26}" width="60" height="52" rx="22" fill="#efeee9" stroke="#a9a79f" stroke-width="1.4"/>`+
+    `<rect x="${x-13}" y="${y-12}" width="5" height="15" rx="1" fill="#2a2a2a"/><rect x="${x+8}" y="${y-12}" width="5" height="15" rx="1" fill="#2a2a2a"/><path d="M${x-4} ${y+18} v-6 a4 4 0 0 1 8 0 v6 z" fill="#2a2a2a"/>`;
+  function svg(){const d=RT.S[KEY];let s='';
+    // wall strip behind the bench, the stainless plate with the duplex outlet
+    s+=`<rect x="0" y="0" width="${W}" height="${H}" rx="8" fill="#e2dccb" stroke="#bdb6a2"/><rect x="0" y="146" width="${W}" height="104" rx="8" fill="#2a2c2e"/>`;
+    s+=`<rect x="${PX-46}" y="14" width="92" height="160" rx="5" fill="#c8cbcd" stroke="#8d9194" stroke-width="1.5"/><rect x="${PX-42}" y="18" width="84" height="152" rx="4" fill="#dadddf"/>`+
+       `<circle cx="${PX}" cy="94" r="3.2" fill="#a3a7aa" stroke="#6d7174"/><path d="M${PX-2} 94 h4" stroke="#6d7174"/>`;
+    s+=outlet(PX,PY-36)+outlet(PX,PY+44);
+    s+=T(186,34,`${V} V ~ ${F} Hz`,{size:9,fill:'#5c584d',a:'middle',w:700});
+    // the mains lead: plug in the upper outlet (or lying beside it), the black cord, the junction with L / N sockets
+    const pin=d.pwr;const gx=pin?PX:PX+64,gy=pin?PY-36:PY-30;
+    s+=`<path d="M${gx} ${gy+16} C ${gx+10} ${gy+70}, ${J.N.x-30} ${J.N.y-60}, ${J.N.x-4} ${J.N.y-26}" fill="none" stroke="#111" stroke-width="7" stroke-linecap="round"/>`;
+    s+=`<g data-k="${P}:PWR" style="cursor:pointer"><rect x="${gx-26}" y="${gy-26}" width="52" height="52" fill="transparent"/><rect x="${gx-17}" y="${gy-20}" width="34" height="38" rx="8" fill="#1d1e1f" stroke="#000"/>`+
+       `<rect x="${gx-11}" y="${gy-14}" width="22" height="4" rx="2" fill="#3b3d3f"/><rect x="${gx-11}" y="${gy-6}" width="22" height="4" rx="2" fill="#3b3d3f"/>`+(pin?'':`<rect x="${gx-12}" y="${gy-30}" width="4" height="12" fill="#c9a43c"/><rect x="${gx+8}" y="${gy-30}" width="4" height="12" fill="#c9a43c"/>`)+`</g>`;
+    s+=T(PX+64,PY+44+34,pin?'':'plug in ↑',{size:7,fill:'#3b3a35',a:'middle'});
+    s+=`<rect x="${J.N.x-22}" y="${J.N.y-26}" width="84" height="46" rx="6" fill="#1b1c1d" stroke="#000"/>`;
+    s+=post(J.N.x,J.N.y,'#1d1f20','')+post(J.L.x,J.L.y,'#1d1f20','')+T(J.N.x,J.N.y+28,'N',{size:9,a:'middle',w:700,fill:'#e9e5da'})+T(J.L.x,J.L.y+28,'L',{size:9,a:'middle',w:700,fill:'#e9e5da'});
+    return s}
   function keyFn(k){if(k==='PWR')L.power();if(k==='CHK')L.check()}
-  return {key:KEY,prefix:P,size:[W,H],name:['AC source 127 V 60 Hz','مصدر التيار المتردد'],fresh,svg,keyFn,
+  return {key:KEY,prefix:P,size:[W,H],name:['Wall socket 127 V 60 Hz','الفيش الجداري'],fresh,svg,keyFn,
     leads:[{k:'acL',label:'L ~',from:J.L,banana:true,circuit:true,pol:'+',tray:'AC L',jn:'AC L'},{k:'acN',label:'N ~',from:J.N,banana:true,circuit:true,pol:'-',tray:'AC N',jn:'AC N'}],
     stamp(ck){const d=RT.S[KEY],l=RT.S.leads;if(!d.pwr||l.acL.node==null||l.acN.node==null)return;const a=ck.idx(l.acL.node),b=ck.idx(l.acN.node);ck.els.push({t:'XS',a,b,s:1,vp:V*Math.SQRT2,f:F,r:0.3});ck.ac={a,b}},
     measure(){L.watch();const c=RT.TB&&RT.TB.ck&&RT.TB.ck.ac;if(c)L.trip(srcI(RT,c.a,c.b,0.3,V*Math.SQRT2))},V,F};

@@ -3,7 +3,7 @@
    an ammeter in series, a voltmeter, the capacitor decade box (with its switch S) across the fluorescent lamp (110 V 20 W +
    ballast). The instructor checks the connection and energizes the circuit. V, I, P without C, then C = 1.0, 2.0, 3.0,
    3.2 … 6.0 µF → V, I, P, PF (Table 1); the minimum current; R, XL, ZL, θL, PF of the lamp; C for PF = 1.
-   Instruments: bench source, lamp, Metrix PX 120, two Fluke 77 (M1 voltmeter, M2 ammeter on its 300 mA jack), BC05 box.
+   Instruments: the wall socket (no ac supply on the table: the mains lead plugs into the wall), lamp, Metrix PX 120, two Fluke 77 (M1 voltmeter, M2 ammeter on its 300 mA jack), BC05 box.
    Decisions: the lamp with its ballast is a linear R + L load: R = 263 Ω, L = 0.931 H (22 W, PF 0.60 lagging at 127 V,
    0.29 A — a typical 20 W tube + choke); C for PF = 1 is then 4.84 µF, inside the table's range as the manual expects.
    The switch S is the bridging plug that joins the capacitor box to the load; with all dials at 0 the box is open
@@ -67,11 +67,11 @@ setup(RT){
         lines:[{t:'AC L → node 1',lead:'acL',at:1},{t:'AC N → node 10',lead:'acN',at:10},{t:'W 10A → node 1',lead:'w1i',at:1},{t:'W COM (A) → node 2',lead:'w1ic',at:2},{t:'W 600V → node 1',lead:'w1v',at:1},{t:'W COM (V) → node 10',lead:'w1vc',at:10},
           {t:'M2 300mA (red) → node 2',lead:'h2ma',at:2},{t:'M2 COM → node 3',lead:'h2c',at:3},{t:'lamp L → node 3',lead:'lpL',at:3},{t:'lamp N → node 10',lead:'lpN',at:10},
           {t:'M1 VΩ → node 1',lead:'h1v',at:1},{t:'M1 COM → node 10',lead:'h1c',at:10},{t:'C box → node 4',lead:'qa',at:4},{t:'C box → node 11',lead:'qb',at:11},{t:'bridging plug: node 10 ↔ node 11',wire:[10,11]},{t:'switch S: bridging plug node 3 ↔ node 4',wire:[3,4]}],ok:s=>s.fig4},
-      {dev:'ac',t:'⚠ «Get the connection checked by the instructor»: اضغط «المشرف يتأكد من التوصيل» في هذي البطاقة، وإذا التوصيل سليم شغّل الـ POWER. شغّل الـ PX 120، و M1 على V~، و M2 على A~.',ok:s=>s.fig4&&s.on},
+      {dev:'ac',t:'⚠ «Get the connection checked by the instructor»: اضغط «المشرف يتأكد من التوصيل» في هذي البطاقة، وإذا التوصيل سليم ركّب فيش السلك في الفيش الجداري (اضغط على الفيش). شغّل الـ PX 120، و M1 على V~، و M2 على A~.',ok:s=>s.fig4&&s.on},
       {dev:'cb',t:'2. بدون مكثف (صفّر كل أقراص الصندوق): سجّل V و I و P.',ok:s=>!!ST[key(0)]},
       {dev:'cb',t:'3. حط C = 1.0 µF على الصندوق (قرص ×1µF على 1) وسجّل V و I و P، وبعدين 2.0 و 3.0 µF.',ok:s=>[1,2,3].every(c=>ST[key(c)])},
       {dev:'cb',t:'4. زِد C من 3.2 لـ 6.0 µF كل 0.2 µF (قرص ×0.1µF) وسجّل القراءات: لاحظ وين يصير التيار أقل شي.',ok:s=>s.done},
-      {dev:'ac',t:'5–6. احسب R و X<sub>L</sub> و Z<sub>L</sub> و θ<sub>L</sub> و PF للمبة بدون مكثف، والـ C اللي يخلّي PF = 1، والـ PF لكل C. بعدين طفّ المصدر.',ok:s=>s.done&&s.off}
+      {dev:'ac',t:'5–6. احسب R و X<sub>L</sub> و Z<sub>L</sub> و θ<sub>L</sub> و PF للمبة بدون مكثف، والـ C اللي يخلّي PF = 1، والـ PF لكل C. بعدين طلّع الفيش من الجدار.',ok:s=>s.done&&s.off}
     ],
     onReset(){ST={};$('result').innerHTML=''}};
 }};})();
