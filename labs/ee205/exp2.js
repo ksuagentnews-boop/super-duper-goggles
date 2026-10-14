@@ -1,15 +1,20 @@
 /* EE205 · Experiment 2 · Root-Mean-Square (RMS) Value, Peak, and Peak-to-Peak Values, Measurements with Oscilloscope
-   (manual pp. 17–22).
-   Procedure I: familiarization with the Hameg (focus, intensity, positions); Fig. 1 dc on CH I (DC coupling) at 1, 2, 5,
-   10 V → deflection × V/div; Fig. 2 sine from the generator on CH II (AC coupling) → Vm, T, f, Vrms, DMM on ACV; then
-   10 V dc on CH I + the sine on CH II: DUAL, then ADD.
-   Procedure II: 10 Vpp sine; RMS from the scope (3.535 V) vs the DMM at 100 Hz … 5 kHz → % error.
-   Procedure III: series RL (17.5 mH air-core coil + 100 Ω), e(t) = 10 sin(2π·10³t): RL of the coil; E, VL, VR on the DMM;
-   VR (CH I) and E (CH II) on the scope → θ and the leading wave, Lissajous in XY (θ = sin⁻¹ L1/L2); I; ZT = E/I; P, PF.
+   (manual pp. 17–22). Steps follow the manual's procedures one to one (Batch 6):
+   Procedure I (steps 1–8): familiarization with the Hameg (focus, intensity, positions); Fig. 1 dc on CH I (DC coupling) at
+   1, 2, 5, 10 V → deflection × V/div; Fig. 2 sine from the generator on CH II (AC coupling) → Vm, T, f, Vrms, DMM on ACV;
+   then 10 V dc on CH I + the sine on CH II: DUAL, then ADD.
+   Procedure II (steps 1–4): 10 Vpp sine; RMS from the scope (3.535 V) vs the DMM at 100 Hz … 5 kHz → % error.
+   Procedure III (steps 1–9): series RL (17.5 mH air-core coil + 100 Ω), e(t) = 10 sin(2π·10³t): RL of the coil; E, VL, VR on
+   the DMM; VR (CH I) and E (CH II) on the scope → θ and the leading wave, Lissajous in XY (θ = sin⁻¹ L1/L2); I; ZT = E/I; P, PF.
+   Figures (def.figs) are the reference wiring (sources on the left); build steps tick when the bench IS the figure's
+   circuit (engine/match.js); the later checks follow the parts and leads (which nets they share), never node numbers.
    Assumptions: Procedure I's sine is not specified: 1 kHz, 4 Vpp is used. Fig. 3's caption says "procedure II" but it
    belongs to Procedure III. e(t) = 10 sin … is set as 20 Vpp on the generator (open circuit; its 50 Ω output then gives
    E < 10 V peak under load, which the DMM measures). The 1000-turn coil has RL ≈ 17.6 Ω (lab video). The decade box of
-   the equipment list stands on the table (no step uses it). */
+   the equipment list stands on the table (no step uses it). Step I.3 says "keep your circuit connected", so Fig. 2 is
+   built next to Fig. 1 (the figure of step I.4 holds both). Fig. 3 is built with a bridging plug between the generator and
+   c (the ammeter takes its place in step 5) and with the Fluke across R as V_R (the last of the three readings of step 2).
+   The calculation steps (I.6, III.6–9) have nothing to check on the bench and tick as soon as they are reached. */
 EXP_DEFS['ee205/exp2']=(()=>{const H=ENGINE.sheet;
 const PARTS={R100:{t:'R',r:100.4,nom:100,lab:'100Ω'},L175:{t:'L',l:0.0175,rs:17.6,lab:'17.5mH'},BR:{t:'BR',lab:''}};
 const FQ=[100,1000,2000,3000,4000,5000];
@@ -32,6 +37,7 @@ ${H.row('V<sub>rms</sub> of the new signal =',H.num('vr8','0.001'),'V')}</li></o
 <table class="tbl"><caption>Procedure II · Comparison between oscilloscope and DMM (10 V peak to peak)</caption><tr><th>V (peak to peak)</th><th>Frequency (Hz)</th><th>RMS Value Using Oscilloscope (V)</th><th>RMS Value Using Digital Multimeter (V)</th><th>% Error</th></tr>
 ${FQ.map(f=>`<tr><td>10 V</td><td>${f} Hz</td><td>${H.num('r'+f,'0.001',70)}</td><td>${H.num('d'+f,'0.001',70)}</td><td>${H.num('e'+f,'0.01',70)}</td></tr>`).join('')}</table>
 <h3>Procedure III</h3>${fig('e2-fig3.png','Fig. 3: Circuit connection for procedure III (series RL, e(t) = 10 sin 2π·10³t V)')}
+<div class="row">${H.cap('w3','V<sub>R</sub> (CH I) and E (CH II)')}${H.cap('w4','Lissajous (XY)')}</div>
 <table class="tbl"><caption>Procedure III · Series RL circuit measurements</caption>
 <tr><td class="l">R<sub>L</sub> of the coil</td><td>${H.num('rl','0.1',80)} Ω</td></tr>
 <tr><td class="l">E (DMM, rms)</td><td>${H.num('e3','0.001',80)} V</td></tr>
@@ -46,7 +52,20 @@ ${FQ.map(f=>`<tr><td>10 V</td><td>${f} Hz</td><td>${H.num('r'+f,'0.001',70)}</td
 <tr><td class="l">Power factor PF = (R + R<sub>L</sub>) / Z<sub>T</sub></td><td>${H.num('pf','0.001',80)}</td></tr></table>
 <div class="row" style="margin-top:12px"><button class="t on" id="submit">صحّح إجاباتي</button></div><div id="result"></div>
 </div></div>`;
-return {procs:[{id:'I',title:'Familiarization with the oscilloscope (Figs. 1, 2)'},{id:'II',title:'Oscilloscope vs DMM for RMS'},{id:'III',title:'Series RL circuit measurements (Fig. 3)'}],
+/* the figures' reference wiring. Fig. 1: DC + node 8 → CH I (node 9), DC − node 22 → CH I ⏚ (node 23). Fig. 2 next to it
+   (Fig. 1 stays connected, step I.3): GEN L node 11 → CH II (node 12), GEN N node 25 → CH II ⏚ (node 26).
+   Fig. 3 in the rectangle: GEN top-left (node 8), plug 8–9 (the ammeter's place), c = 9, the coil along the top to a = 10,
+   R down the right side to b = 17, the bottom row back to GEN ⏚ (node 22); the Fluke across R (V_R) */
+const L1=[{lead:'Lp',alt:'Rp',at:8},{wire:[8,9]},{lead:'c1r',at:9},{lead:'Lm',alt:'Rm',at:22},{wire:[22,23]},{lead:'c1b',at:23}];
+const L2=[...L1,{lead:'gr',at:11},{wire:[11,12]},{lead:'c2r',at:12},{lead:'gb',at:25},{wire:[25,26]},{lead:'c2b',at:26}];
+const L3=[{lead:'gr',at:8},{wire:[8,9]},{part:['L175',9,10]},{part:['R100',10,17]},{wire:[17,24]},{wire:[24,23]},{wire:[23,22]},{lead:'gb',at:22},{lead:'h1v',at:10},{lead:'h1c',at:17}];
+const IMG=f=>'labs/ee205/fig/'+f;
+const figs={'1':{img:IMG('e2-fig1.png'),cap:'Fig. 1 · Oscilloscope for measurement of DC Voltage',lines:L1},
+  '2':{img:IMG('e2-fig2.png'),cap:'Fig. 2 · Oscilloscope for measurement of AC voltage (Fig. 1 stays connected)',lines:L2},
+  '3':{img:IMG('e2-fig3.png'),cap:'Fig. 3 · Series RL circuit (the Fluke across R for V<sub>R</sub>)',lines:L3}};
+/* the coil alone on the ohmmeter (step III.1) */
+const OHML={lines:[{part:['L175',0,1]},{lead:'h1v',at:0},{lead:'h1c',at:1}]};
+return {figs,procs:[{id:'I',title:'Familiarization with the oscilloscope (Figs. 1, 2)'},{id:'II',title:'Oscilloscope vs DMM for RMS'},{id:'III',title:'Series RL circuit measurements (Fig. 3)'}],
 sheet,params:()=>({}),
 instruments:[
   {type:'thandar',procs:['I'],prev:d=>{d.u[0].v=3;d.u[0].ilim=0.2}},
@@ -57,7 +76,7 @@ instruments:[
 parts:PARTS,
 tray:[['R100','100 Ω'],['L175','17.5 mH coil'],['BR','Bridging plug'],['W','Wire']],
 setup(RT){
-  const K=ENGINE.labkit(RT),N=K.N,G=ENGINE.sheet;let ST={};
+  const K=ENGINE.labkit(RT),G=ENGINE.sheet;let ST={};
   const sc=()=>RT.S.sc;
   const probe=c=>RT.leadNet(`c${c+1}r`);
   /* reference: series RL behind the generator's 50 Ω */
@@ -65,40 +84,42 @@ setup(RT){
   const CAL={zc:Math.hypot(100+RL,XL),th:Math.atan2(XL,100+RL)*180/Math.PI};CAL.pf=(100+RL)/CAL.zc;
   /* a channel shows its trace on screen: calibrated, inside ±4 div */
   const onScreen=(c,v)=>{const ch=sc().ch[c];return sc().pwr&&!ch.var&&Math.abs(v/ch.vd)<=4.05};
+  /* Fig. 3 by its parts: the coil c–a and R a–b share a; b is the generator's ground (earth) */
+  function topo3(){const L=RT.S.parts.filter(p=>p.type==='L175'),R=RT.S.parts.filter(p=>p.type==='R100');if(L.length!==1||R.length!==1)return null;
+    const [l1,l2]=RT.partNets(L[0]),[r1,r2]=RT.partNets(R[0]);let a,c;if(l1!=null&&(l1===r1||l1===r2)){a=l1;c=l2}else if(l2!=null&&(l2===r1||l2===r2)){a=l2;c=l1}else return null;
+    const b=r1===a?r2:r1;if(b!==-1||c==null||c===a||c===-1||RT.leadNet('gb')!==-1)return null;return {a,b,c}}
   function status(){const st={};const S=sc(),g=K.gen();st.pwr=S.pwr;st.fl=RT.S.hm1;
     st.knobs=S.pwr&&(S.focus!==RT.inst.sc.fresh().focus||S.intens!==RT.inst.sc.fresh().intens);if(st.knobs)ST.knobs=true;
     /* Procedure I · Fig. 1 */
-    const s=K.sup();st.sup=s;st.fig1=s&&probe(0)!=null&&probe(0)===s.P&&RT.leadNet('c1b')!=null&&RT.leadNet('c1b')===s.M;
+    const s=K.sup();st.sup=s;st.fig1=RT.match('1').ok;
     if(st.fig1&&S.ch[0].cpl==='GND'&&S.pwr)ST.zero=true;
     st.ch1dc=S.ch[0].cpl==='DC';
-    if(st.fig1&&st.ch1dc&&s.on&&!S.xy){[1,2,5,10].forEach(v=>{if(Math.abs(s.U.v-v)<0.006&&onScreen(0,v))ST['dc'+v]={vd:S.ch[0].vd}})}
+    if(st.fig1&&st.ch1dc&&s.on&&!S.xy&&ST.zero){[1,2,5,10].forEach(v=>{if(Math.abs(s.U.v-v)<0.006&&onScreen(0,v))ST['dc'+v]=+s.U.v.toFixed(2)})}
     st.supOff=!s||!s.on;
-    /* Fig. 2: generator on CH II, AC coupling */
+    /* Fig. 2: the generator on CH II (both by their leads' nets), AC coupling */
     const gn=RT.leadNet('gr');st.fig2=gn!=null&&probe(1)===gn&&RT.leadNet('c2b')!=null;
     st.sine14=g.on&&g.wave==='Sine'&&g.f===1000&&Math.abs(g.vpp-4)<0.001&&Math.abs(g.off)<1e-9;
     st.ch2ac=S.ch[1].cpl==='AC';
-    if(st.fig2&&st.sine14&&st.ch2ac&&onScreen(1,2)&&(S.ch2sel||S.dual)&&!S.add&&!S.xy)ST.sine=true;
+    if(st.fig2&&st.sine14&&st.ch2ac&&onScreen(1,2)&&(S.ch2sel||S.dual)&&!S.add&&!S.xy)ST.sine={vm:g.vpp/2,T:1000/g.f};
     if(st.fig2&&st.sine14){const v=K.across('ACV',gn,-1,false);if(v!=null&&ST.sine)ST.vrd=v}
     const md=RT.inst.sc.mode();st.mode=md;
-    if(st.fig1&&st.fig2&&s.ok&&Math.abs(s.U.v-10)<0.006&&st.sine14&&st.ch1dc){if(md==='DUAL')ST.dual=true;if(md==='ADD'&&ST.dual)ST.add=true}
+    const fig1on=s&&probe(0)!=null&&probe(0)===s.P&&RT.leadNet('c1b')===s.M;
+    if(fig1on&&st.fig2&&s.ok&&Math.abs(s.U.v-10)<0.006&&st.sine14&&st.ch1dc){if(md==='DUAL')ST.dual=true;if(md==='ADD'&&ST.dual)ST.add=true}
     /* Procedure II: 10 Vpp sine, scope on it, DMM on ACV */
     const s10=g.on&&g.wave==='Sine'&&Math.abs(g.vpp-10)<0.001&&Math.abs(g.off)<1e-9;st.s10=s10;
     const scOn=[0,1].find(c=>probe(c)===gn&&gn!=null);st.scOnGen=scOn!=null;
     if(s10&&scOn!=null&&onScreen(scOn,5)&&(scOn===1?(S.ch2sel||S.dual||S.add):(!S.ch2sel||S.dual)))ST.pp10=true;
     if(s10&&ST.pp10&&FQ.includes(g.f)){const v=K.across('ACV',gn,-1,false);if(v!=null)ST['d'+g.f]=v}
-    /* Procedure III · Fig. 3: c = 15 (generator through the plug 8 ↔ 15), a = 16, b = 23 (earth) */
-    st.coilAlone=RT.between(N(15),N(16)).length===1&&K.has('L175',15,16)&&RT.at(N(15)).length===1&&RT.at(N(16)).length===1;
-    if(st.coilAlone){const v=K.across('OHM',N(15),N(16),true);if(v!=null)ST.rl=v}
-    st.fig3=K.has('L175',15,16)&&K.has('R100',16,23)&&gn!=null&&RT.leadNet('gb')!=null&&N(23)===-1&&(gn===N(15)||(gn===N(8)&&(N(8)===N(15)||K.ammOn(N(8),N(15)))));
+    /* Procedure III: the coil alone on the ohmmeter; Fig. 3 by its parts (c, a, b) */
+    if(RT.match(OHML).ok){const v=K.across('OHM',RT.leadNet('h1v'),RT.leadNet('h1c'));if(v!=null)ST.rl=v}
     st.e20=g.on&&g.wave==='Sine'&&g.f===1000&&Math.abs(g.vpp-20)<0.001&&Math.abs(g.off)<1e-9;
-    const run3=st.fig3&&st.e20&&N(8)===N(15);
-    if(run3){[['e3',15,-1],['vl3',15,16],['vr3',16,-1]].forEach(([k,a,b])=>{const v=K.across('ACV',N(a),b===-1?-1:N(b),false);if(v!=null)ST[k]=v})}
-    st.scope3=run3&&probe(0)===N(16)&&probe(1)===N(15);
+    const T=topo3();st.T=T;const run3=T&&st.e20&&gn===T.c;
+    if(run3){[['e3',T.c,-1],['vl3',T.c,T.a],['vr3',T.a,-1]].forEach(([k,a,b])=>{const v=K.across('ACV',a,b,false);if(v!=null)ST[k]=v})}
+    st.scope3=run3&&probe(0)===T.a&&probe(1)===T.c;
     if(st.scope3&&S.pwr&&(md==='DUAL'||md==='CHOP')&&!S.xy)ST.dual3=true;
     if(st.scope3&&S.pwr&&S.xy)ST.xy=true;
     st.noScope=probe(0)==null&&probe(1)==null;
-    if(st.fig3&&st.e20&&st.noScope){const v=K.amm(N(8),N(15),'ACI');if(v!=null)ST.i3=v}
-    st.genOff=!g.out||!g.pwr;
+    if(T&&st.e20&&st.noScope&&gn!==T.c){const v=K.amm(gn,T.c,'ACI');if(v!=null)ST.i3=v}
     st.ST=ST;return st}
   $('submit').addEventListener('click',()=>{const g=G.grader(),v=G.v,s=G.s;
     g.proc('I');[1,2,5,10].forEach(x=>g.add(G.near(v('dc'+x),x,x*0.03+0.02),`DC ${x} V on the scope`,`≈ ${x} V (deflection × V/div)`));
@@ -116,33 +137,41 @@ setup(RT){
     g.add(G.near(v('zm'),v('e3')/v('i3')*1e3,0.5),'ZT = E/I');g.add(G.near(v('zc'),CAL.zc,1),'ZT calculated',`≈ ${CAL.zc.toFixed(1)} Ω`);
     g.add(G.near(v('p3'),Math.pow(v('i3')/1e3,2)*(100+v('rl'))*1e3,0.05),'P = I²(R+RL)');g.add(G.near(v('pf'),(100+v('rl'))/v('zc'),0.005),'PF = (R+RL)/ZT',`≈ ${CAL.pf.toFixed(3)}`);
     g.show($('result'))});
-  const F1='labs/ee205/fig/e2-fig1.png',F2='labs/ee205/fig/e2-fig2.png',F3='labs/ee205/fig/e2-fig3.png';
+  const calc=t=>({dev:'board',t,ok:()=>true});
   return {status,
     steps:[
-      {dev:'sc',t:'Procedure I: شغّل الـ Hameg (POWER)، وجرّب أزرار FOCUS و INTENS و X-POS / Y-POS وشوف وش تسوي بالخط على الشاشة.',ok:s=>ST.knobs},
-      {dev:'board',fig:F1,figCap:'Fig. 1',t:'ركّب Fig. 1: الـ dc supply على CH I.',lines:[{t:'CH I: red clip → node 2',lead:'c1r',at:2},{t:'CH I ⏚: black clip → node 9',lead:'c1b',at:9},{t:'DC + → node 2',lead:'Lp',alt:'Rp',at:2},{t:'DC − → node 9',lead:'Lm',alt:'Rm',at:9}],ok:s=>s.fig1},
-      {dev:'sc',t:'a) حدّد خط الصفر: اضغط GD تحت CH I وحط الخط على وسط الشاشة بـ Y-POS I.',ok:s=>ST.zero},
-      {dev:'sc',t:'b) رجّع CH I على DC (GD مطفي و AC/DC على DC).',ok:s=>ST.zero&&s.ch1dc&&s.fig1},
-      {dev:'psu',t:'c) شغّل الـ supply على 1 V، واضبط VOLTS/DIV لين يبان الخط بانحراف واضح (VAR على CAL). سجّل: عدد الـ divisions × V/div.',ok:s=>ST.dc1!=null},
-      {dev:'psu',t:'كرّر لـ 2 V و 5 V و 10 V (غيّر VOLTS/DIV إذا طلع الخط من الشاشة).',ok:s=>ST.dc2!=null&&ST.dc5!=null&&ST.dc10!=null},
-      {dev:'psu',t:'3. طفّ الـ supply (OUTPUT OFF) وخلّ الدائرة موصولة.',ok:s=>s.supOff&&ST.dc10!=null},
-      {dev:'board',fig:F2,figCap:'Fig. 2',t:'4. ركّب Fig. 2: الـ function generator على CH II.',lines:[{t:'GEN OUT: red clip (L) → node 4',lead:'gr',at:4},{t:'GEN ⏚: black clip (N) → node 11',lead:'gb',at:11},{t:'CH II: red clip → node 4',lead:'c2r',at:4},{t:'CH II ⏚: black clip → node 11',lead:'c2b',at:11}],ok:s=>s.fig2},
-      {dev:'gen',t:'شغّل الـ generator: Sine، FREQ = 1 kHz، AMPL = 4 Vpp، OFFSET = 0، و OUTPUT ON.',ok:s=>s.fig2&&s.sine14},
-      {dev:'sc',t:'5. حوّل الـ mode على CH II (زر CH I/II)، و CH II على AC. اضبط VOLTS/DIV و TIME/DIV لين تشوف موجة أو موجتين كاملة، واقرا V<sub>m</sub> و T واحسب f و V<sub>rms</sub>.',ok:s=>ST.sine},
-      {dev:'hm1',t:'7. حط الـ Fluke على V~ وقِس V<sub>rms</sub> على مخرج الـ generator (VΩ → node 4، COM → node 11). قارنه بالمحسوب.',lines:[{t:'Fluke VΩ → node 4',lead:'h1v',at:4},{t:'Fluke COM → node 11',lead:'h1c',at:11}],ok:s=>ST.vrd!=null},
-      {dev:'sc',t:'8. رجّع الـ supply على ON بـ 10 V على CH I (DC)، وحوّل الـ mode على DUAL: تشوف الإشارتين مع بعض.',ok:s=>ST.dual},
-      {dev:'sc',t:'بعدين حرّر DUAL واضغط ADD (DUAL و ADD مع بعض = CHOP): الشاشة تعرض مجموع CH I + CH II. قارنه بـ 10 V dc + الموجة، واحسب V<sub>rms</sub> للإشارة الجديدة.',ok:s=>ST.add},
-      {dev:'gen',t:'Procedure II: طفّ الـ supply وشيل أطرافه وأطراف CH I. اضبط الـ generator على Sine بـ 10 Vpp (FREQ = 100 Hz)، وخلّ الـ scope يقيس الـ peak to peak (10 V) على CH II: حط VOLTS/DIV على 2 V.',ok:s=>ST.pp10&&s.supOff},
-      ...FQ.map(f=>({dev:'gen',t:`قِس الـ RMS بالـ Fluke (V~) على ${f} Hz وسجّله، والـ RMS من الـ scope = 10/(2√2) = 3.535 V (الـ Vpp ثابت).`,ok:s=>ST['d'+f]!=null})),
-      {dev:'board',t:'Procedure III: طفّ الـ OUTPUT، وفكّ أطراف Procedure II. حط الـ coil (17.5 mH) لحاله بين node 15 و node 16، وقِس R<sub>L</sub> بالـ Fluke على Ω.',lines:[{t:'17.5 mH coil: node 15 ↔ node 16',part:['L175',15,16]},{t:'Fluke VΩ → node 15',lead:'h1v',at:15},{t:'Fluke COM → node 16',lead:'h1c',at:16}],ok:s=>ST.rl!=null},
-      {dev:'board',fig:F3,figCap:'Fig. 3',t:'ركّب Fig. 3: c = node 15، a = node 16، b = node 23 (الأرضي). الـ generator يدخل على node 8 وفيه bridging plug لـ node 15 (مكان الأميتر بعدين).',
-        lines:[{t:'100 Ω: node 16 ↔ node 23',part:['R100',16,23]},{t:'bridging plug: node 8 ↔ node 15',wire:[8,15]},{t:'GEN OUT red → node 8',lead:'gr',at:8},{t:'GEN ⏚ black → node 23 (b)',lead:'gb',at:23}],ok:s=>s.fig3},
-      {dev:'gen',t:'اضبط e(t) = 10 sin(2π·10³t): Sine، 1 kHz، AMPL = 20 Vpp، و OUTPUT ON.',ok:s=>s.fig3&&s.e20},
-      {dev:'hm1',t:'2. بالـ Fluke على V~ قِس E (node 15 ↔ node 23)، و V<sub>L</sub> (node 15 ↔ node 16)، و V<sub>R</sub> (node 16 ↔ node 23). القراءات rms.',ok:s=>ST.e3!=null&&ST.vl3!=null&&ST.vr3!=null},
-      {dev:'board',fig:F3,figCap:'Fig. 3',t:'3. اعرض V<sub>R</sub> على CH I و E على CH II (الأرضي على b)، وحوّل على DUAL.',lines:[{t:'CH I red → node 16 (a)',lead:'c1r',at:16},{t:'CH I ⏚ → node 23 (b)',lead:'c1b',at:23},{t:'CH II red → node 15 (c)',lead:'c2r',at:15},{t:'CH II ⏚ → node 23 (b)',lead:'c2b',at:23}],ok:s=>ST.dual3},
-      {dev:'sc',t:'4. قِس الـ phase angle θ ووش الموجة اللي تسبق. بعدين اضغط XY: الـ Lissajous، و θ = sin⁻¹(L<sub>1</sub>/L<sub>2</sub>).',ok:s=>ST.xy},
-      {dev:'board',t:'5. شيل أطراف الـ scope، وقِس I: شيل الـ plug بين node 8 و node 15 وحط الـ Fluke مكانه على A~ (المدخل 300mA → node 8، COM → node 15).',lines:[{t:'Fluke 300mA (red) → node 8',lead:'h1ma',at:8},{t:'Fluke COM → node 15',lead:'h1c',at:15}],ok:s=>ST.i3!=null},
-      {dev:'gen',t:'6–9. احسب Z<sub>T</sub> = E/I و Z<sub>T</sub> النظري والـ P والـ PF، وبعدين طفّ الـ generator.',ok:s=>s.genOff&&ST.i3!=null}
+      /* Procedure I (manual pp. 19–21), steps 1–8 */
+      {dev:'sc',t:'Procedure I · 1. شغّل الـ oscilloscope وشوف وظيفة مفاتيح التحكم هذي:',acts:['a) Focus','b) Intensity','c) Horizontal position و vertical position'],ok:s=>ST.knobs},
+      {dev:'board',build:'1',t:'2. وصّل الدائرة Fig. 1.',acts:['a) حدّد خط الصفر على الشاشة (GD تحت CH I، والخط على الوسط بـ Y-POS I).','b) خلّ مفتاح channel-1 على dc mode.','c) غيّر جهد الـ supply لين تاخذ القيم اللي في الجدول (1، 2، 5، 10 V)، وعبّي الجدول: vertical deflection (div) × V/div (VAR على CAL).'],
+        ok:s=>ST.zero&&[1,2,5,10].every(v=>ST['dc'+v]!=null),rec:[1,2,5,10].map(v=>({to:'dc'+v,val:()=>ST['dc'+v],unit:'V',dec:2,label:`DC ${v} V`}))},
+      {dev:'psu',t:'3. طفّ الـ dc voltage supply وخلّ الدائرة موصولة.',ok:s=>s.supOff&&s.fig1&&ST.dc10!=null},
+      {dev:'board',build:'2',t:'4. حوّل الـ display mode switch على channel 2 ووصّل الدائرة Fig. 2. استخدم الـ function generator كمصدر AC.',ok:s=>s.mode==='II'},
+      {dev:'sc',t:'5. خلّ مدخل channel 2 على ac mode. اعرض إشارة sinusoidal على الـ oscilloscope واحسب ترددها ومقدارها:',acts:['شغّل الـ generator: Sine، FREQ = 1 kHz، AMPL = 4 Vpp، OFFSET = 0، و OUTPUT ON.','CH II على AC، واضبط VOLTS/DIV و TIME/DIV لين تشوف موجة أو موجتين كاملة.','V<sub>m</sub> = vertical deflection × V/div، و T = horizontal deflection × time/div.'],
+        ok:s=>!!ST.sine,rec:[{to:'vm',val:()=>ST.sine?ST.sine.vm:null,unit:'V',dec:2,label:'V<sub>m</sub>'},{to:'tp',val:()=>ST.sine?ST.sine.T:null,unit:'ms',dec:3,label:'T'}]},
+      calc('6. احسب تردد الإشارة f = 1/T، و الـ V<sub>rms</sub>.'),
+      {dev:'hm1',t:'7. استخدم الـ multimeter (ac voltage mode) وقِس الـ V<sub>rms</sub> للإشارة. كيف تقارن هالقيمة بالمحسوبة في (6)؟',acts:['حط الـ Fluke على V~، و VΩ على L (مخرج الـ generator) و COM على N.'],ok:s=>ST.vrd!=null,
+        rec:[{to:'vd',val:()=>ST.vrd,unit:'V',dec:3,label:'V<sub>rms</sub> (DMM)'}]},
+      {dev:'sc',t:'8. رجّع الـ dc supply على ON لدائرة Fig. 1، ووصّله على channel 1 وحوّل الـ display mode على DUAL (الإشارتين مع بعض على الشاشة). بعدين حوّل على ADD (مجموع channel 1 و 2). كيف تقارن الإشارة بمجموع 10 V dc والإشارة اللي في (5)؟ وكم الـ V<sub>rms</sub> للإشارة الجديدة؟',
+        acts:['شغّل الـ supply على 10 V (CH I على DC).','اضغط DUAL.','حرّر DUAL واضغط ADD (DUAL و ADD مع بعض = CHOP).'],ok:s=>ST.add},
+      /* Procedure II (manual p. 21), steps 1–4 */
+      {dev:'gen',t:'Procedure II · 1. استخدم الـ function generator وطلّع sinusoidal voltage بـ 10 V (peak to peak).',acts:['Sine، AMPL = 10 Vpp، OFFSET = 0، FREQ = 100 Hz، OUTPUT ON.'],ok:s=>s.s10},
+      {dev:'sc',t:'2. استخدم الـ oscilloscope وقِس الـ peak to peak (10 V). RMS = 5/√2 = 3.535 V.',acts:['الإشارة على CH II، و VOLTS/DIV على 2 V (5 divisions).'],ok:s=>ST.pp10},
+      {dev:'hm1',t:'3. استخدم الـ digital multimeter وقِس الـ RMS.',acts:['الـ Fluke على V~ على مخرج الـ generator.'],ok:s=>FQ.some(f=>ST['d'+f]!=null)},
+      {dev:'gen',t:'4. زِد التردد (وخلّ الـ peak to peak ثابت) وسجّل الـ RMS في الجدول:',acts:FQ.map(f=>`${f} Hz`),ok:s=>FQ.every(f=>ST['d'+f]!=null),
+        rec:FQ.map(f=>({to:'d'+f,val:()=>ST['d'+f],unit:'V',dec:3,label:`${f} Hz`}))},
+      /* Procedure III (manual p. 22), steps 1–9 */
+      {dev:'hm1',t:'Procedure III · 1. قِس مقاومة الـ coil، R<sub>L</sub>.',acts:['حط الـ coil (17.5 mH) لحاله على اللوحة، والـ Fluke على Ω عليه.'],ok:s=>ST.rl!=null,rec:[{to:'rl',val:()=>ST.rl,unit:'Ω',dec:1,label:'R<sub>L</sub>'}]},
+      {dev:'board',build:'3',t:'2. وصّل الدائرة Fig. 3، وقِس E و V<sub>L</sub> و V<sub>R</sub> بالـ multimeter. ملاحظة: القيم المقاسة هي قيم الـ rms.',
+        acts:['اضبط e(t) = 10 sin(2π·10³t): Sine، 1 kHz، AMPL = 20 Vpp، و OUTPUT ON.','الـ Fluke على V~: E (c–b)، و V<sub>L</sub> (c–a)، و V<sub>R</sub> (a–b).'],
+        ok:s=>s.e20&&ST.e3!=null&&ST.vl3!=null&&ST.vr3!=null,rec:[['e3','E'],['vl3','V<sub>L</sub>'],['vr3','V<sub>R</sub>']].map(([k,l])=>({to:k,val:()=>ST[k],unit:'V',dec:3,label:l}))},
+      {dev:'sc',t:'3. اعرض V<sub>R</sub> و E على الـ oscilloscope. ارسم الموجات.',acts:['CH I على a (V<sub>R</sub>)، و CH II على c (E)، والأرضي على b.','حوّل على DUAL.'],ok:s=>ST.dual3,rec:[{scope:'w3',label:'V<sub>R</sub> و E'}]},
+      {dev:'sc',t:'4. قِس الـ phase angle θ، ووضّح أي موجة تسبق. ليش؟',acts:['من الإزاحة بين الموجتين على DUAL.','أو اضغط XY: الـ Lissajous، و θ = sin⁻¹(L<sub>1</sub>/L<sub>2</sub>) (Fig. 3-c).'],ok:s=>ST.xy,rec:[{scope:'w4',label:'Lissajous'}]},
+      {dev:'board',t:'5. شيل توصيلة الـ oscilloscope وقِس التيار I اللي يمشي في الدائرة.',acts:['الـ Fluke على A~: شيل الـ plug اللي بين الـ generator و c، وحط الأميتر مكانه (المدخل 300mA على جهة الـ generator، COM على c).'],ok:s=>ST.i3!=null,
+        rec:[{to:'i3',val:()=>ST.i3!=null?ST.i3*1e3:null,unit:'mA',dec:2,label:'I'}]},
+      calc('6. احسب Z<sub>T</sub> من العلاقة Z<sub>T</sub> = E/I.'),
+      calc('7. احسب Z<sub>T</sub> وارسم الـ impedance diagram اللي استخدمته في حسابك.'),
+      calc('8. بالـ phasor analysis أثبت إن E = V<sub>R</sub> + V<sub>L</sub>.'),
+      calc('9. احسب الـ average power المعطاة والـ power factor لدائرة Fig. 3.')
     ],
     onReset(){ST={};$('result').innerHTML=''}};
 }};})();

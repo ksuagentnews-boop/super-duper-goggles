@@ -1,14 +1,22 @@
-/* EE205 · Experiment 3 · Thevenin's and Maximum Power Transfer Theorems (manual pp. 23–26).
-   Procedure I: Fig. 6a (5 V 1 kHz, 1 kΩ series, 3.3 kΩ shunt, 96 mH = the 17.5 mH coil with its iron core, 10 kΩ load)
-   → VR, IR; remove the 10 kΩ → ETH = Va-b; ZTH by shorting the supply (calculated); Fig. 6b (generator at ETH, ZTH made of
-   the decade box + the iron-core coil) → VR, IR, compare.
-   Procedure II: Fig. 7: 5 V 1 kHz, 100 Ω + 17.5 mH (air core) + RD (decade box = R + RL) + C, C = 0.1, 0.47, 0.57, 1, 1.1,
-   1.2, 1.47, 4.7, 22 µF (combinations in parallel) → Va-b, |Xc|, P = Va-b² / RD (Table 1); P vs |Xc|.
+/* EE205 · Experiment 3 · Thevenin's and Maximum Power Transfer Theorems (manual pp. 23–26). Steps follow the manual's
+   procedures one to one (Batch 6):
+   Procedure I (steps 1–4): Fig. 6a (5 V 1 kHz, 1 kΩ series, 3.3 kΩ shunt, 96 mH = the 17.5 mH coil with its iron core,
+   10 kΩ load) → VR, IR; remove the 10 kΩ → ETH = Va-b; ZTH by shorting the source (calculated); Fig. 6b (generator at ETH,
+   ZTH made of the decade box + the iron-core coil) → VR, IR, compare.
+   Procedure II (steps 1–6): Fig. 7: 5 V 1 kHz, 100 Ω + 17.5 mH (air core) + RD (decade box = R + RL) + C, C = 0.1, 0.47,
+   0.57, 1, 1.1, 1.2, 1.47, 4.7, 22 µF (combinations in parallel) → Va-b, |Xc|, P = Va-b² / RD (Table 1); P vs |Xc|.
    Instruments: Metrix MTX 3240, two Fluke 77 (yellow holsters, as on the table photo: M1 voltmeter, M2 ammeter), YEW box.
+   Figures (def.figs) are the reference wiring in the lab's rectangle layout (generator top-left node 8, its ground bottom-
+   left node 22); build steps tick when the bench IS the figure's circuit (engine/match.js); the measurement set-ups
+   (E_TH open circuit, every capacitor combination of Table 1) are matched the same way, never by node number.
    Decisions: "5 V" is 5 V rms of the generator EMF (AMPL = 14.14 Vpp); with it Va-b at 0.47 µF is 1.61 V, as read in the
    lab video (1.606 V). The coil's RL = 17.6 Ω; with the iron core it is 96 mH (PLAN). ZTH in rectangular form is
    calculated with the source shorted; the generator's own 50 Ω may be left out or included (both accepted). In Fig. 6b
-   ZTH's real part is set on the decade box (Rth − RL ≈ 767 Ω) in series with the iron-core coil. */
+   ZTH's real part is set on the decade box (Rth − RL ≈ 767 Ω) in series with the iron-core coil. Figs. 6a/6b draw V_R and
+   I_R: M1 sits across the 10 kΩ and M2 (A~, 300 mA jack) in series between a and the 10 kΩ, as part of the figure;
+   "isolate the 10 kΩ" (step I.2) takes the load branch out (the 10 kΩ and M2). Fig. 7 draws V_a-b: M1 across R_D; it is
+   built with the first capacitor of Table 1 (0.1 µF). The calculation steps (I.3, II.3–6) have nothing to check on the
+   bench and tick as soon as they are reached. */
 EXP_DEFS['ee205/exp3']=(()=>{const H=ENGINE.sheet;
 const PARTS={R100:{t:'R',r:100.3,nom:100,lab:'100Ω'},R1k:{t:'R',r:996,nom:1000,lab:'1kΩ'},R3k3:{t:'R',r:3291,nom:3300,lab:'3.3kΩ'},R10k:{t:'R',r:9930,nom:10000,lab:'10kΩ'},
   L175:{t:'L',l:0.0175,rs:17.6,lab:'17.5mH'},L96:{t:'L',l:0.096,rs:17.6,core:true,lab:'96mH (core)'},
@@ -41,7 +49,25 @@ ${CS.map(([k,c])=>`<tr><td>${c} µF</td><td>${H.num(k+'v','0.001',70)}</td><td>$
 <div>${H.sel('q6',[['a','When |XC| ≈ XL (≈ 110 Ω, C ≈ 1.47 µF): the load is the conjugate of ZTH'],['b','At the largest capacitor (22 µF)'],['c','At the smallest capacitor (0.1 µF)'],['d','The power does not depend on C']])}</div></li></ol>
 <div class="row" style="margin-top:12px"><button class="t on" id="submit">صحّح إجاباتي</button></div><div id="result"></div>
 </div></div>`;
-return {procs:[{id:'I',title:"Thevenin's theorem (Fig. 6)"},{id:'II',title:'Maximum power transfer (Fig. 7, Table 1)'}],
+/* the figures' reference wiring (rectangle: top row 8–11, right column down to row 3, bottom row back to 22).
+   Fig. 6a: GEN 8, 1 kΩ 8–9, the 3.3 kΩ down 9–16, the iron-core coil 9–10 (a = 10), M2 in series a → 11, the 10 kΩ down
+   11–18, M1 across it, the bottom bus 16–23, 18–25–24–23–22 = b (GEN ⏚). Fig. 6b: the box (Z_TH real part) in place of the
+   1 kΩ, no 3.3 kΩ. Fig. 7: GEN 8, 100 Ω 8–9, the air-core coil 9–10 (a), R_D (box) a → 17 (b), C b → 24, back to 22. */
+const GEN=[{lead:'gr',at:8},{lead:'gb',at:22}],BUS=[{wire:[18,25]},{wire:[25,24]},{wire:[24,23]},{wire:[23,22]}];
+const LOAD=[{lead:'h2ma',at:10},{lead:'h2c',at:11},{part:['R10k',11,18]},{lead:'h1v',at:11},{lead:'h1c',at:18}];
+const L6a=[...GEN,{part:['R1k',8,9]},{part:['R3k3',9,16]},{wire:[16,23]},{part:['L96',9,10]},...LOAD,...BUS];
+const L6b=[...GEN,{lead:'y1H',alt:'y1L',at:8},{lead:'y1L',alt:'y1H',at:9},{part:['L96',9,10]},...LOAD,...BUS];
+const ETH={lines:[...GEN,{part:['R1k',8,9]},{part:['R3k3',9,16]},{wire:[16,23]},{part:['L96',9,10]},{lead:'h1v',at:10},{lead:'h1c',at:23},{wire:[23,22]}]};
+const L7=c=>[...GEN,{part:['R100',8,9]},{part:['L175',9,10]},{lead:'y1H',alt:'y1L',at:10},{lead:'y1L',alt:'y1H',at:17},{lead:'h1v',at:10},{lead:'h1c',at:17},
+  ...c.map((t,i)=>[[17,24],[18,25],[16,23]][i]).flatMap((ab,i)=>[{part:[c[i],ab[0],ab[1]]}]),...(c.length>1?[{wire:[17,18]},{wire:[24,25]}]:[]),...(c.length>2?[{wire:[16,17]}]:[]),{wire:[24,23]},{wire:[23,22]}];
+const IMG=f=>'labs/ee205/fig/'+f;
+const figs={'6a':{img:IMG('e3-fig6.png'),cap:'Fig. 6a · M1 across the 10 kΩ (V<sub>R</sub>), M2 in series (I<sub>R</sub>)',lines:L6a},
+  '6b':{img:IMG('e3-fig6.png'),cap:'Fig. 6b · Thevenin equivalent: E<sub>TH</sub>, Z<sub>TH</sub> = decade box + iron-core coil',lines:L6b},
+  '7':{img:IMG('e3-fig7.png'),cap:'Fig. 7 · Circuit for Procedure II (C = 0.1 µF first, M1 across R<sub>D</sub>)',lines:L7(['C01'])}};
+/* Table 1: Fig. 7 with each capacitor combination (caps in parallel between b and ground) */
+const COMBO={c01:['C01'],c047:['C047'],c057:['C047','C01'],c1:['C1'],c11:['C1','C01'],c12:['C1','C01','C01'],c147:['C1','C047'],c47:['C47'],c22:['C22']};
+const CF={};for(const k in COMBO)CF[k]={lines:L7(COMBO[k])};
+return {figs,procs:[{id:'I',title:"Thevenin's theorem (Fig. 6)"},{id:'II',title:'Maximum power transfer (Fig. 7, Table 1)'}],
 sheet,params:()=>({}),
 instruments:[
   {type:'metrix',prev:{freq:2000,amp:5,wave:'Sine'}},
@@ -51,35 +77,29 @@ instruments:[
 parts:PARTS,
 tray:[['R100','100 Ω'],['R1k','1 kΩ'],['R3k3','3.3 kΩ'],['R10k','10 kΩ'],['L175','17.5 mH coil'],['L96','coil + iron core (96 mH)'],['C01','0.1 µF'],['C047','0.47 µF'],['C1','1 µF'],['C47','4.7 µF'],['C22','22 µF'],['BR','Bridging plug'],['W','Wire']],
 setup(RT){
-  const K=ENGINE.labkit(RT),N=K.N,G=ENGINE.sheet;let ST={};
+  const K=ENGINE.labkit(RT),G=ENGINE.sheet;let ST={};
   /* complex helpers for the calculated values */
   const c=(r,i)=>({r,i}),add=(a,b)=>c(a.r+b.r,a.i+b.i),mul=(a,b)=>c(a.r*b.r-a.i*b.i,a.r*b.i+a.i*b.r),div=(a,b)=>{const d=b.r*b.r+b.i*b.i;return c((a.r*b.r+a.i*b.i)/d,(a.i*b.r-a.r*b.i)/d)},par=(a,b)=>div(mul(a,b),add(a,b));
   const CAL={};{const z=par(c(1000,0),c(3300,0));CAL.zr=z.r+RL;CAL.zx=W*0.096;CAL.zr50=par(c(1050,0),c(3300,0)).r+RL;CAL.z7r=100+RL;CAL.z7x=XL}
   const vpp5=5*2*Math.SQRT2;
   const g5=()=>{const g=K.gen();return g.on&&g.wave==='Sine'&&g.f===1000&&Math.abs(g.vpp-vpp5)<0.02&&Math.abs(g.off)<1e-9};
-  const capSum=(a,b)=>RT.between(a,b).filter(x=>RT.PARTS[x.p.type].t==='C').reduce((s,x)=>s+RT.PARTS[x.p.type].c,0)*1e6;
-  function status(){const st={};const g=K.gen(),gn=RT.leadNet('gr');st.g=g;st.g5=g5();
-    const box=RT.inst.yew1,bH=RT.leadNet('y1H'),bL=RT.leadNet('y1L');st.box=box.value();
-    /* Procedure I · Fig. 6a: gen 1, 1k 1–2, 3.3k 2–9, coil (core) 2–3, plug 3–4 (IR), 10k 4–11; ground bus 9–10–11 (gen black) */
-    const gnd=N(9)===-1&&N(10)===-1&&N(11)===-1&&RT.leadNet('gb')===-1;st.gnd=gnd;
-    const front=gn===N(1)&&K.has('R1k',1,2)&&K.has('R3k3',2,9);st.front=front;
-    st.coil=K.has('L96',2,3);const load=K.has('R10k',4,11);st.load=load;
-    st.fig6a=gnd&&front&&st.coil&&load&&N(3)===N(4);
-    if(st.fig6a&&st.g5){const v=K.across('ACV',N(4),-1);if(v!=null)ST.vr1=v}
-    st.ammR=K.ammOn(N(3),N(4));
-    if(gnd&&front&&st.coil&&load&&st.g5){const i=K.amm(N(3),N(4),'ACI');if(i!=null&&!ST.thev)ST.ir1=i}
-    st.open=gnd&&front&&st.coil&&!load&&RT.at(N(3)).length<=1;
-    if(st.open&&st.g5){const v=K.across('ACV',N(3),-1);if(v!=null)ST.eth=v}
-    /* Fig. 6b: generator at ETH (rms) on node 1, box between 1 and 2, the same coil and load; no 1k, no 3.3k */
+  const M1=()=>RT.meters().find(m=>m.key==='hm1'),M2=()=>RT.meters().find(m=>m.key==='hm2');
+  const volts=()=>{const m=M1();return m&&m.D.pwr&&m.D.fn==='ACV'&&m.D.jack==='HI'?K.shown(m):null};
+  const amps=()=>{const m=M2();return m&&m.D.pwr&&m.D.fn==='ACI'&&m.D.jack==='A'?K.shown(m):null};
+  function status(){const st={};const g=K.gen();st.g=g;st.g5=g5();
+    st.box=RT.inst.yew1.value();
+    /* Procedure I · Fig. 6a (M1 on V_R, M2 in series for I_R) */
+    st.fig6a=RT.match('6a').ok;
+    if(st.fig6a&&st.g5&&!ST.thev){const v=volts(),i=amps();if(v!=null)ST.vr1=v;if(i!=null)ST.ir1=i}
+    /* E_TH: the load branch out, M1 across a–b */
+    if(st.g5&&RT.match(ETH).ok){const v=volts();if(v!=null)ST.eth=v}
+    /* Fig. 6b: the generator at E_TH (rms), the box ≈ R_TH − R_L */
     const eth=ST.eth;st.gEth=eth!=null&&g.on&&g.wave==='Sine'&&g.f===1000&&Math.abs(g.vpp/(2*Math.SQRT2)-eth)<0.02;
-    st.fig6b=gnd&&gn===N(1)&&!K.has('R1k',1,2)&&!K.has('R3k3',2,9)&&((bH===N(1)&&bL===N(2))||(bL===N(1)&&bH===N(2)))&&st.coil&&load&&st.box>=700&&st.box<=800;
-    if(st.fig6b&&st.gEth){ST.thev=true;if(N(3)===N(4)){const v=K.across('ACV',N(4),-1);if(v!=null)ST.vr2=v}const i=K.amm(N(3),N(4),'ACI');if(i!=null)ST.ir2=i}
-    /* Procedure II · Fig. 7: gen 15, 100 Ω 15–16, coil (air) 16–17 = a, box RD a → b = 24, caps from the b bus (24-25-26) to the ground bus (31-32-33) */
-    const gnd7=N(31)===-1&&RT.leadNet('gb')===-1;
-    st.fig7=gnd7&&gn===N(15)&&K.has('R100',15,16)&&K.has('L175',16,17)&&((bH===N(17)&&bL===N(24))||(bL===N(17)&&bH===N(24)));
+    st.boxTh=st.box>=700&&st.box<=800;st.fig6b=RT.match('6b').ok;
+    if(st.fig6b&&st.boxTh&&st.gEth){ST.thev=true;const v=volts(),i=amps();if(v!=null)ST.vr2=v;if(i!=null)ST.ir2=i}
+    /* Procedure II · Fig. 7 with each capacitor combination of Table 1, R_D = R + R_L */
     st.rd=st.box;st.rdOK=Math.abs(st.box-(100+RL))<=1;
-    st.C=st.fig7?capSum(N(24),-1):0;
-    if(st.fig7&&st.rdOK&&st.g5){const v=K.across('ACV',N(17),N(24),true);if(v!=null)CS.forEach(([k,cv])=>{if(Math.abs(st.C-cv)<1e-6)ST[k]=v})}
+    if(st.rdOK&&st.g5){const v=volts();if(v!=null)for(const k in CF)if(RT.match(CF[k]).ok)ST[k]=v}
     st.genOff=!g.out||!g.pwr;
     st.ST=ST;return st}
   $('submit').addEventListener('click',()=>{const gr=G.grader(),v=G.v,s=G.s;const rd=k=>ST[k]!=null;
@@ -92,29 +112,28 @@ setup(RT){
       gr.add(G.near(v(k+'x'),xc,xc*0.005+0.1),`${cv} µF |Xc|`,`1/(ωC) = ${xc.toFixed(1)} Ω`);gr.add(G.near(v(k+'p'),v(k+'v')*v(k+'v')/v('rd')*1e3,0.05),`${cv} µF P`,'Va-b² / RD')});
     gr.add(s('q6')==='a','Step 6 maximum power','|XC| = XL: the load is the conjugate of ZTH');
     gr.show($('result'))});
-  const F6='labs/ee205/fig/e3-fig6.png',F7='labs/ee205/fig/e3-fig7.png';
+  const calc=t=>({dev:'board',t,ok:()=>true});
   return {status,
     steps:[
-      {dev:'board',fig:F6,figCap:'Fig. 6a',t:'Procedure I: ركّب Fig. 6a. الأرضي (b) هو node 9 و 10 و 11 (bridging plugs)، و a = node 3. بين node 3 و node 4 bridging plug مكان الأميتر بعدين. حط الـ iron core في الـ coil (96 mH).',
-        lines:[{t:'1 kΩ: node 1 ↔ node 2',part:['R1k',1,2]},{t:'3.3 kΩ: node 2 ↔ node 9',part:['R3k3',2,9]},{t:'coil + iron core (96 mH): node 2 ↔ node 3',part:['L96',2,3]},{t:'bridging plug: node 3 ↔ node 4',wire:[3,4]},
-          {t:'10 kΩ: node 4 ↔ node 11',part:['R10k',4,11]},{t:'bridging plug: node 9 ↔ node 10',wire:[9,10]},{t:'bridging plug: node 10 ↔ node 11',wire:[10,11]},{t:'GEN OUT red → node 1',lead:'gr',at:1},{t:'GEN ⏚ black → node 9 (b)',lead:'gb',at:9}],ok:s=>s.fig6a},
-      {dev:'gen',t:'شغّل الـ generator: Sine، 1 kHz، و 5 V rms يعني AMPL = 14.14 Vpp (الـ Metrix يعرض Vpp)، و OUTPUT ON.',ok:s=>s.fig6a&&s.g5},
-      {dev:'hm1',t:'1. قِس V<sub>R</sub> على الـ 10 kΩ بـ M1 على V~ (VΩ → node 4، COM → node 11).',lines:[{t:'M1 VΩ → node 4',lead:'h1v',at:4},{t:'M1 COM → node 11',lead:'h1c',at:11}],ok:s=>ST.vr1!=null},
-      {dev:'hm2',t:'وقِس I<sub>R</sub>: شيل الـ plug بين node 3 و node 4 وحط M2 على A~ مكانه (300mA → node 3، COM → node 4). رجّع الـ plug بعدها.',lines:[{t:'M2 300mA (red) → node 3',lead:'h2ma',at:3},{t:'M2 COM → node 4',lead:'h2c',at:4}],ok:s=>ST.ir1!=null},
-      {dev:'board',t:'2. شيل الأميتر ورجّع الـ plug، وبعدين افصل الـ 10 kΩ (شيله): قِس V<sub>a-b</sub> بـ M1 (VΩ → node 3، COM → الأرضي). هذا E<sub>TH</sub>.',ok:s=>ST.eth!=null},
-      {dev:'board',t:'3. احسب Z<sub>TH</sub> وأنت قاصر المصدر: (1 kΩ ∥ 3.3 kΩ) + R<sub>L</sub> + jωL. اكتبه rectangular في الجدول.',ok:s=>ST.eth!=null},
-      {dev:'yew1',fig:F6,figCap:'Fig. 6b',t:'4. ركّب Fig. 6b: شيل الـ 1 kΩ والـ 3.3 kΩ، وحط الـ decade box مكان الجزء الحقيقي من Z<sub>TH</sub> (≈ 767 Ω) بين node 1 و node 2 مع نفس الـ coil، ورجّع الـ 10 kΩ.',
-        lines:[{t:'R1 H → node 1',lead:'y1H',at:1},{t:'R1 L → node 2',lead:'y1L',at:2},{t:'10 kΩ: node 4 ↔ node 11',part:['R10k',4,11]}],ok:s=>s.fig6b},
-      {dev:'gen',t:'اضبط الـ generator على E<sub>TH</sub> اللي قسته (AMPL = E<sub>TH</sub> × 2√2 Vpp)، وقِس V<sub>R</sub> و I<sub>R</sub> مرة ثانية وقارنها بالخطوة 1.',ok:s=>ST.vr2!=null&&ST.ir2!=null},
-      {dev:'gen',t:'Procedure II: طفّ الـ OUTPUT، وفضّ دائرة Procedure I (القطع وأطراف الـ box والـ generator).',ok:s=>s.genOff&&!RT.S.parts.length},
-      {dev:'board',fig:F7,figCap:'Fig. 7',t:'ركّب Fig. 7: a = node 17، b = node 24 (bus 24-25-26)، والأرضي bus 31-32-33. R<sub>D</sub> هو الـ decade box بين a و b، والمكثفات من b للأرضي.',
-        lines:[{t:'100 Ω: node 15 ↔ node 16',part:['R100',15,16]},{t:'17.5 mH coil (air core): node 16 ↔ node 17',part:['L175',16,17]},{t:'R1 (R<sub>D</sub>) H → node 17 (a)',lead:'y1H',at:17},{t:'R1 L → node 24 (b)',lead:'y1L',at:24},
-          {t:'bridging plug: node 24 ↔ node 25',wire:[24,25]},{t:'bridging plug: node 25 ↔ node 26',wire:[25,26]},{t:'bridging plug: node 31 ↔ node 32',wire:[31,32]},{t:'bridging plug: node 32 ↔ node 33',wire:[32,33]},
-          {t:'GEN OUT red → node 15',lead:'gr',at:15},{t:'GEN ⏚ black → node 31',lead:'gb',at:31}],ok:s=>s.fig7},
-      {dev:'yew1',t:'1. اضبط R<sub>D</sub> = R + R<sub>L</sub> (100 + R<sub>L</sub>، يعني ≈ 118 Ω) على الـ decade box، وشغّل الـ generator (5 V rms، 1 kHz).',ok:s=>s.fig7&&s.rdOK&&s.g5},
-      {dev:'hm1',t:'حط M1 على V~ على R<sub>D</sub> (VΩ → node 17، COM → node 24).',lines:[{t:'M1 VΩ → node 17 (a)',lead:'h1v',at:17},{t:'M1 COM → node 24 (b)',lead:'h1c',at:24}],ok:s=>K.across('ACV',N(17),N(24),true)!=null},
-      ...CS.map(([k,cv],i)=>({dev:'board',t:`2. C = <b>${cv} µF</b>${cv===0.57?' (0.47 + 0.1 على التوازي)':cv===1.1?' (1 + 0.1)':cv===1.2?' (1 + 0.1 + 0.1)':cv===1.47?' (1 + 0.47)':''}: حط المكثفات بين الـ b bus والأرضي (node 24 ↔ 31، node 25 ↔ 32، node 26 ↔ 33)، وسجّل V<sub>a-b</sub>.`,ok:s=>ST[k]!=null})),
-      {dev:'gen',t:'3–6. احسب Z<sub>TH</sub> و |X<sub>C</sub>| و P = V<sub>a-b</sub>²/R<sub>D</sub> لكل قيمة وارسم P ضد |X<sub>C</sub>|. بعدين طفّ الـ generator.',ok:s=>s.genOff&&CS.every(([k])=>ST[k]!=null)}
+      /* Procedure I (manual p. 24), steps 1–4 */
+      {dev:'board',build:'6a',t:'Procedure I · 1. وصّل الدائرة Fig. 6a، وقِس V<sub>R</sub> و I<sub>R</sub>.',
+        acts:['حط الـ iron core في الـ coil (96 mH).','شغّل الـ generator: Sine، 1 kHz، و 5 V rms يعني AMPL = 14.14 Vpp (الـ Metrix يعرض Vpp)، و OUTPUT ON.','M1 على V~ على الـ 10 kΩ (V<sub>R</sub>)، و M2 على A~ (المدخل 300mA) على التوالي بين a والـ 10 kΩ (I<sub>R</sub>).'],
+        ok:s=>s.g5&&ST.vr1!=null&&ST.ir1!=null,rec:[{to:'vr1',val:()=>ST.vr1,unit:'V',dec:3,label:'V<sub>R</sub>'},{to:'ir1',val:()=>ST.ir1!=null?ST.ir1*1e3:null,unit:'mA',dec:2,label:'I<sub>R</sub>'}]},
+      {dev:'hm1',t:'2. افصل الـ 10 kΩ عن الدائرة وقِس الجهد بين الطرفين (a-b). هذا الجهد هو E<sub>TH</sub>.',acts:['شيل فرع الـ load: الـ 10 kΩ وأطراف M2.','M1 (V~) بين a والأرضي b.'],ok:s=>ST.eth!=null,
+        rec:[{to:'eth',val:()=>ST.eth,unit:'V',dec:3,label:'E<sub>TH</sub>'}]},
+      calc('3. احسب Z<sub>TH</sub> وأنت قاصر المصدر (shorting the supply): (1 kΩ ∥ 3.3 kΩ) + R<sub>L</sub> + jωL، واكتبه rectangular.'),
+      {dev:'board',build:'6b',t:'4. ركّب الـ Thevenin\'s equivalent لدائرة Fig. 6a بإدخال E<sub>TH</sub> و Z<sub>TH</sub> مثل Fig. 6b، وقِس I<sub>R</sub> و V<sub>R</sub>. قارنها بالخطوة (1).',
+        acts:['Z<sub>TH</sub>: الـ decade box على الجزء الحقيقي ناقص R<sub>L</sub> (≈ 767 Ω) على التوالي مع نفس الـ coil بالـ iron core.','رجّع الـ 10 kΩ مع M1 و M2 مثل Fig. 6a.','اضبط الـ generator على E<sub>TH</sub> اللي قسته (AMPL = E<sub>TH</sub> × 2√2 Vpp).'],
+        ok:s=>s.boxTh&&s.gEth&&ST.vr2!=null&&ST.ir2!=null,rec:[{to:'vr2',val:()=>ST.vr2,unit:'V',dec:3,label:'V<sub>R</sub>'},{to:'ir2',val:()=>ST.ir2!=null?ST.ir2*1e3:null,unit:'mA',dec:2,label:'I<sub>R</sub>'}]},
+      /* Procedure II (manual pp. 25–26), steps 1–6 */
+      {dev:'board',build:'7',t:'Procedure II · 1. ركّب دائرة Fig. 7. خلّ R<sub>D</sub> = R + R<sub>L</sub>.',acts:['R<sub>D</sub> على الـ decade box: 100 + R<sub>L</sub> ≈ 118 Ω.','شغّل الـ generator: 5 V rms (14.14 Vpp)، 1 kHz.'],ok:s=>s.rdOK&&s.g5},
+      {dev:'board',t:'2. بدّل الـ capacitor combinations مثل Table 1 وقِس V<sub>a-b</sub> لكل combination.',
+        acts:CS.map(([k,cv])=>`${cv} µF${cv===0.57?' (0.47 + 0.1 على التوازي)':cv===1.1?' (1 + 0.1)':cv===1.2?' (1 + 0.1 + 0.1)':cv===1.47?' (1 + 0.47)':''}`),
+        ok:s=>CS.every(([k])=>ST[k]!=null),rec:CS.map(([k,cv])=>({to:k+'v',val:()=>ST[k],unit:'V',dec:3,label:`${cv} µF`}))},
+      calc('3. احسب Z<sub>TH</sub> لدائرة Fig. 7 وسجّله بالـ rectangular form.'),
+      calc('4. احسب X<sub>C</sub> لكل combination وسجّلها في Table 1.'),
+      calc('5. احسب الـ power المنقولة للـ load: P = V<sub>a-b</sub>² / R<sub>D</sub>. كرّر لكل الـ combinations وسجّلها في Table 1.'),
+      calc('6. ارسم P ضد |X<sub>C</sub>| وحدّد نقطة الـ maximum power transfer على الرسم. وش تستنتج؟')
     ],
     onReset(){ST={};$('result').innerHTML=''}};
 }};})();

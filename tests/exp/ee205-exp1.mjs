@@ -8,66 +8,61 @@ export async function run(page, vp, ok) {
   const done = async n => (await steps()) >= n;
   const shown = k => page.evaluate(k => { const m = BENCH.sim.RT.meters().find(q => q.key === k); return m.r.shown; }, k);
   // ---- Procedure I ----
-  await H.focus('hm1'); await H.key('h1:SW+', 2); ok(await done(1), 'I.1 Fluke on Ω');
+  await H.focus('hm1'); await H.key('h1:SW+', 2);
   await H.focus('board'); await H.place('RC1', 0, 1); await H.lead('h1v', 0); await H.lead('h1c', 1);
-  ok(await done(2), `I Resistor 1 measured: ${JSON.stringify(await shown('hm1'))}`);
-  await H.del(0, 1); await H.place('RC2', 0, 1); ok(await done(3), 'I Resistor 2 measured');
-  await H.del(0, 1); await H.place('RC3', 0, 1); ok(await done(4), 'I Resistor 3 measured');
-  await H.del(0, 1); await H.lead('y1H', 0); await H.lead('y1L', 1);
-  ok(await done(5), 'I decade box R1 on the ohmmeter');
+  ok(!!(await st()).rRC1, `I.1 Resistor 1 measured: ${JSON.stringify(await shown('hm1'))}`);
+  await H.del(0, 1); await H.place('RC2', 3, 4); await H.lead('h1v', 4); await H.lead('h1c', 3); ok(!!(await st()).rRC2, 'I.1 Resistor 2 measured (elsewhere, leads swapped)');
+  await H.del(3, 4); await H.place('RC3', 0, 1); await H.lead('h1v', 0); await H.lead('h1c', 1); ok(await done(1), 'I.1 Resistor 3 measured — step 1 done');
+  await H.del(0, 1); await H.lead('y1H', 1); await H.lead('y1L', 0);
   const dials = async target => { const d = await page.evaluate(() => BENCH.sim.RT.S.yew1.d.slice());
     for (let j = 0; j < 6; j++) { const want = target[j] || 0; while (d[j] !== want) { await H.key(`y1:D${j}${d[j] < want ? '+' : '-'}`); d[j] += d[j] < want ? 1 : -1; } } };
   await H.focus('yew1');
   const BOX = [[0, 4], [1, 5], [2, 7], [3, 5], [4, 3]];
   for (const [j, n] of BOX) { const t = [0, 0, 0, 0, 0, 0]; t[j] = n; await dials(t); }
-  ok(await done(10), `I Table 3 five readings: ${JSON.stringify(await st())}`);
+  ok(await done(4), `I.2 Table 3 five readings (box reversed on the meter), I.3–4 calculations: ${JSON.stringify(await st())}`);
   // ---- Procedure II (the decade box leaves the table, its leads back in the tray; the supply comes) ----
-  ok(await page.evaluate(() => !BENCH.sim.RT.layout.regions.yew1 && !!BENCH.sim.RT.layout.regions.psu && !BENCH.sim.RT.S.jack.y1H), 'II: decade box left, supply came ' + JSON.stringify(await page.evaluate(() => [BENCH.sim.RT.procOf(), Object.keys(BENCH.sim.RT.layout.regions), BENCH.sim.RT.S.jack.y1H, BENCH.sim.status && 0])));
-  await H.lead('y1H', null); await H.lead('y1L', null);
-  ok(await done(11), 'II board clear');
+  ok(await page.evaluate(() => !BENCH.sim.RT.layout.regions.yew1 && !!BENCH.sim.RT.layout.regions.psu && !BENCH.sim.RT.S.jack.y1H), 'II: decade box left, supply came');
+  await H.lead('h1v', null); await H.lead('h1c', null);
+  /* a layout of its own (nodes 7–10, not the reference rectangle) */
   await H.focus('board'); await H.place('R4k7', 7, 8); await H.place('R1k', 8, 9); await H.place('R2k2', 9, 10); await H.lead('Lp', 7); await H.lead('Lm', 10);
-  ok(await done(12), 'II Fig. 5 built');
-  await H.focus('psu'); await H.key('p:PWR'); await H.key('p:LVC-', 2); await H.key('p:LON'); ok(await done(13), 'II E = 10 V on');
-  await H.focus('hm1'); await H.key('h1:SW-', 2); await H.lead('h1v', 7); await H.lead('h1c', 8); ok(await done(14), 'II V1 measured');
-  await H.lead('h1v', 8); await H.lead('h1c', 9); await H.lead('h1v', 9); await H.lead('h1c', 10);
-  ok(await done(15), `II V2, V3: ${JSON.stringify(await st())}`);
-  await H.lead('h1v', 7); await H.lead('h1c', 10); ok(await done(16), 'II E measured');
+  ok(await done(5), 'II.1 Fig. 5 built');
+  await H.focus('psu'); await H.key('p:PWR'); await H.key('p:LVC-', 2); await H.key('p:LON');
+  await H.focus('hm1'); await H.key('h1:SW-', 2);
+  for (const [a, b] of [[7, 8], [8, 9], [9, 10], [7, 10]]) { await H.lead('h1v', a); await H.lead('h1c', b); }
+  ok(await done(10), `II.2 V1 V2 V3 E measured, II.3–6: ${JSON.stringify(await st())}`);
   // ---- Procedure III ----
   await H.focus('psu'); await H.key('p:LON');
   await H.focus('board'); for (const [a, b] of [[7, 8], [8, 9], [9, 10]]) await H.del(a, b);
-  await H.lead('h1v', null); await H.lead('h1c', null); await H.lead('Lp', null); await H.lead('Lm', null);
-  ok(await done(17), 'III output off, board clear');
+  await H.lead('Lp', null); await H.lead('Lm', null);
   ok(await page.evaluate(() => !BENCH.sim.RT.layout.regions.hm1 && !!BENCH.sim.RT.layout.regions.hm2), 'III: Fluke left, GoldStar came');
   await H.place('R1k', 23, 30); await H.place('R4k7', 24, 31); await H.place('R2k2', 25, 32);
   for (const [a, b] of [[30, 31], [31, 32], [16, 17], [17, 18], [16, 23], [17, 24], [18, 25], [15, 16]]) await H.place('BR', a, b);
-  await H.lead('Lp', 15); await H.lead('Lm', 32); ok(await done(18), 'III Fig. 6 built');
-  await H.focus('psu'); await H.key('p:LON'); ok(await done(19), 'III output on');
+  await H.lead('Lp', 15); await H.lead('Lm', 32); ok(await done(11), 'III.1 Fig. 6 built');
+  await H.focus('psu'); await H.key('p:LON');
   await H.focus('hm2'); await H.key('h2:SW+', 6);
   await H.focus('board'); await H.del(16, 23); await H.lead('h2v', 16); await H.lead('h2c', 23);
-  ok(await done(20), `III I1 = ${JSON.stringify(await shown('hm2'))}`);
+  ok(!!(await st()).i1, `III I1 = ${JSON.stringify(await shown('hm2'))}`);
   const move = async (back, a, b) => { await H.lead('h2v', null); await H.lead('h2c', null); await H.place('BR', back[0], back[1]); await H.del(a, b); await H.lead('h2v', a); await H.lead('h2c', b); };
-  await move([16, 23], 17, 24); ok(await done(21), 'III I2');
-  await move([17, 24], 18, 25); ok(await done(22), 'III I3');
-  await move([18, 25], 15, 16); ok(await done(23), `III IT ${JSON.stringify(await st())}`);
+  await move([16, 23], 17, 24); await move([17, 24], 18, 25); await move([18, 25], 15, 16);
+  ok(await done(15), `III.2 I1 I2 I3 IT, III.3–5: ${JSON.stringify(await st())}`);
   // ---- Procedure IV ----
   await H.focus('psu'); await H.key('p:LON'); await H.focus('board');
   await H.lead('h2v', null); await H.lead('h2c', null); await H.lead('Lp', null); await H.lead('Lm', null);
   for (const [a, b] of [[23, 30], [24, 31], [25, 32], [30, 31], [31, 32], [16, 17], [17, 18], [16, 23], [17, 24], [18, 25]]) await H.del(a, b);
-  ok(await done(24), 'IV clear');
   await H.place('R220', 9, 16); await H.place('R470', 9, 10); await H.place('BR', 10, 17); await H.place('R10k', 16, 17); await H.place('R220', 16, 23); await H.place('BR', 23, 24); await H.place('R1k', 17, 24);
   await H.lead('Lp', 2); await H.lead('Lm', 23); await H.lead('h2v', 2); await H.lead('h2c', 9);
-  ok(await done(25), 'IV Fig. 7 built');
+  ok(await done(16), 'IV.1 Fig. 7 built (GoldStar in series)');
   await H.focus('hm2'); await H.key('h2:SW+'); await H.focus('psu'); await H.key('p:LVC+', 5); await H.key('p:LON');
-  ok(await done(26), `IV ID = ${JSON.stringify(await shown('hm2'))}`);
+  ok(await done(19), `IV.2 ID = ${JSON.stringify(await shown('hm2'))}, IV.3–4`);
   const setBox = async (k, target) => { await H.focus('yew' + k); const d = await page.evaluate(k => BENCH.sim.RT.S['yew' + k].d.slice(), k);
     for (let j = 0; j < 6; j++) while (d[j] !== target[j]) { await H.key(`y${k}:D${j}${d[j] < target[j] ? '+' : '-'}`); d[j] += d[j] < target[j] ? 1 : -1; } };
   await setBox(1, [10, 0, 0, 0, 0, 0]); await setBox(2, [0, 4, 4, 0, 0, 0]); await setBox(3, [6, 0, 2, 0, 0, 0]);
-  ok(await done(27), 'IV Ra Rb Rc set');
   await H.focus('board'); await H.del(9, 16); await H.del(9, 10); await H.del(16, 17);
-  await H.lead('y1H', 12); await H.lead('y1L', 9); await H.lead('y2H', 12); await H.lead('y2L', 10); await H.lead('y3H', 12); await H.lead('y3L', 16);
-  ok(await done(29), `IV Fig. 8, IY: ${JSON.stringify(await st())}`);
+  await H.lead('y1H', 12); await H.lead('y1L', 9); await H.lead('y2L', 12); await H.lead('y2H', 10); await H.lead('y3H', 12); await H.lead('y3L', 16);
+  ok(await done(21), `IV.5 Fig. 8, IY, IV.6: ${JSON.stringify(await st())}`);
   await page.screenshot({ path: `/tmp/ee205-exp1-${vp}.png` });
-  await H.focus('psu'); await H.key('p:LON'); await H.key('p:PWR'); ok(await done(30), 'all steps done');
+  /* wrong circuits do not pass: a box on the wrong corner */
+  ok(await page.evaluate(() => { const RT = BENCH.sim.RT; const ok8 = RT.match('8').ok; return ok8; }), 'Fig. 8 matches as built');
   // ---- sheet ----
   const S = await st();
   const F = await page.evaluate(S => { const P = BENCH.sim.RT.PARTS; const f = {}; const r = (x, d) => (+x).toFixed(d);

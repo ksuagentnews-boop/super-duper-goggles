@@ -1,16 +1,23 @@
 /* EE205 · Experiment 1 · Introduction to Measurement of Resistors, Current and Voltage Divider Rules, and Δ-Y
-   Transformation Rule (manual pp. 9–16).
-   Procedure I: Table 2 (three colour-coded resistors: colour code vs ohmmeter) and Table 3 (YEW decade box at
+   Transformation Rule (manual pp. 9–16). Steps follow the manual's procedures one to one (Batch 6):
+   Procedure I (steps 1–4): Table 2 (three colour-coded resistors: colour code vs ohmmeter) and Table 3 (YEW decade box at
    4 Ω ×1, 50 Ω ×10, 700 Ω ×100, 5 kΩ ×1K, 30 kΩ ×10K: reading, tolerance, % error).
-   Procedure II: Fig. 5, E = 10 V, R1 = 4.7 kΩ, R2 = 1 kΩ, R3 = 2.2 kΩ in series → V1, V2, V3, E (Table 4).
-   Procedure III: Fig. 6, E = 10 V, 1 kΩ ∥ 4.7 kΩ ∥ 2.2 kΩ → I1, I2, I3, IT with the GoldStar in series (Table 5).
-   Procedure IV: Fig. 7 bridge (a-c 220, a-b 470, c-b 10 k, c-d 220, b-d 1 k), E = 15 V → ID; Δ abc → Y (Ra, Rb, Rc on
-   the three decade boxes), Fig. 8 → IY.
-   Instruments (each procedure brings its own, see `procs` below): Thandar TS3022S, Fluke 77 (M1: ohmmeter / voltmeter), GoldStar DM-33x (M2:
-   ammeter, as in the lab video), three YEW 2786 boxes.
+   Procedure II (steps 1–6): Fig. 5, E = 10 V, R1 = 4.7 kΩ, R2 = 1 kΩ, R3 = 2.2 kΩ in series → V1, V2, V3, E (Table 4).
+   Procedure III (steps 1–5): Fig. 6, E = 10 V, 1 kΩ ∥ 4.7 kΩ ∥ 2.2 kΩ → I1, I2, I3, IT with the GoldStar in series (Table 5).
+   Procedure IV (steps 1–6): Fig. 7 bridge (a-c 220, a-b 470, c-b 10 k, c-d 220, b-d 1 k), E = 15 V → ID; Δ abc → Y (Ra, Rb,
+   Rc on the three decade boxes), Fig. 8 → IY.
+   Figures (def.figs) are the reference wiring in the lab's rectangle layout (source on the left, + top-left node 8, − bottom-
+   left node 22); build steps tick when the bench IS the figure's circuit (engine/match.js); the measurement set-ups (meter
+   across a part, ammeter in place of a branch plug, ohmmeter on a part / box) are matched the same way, never by node.
+   Instruments (each procedure brings its own, see `procs` below): Thandar TS3022S, Fluke 77 (M1: ohmmeter / voltmeter),
+   GoldStar DM-33x (M2: ammeter, as in the lab video), three YEW 2786 boxes.
    Assumptions: the three "colour code resistors" of Procedure I are 330 Ω, 6.8 kΩ and 56 kΩ (5 %, gold band); the parts
    are real (each a little off its nominal value, inside 5 %); "simulated" values of Procedure IV are the calculated
-   ones (no PSpice on this bench); the Δ→Y values are set on the boxes to the nearest ohm. */
+   ones (no PSpice on this bench); the Δ→Y values are set on the boxes to the nearest ohm. Procedure I step 3 says "record
+   in table 2": the tolerance column is in Table 3. Fig. 6 is built with a bridging plug in every branch and between the
+   source and the bus, so the one ammeter can take a plug's place for I1, I2, I3 and IT in turn. Figs. 7 and 8 draw I_D /
+   I_Y on the source line: the GoldStar sits there in series (part of the figure). The calculation / comparison steps
+   (I.3–4, II.3–6, III.3–5, IV.3–4, IV.6) have nothing to check on the bench and tick as soon as they are reached. */
 EXP_DEFS['ee205/exp1']=(()=>{const H=ENGINE.sheet;
 const PARTS={RC1:{t:'R',r:333.4,nom:330,lab:'Resistor 1'},RC2:{t:'R',r:6744,nom:6800,lab:'Resistor 2'},RC3:{t:'R',r:56620,nom:56000,lab:'Resistor 3'},
   R220:{t:'R',r:218.7,nom:220,lab:'220Ω'},R470:{t:'R',r:466.2,nom:470,lab:'470Ω'},R1k:{t:'R',r:994.1,nom:1000,lab:'1kΩ'},R2k2:{t:'R',r:2213,nom:2200,lab:'2.2kΩ'},
@@ -42,7 +49,31 @@ const t6=`<table class="tbl"><caption>Procedure IV: Δ-Y Transformation · E = 1
 <tr><td class="l">I<sub>Y</sub> measured (Fig. 8)</td><td>${H.num('iym','0.01',80)} mA</td></tr>
 <tr><td class="l">I<sub>Y</sub> calculated</td><td>${H.num('iyc','0.01',80)} mA</td></tr></table>`;
 const fig=(f,cap,w=420)=>`<div class="figbox" style="padding:8px;text-align:center"><img class="figimg" src="labs/ee205/fig/${f}" alt="${cap}" style="max-width:${w}px;width:100%"></div><div class="hint" style="text-align:center">${cap}</div>`;
-return {procs:[{id:'I',title:'Resistance measurement (Tables 2, 3)'},{id:'II',title:'Voltage divider rule (Fig. 5, Table 4)'},{id:'III',title:'Current divider rule (Fig. 6, Table 5)'},{id:'IV',title:'Δ-Y transformation (Figs. 7, 8)'}],
+/* the figures' reference wiring, in the lab's rectangle layout (bottom-left node 22, left column 22–8, top row 8–11,
+   right column down to row 3, bottom row back to 22): DC + top-left (node 8), DC − bottom-left (node 22) */
+const SUP=[{lead:'Lp',alt:'Rp',at:8},{lead:'Lm',alt:'Rm',at:22}];
+const L5=[...SUP,{part:['R4k7',8,9]},{part:['R1k',9,10]},{part:['R2k2',10,17]},{wire:[17,24]},{wire:[24,23]},{wire:[23,22]}];
+/* Fig. 6: plug 8–9 = the I_T line, bus 9–10–11, a plug per branch (9–16, 10–17, 11–18), the branches down to the bottom bus */
+const P6={it:[8,9],i1:[9,16],i2:[10,17],i3:[11,18]};
+const L6=[...SUP,{wire:P6.it},{wire:[9,10]},{wire:[10,11]},{wire:P6.i1},{wire:P6.i2},{wire:P6.i3},{part:['R1k',16,23]},{part:['R4k7',17,24]},{part:['R2k2',18,25]},{wire:[22,23]},{wire:[23,24]},{wire:[24,25]}];
+/* Fig. 7: a = 9, b = 10/17, c = 16, d = 23/24/22; the GoldStar between DC + and a */
+const AMM=[{lead:'h2v',at:8},{lead:'h2c',at:9}],DOWN=[{part:['R220',16,23]},{part:['R1k',17,24]},{wire:[24,23]},{wire:[23,22]}];
+const L7=[...SUP,...AMM,{part:['R470',9,10]},{part:['R220',9,16]},{wire:[10,17]},{part:['R10k',16,17]},...DOWN];
+/* Fig. 8: the Y point n = node 10; Ra (box R1) n–a, Rb (box R2) n–b, Rc (box R3) n–c (each box either way round) */
+const BOXY=(k,at)=>[{lead:`y${k}H`,alt:`y${k}L`,at:10},{lead:`y${k}L`,alt:`y${k}H`,at}];
+const L8=[...SUP,...AMM,...BOXY(1,9),...BOXY(2,17),...BOXY(3,16),...DOWN];
+const IMG=f=>'labs/ee205/fig/'+f;
+const figs={'5':{img:IMG('e1-fig5.png'),cap:'Fig. 5 · Circuit to verify voltage division rule',lines:L5},
+  '6':{img:IMG('e1-fig6.png'),cap:'Fig. 6 · Circuit to verify current division rule',lines:L6},
+  '7':{img:IMG('e1-fig7.png'),cap:'Fig. 7 · Δ - Y Circuit (GoldStar in series for I<sub>D</sub>)',lines:L7},
+  '8':{img:IMG('e1-fig8.png'),cap:'Fig. 8 · Δ - Y Circuit (R<sub>a</sub>, R<sub>b</sub>, R<sub>c</sub> on the decade boxes)',lines:L8}};
+/* measurement set-ups, matched like the figures: the ohmmeter on one resistor / on the box alone (Procedure I), the voltmeter
+   across a part of Fig. 5, the ammeter in place of one plug of Fig. 6 */
+const OHM={};['RC1','RC2','RC3'].forEach(t=>OHM[t]={lines:[{part:[t,0,1]},{lead:'h1v',at:0},{lead:'h1c',at:1}]});
+const OHMBOX={lines:[{lead:'y1H',alt:'y1L',at:0},{lead:'y1L',alt:'y1H',at:1},{lead:'h1v',at:0},{lead:'h1c',at:1}]};
+const VM={v1:[8,9],v2:[9,10],v3:[10,17],vt:[8,22]};Object.keys(VM).forEach(k=>VM[k]={lines:[...L5,{lead:'h1v',at:VM[k][0]},{lead:'h1c',at:VM[k][1]}]});
+const AM={};Object.keys(P6).forEach(k=>{const [a,b]=P6[k];AM[k]={lines:[...L6.filter(l=>l.wire!==P6[k]),{lead:'h2v',at:a},{lead:'h2c',at:b}]}});
+return {figs,procs:[{id:'I',title:'Resistance measurement (Tables 2, 3)'},{id:'II',title:'Voltage divider rule (Fig. 5, Table 4)'},{id:'III',title:'Current divider rule (Fig. 6, Table 5)'},{id:'IV',title:'Δ-Y transformation (Figs. 7, 8)'}],
 sheet:`<div class="paper" id="paper">
 <h2>Experiment 1 · Measurement of Resistors, Voltage &amp; Current Divider Rules, Δ-Y Transformation</h2>
 <div class="check manual-only" id="live"></div>
@@ -63,7 +94,7 @@ instruments:[
 parts:PARTS,
 tray:[['RC1','Resistor 1'],['RC2','Resistor 2'],['RC3','Resistor 3'],['R220','220 Ω'],['R470','470 Ω'],['R1k','1 kΩ'],['R2k2','2.2 kΩ'],['R4k7','4.7 kΩ'],['R10k','10 kΩ'],['BR','Bridging plug'],['W','Wire']],
 setup(RT){
-  const N=n=>RT.netOf(n),G=ENGINE.sheet;let ST={};
+  const G=ENGINE.sheet;let ST={};
   const nom=t=>PARTS[t].nom;
   /* reference circuits with the real part values and the meters' own resistances */
   function dc(n,res,E,amm){/* res: [a,b,R]; source + on node 0, − on earth; returns node voltages */
@@ -78,48 +109,28 @@ setup(RT){
   const CAL={};{const S=10000+470+220;CAL.ra=470*220/S;CAL.rb=10000*470/S;CAL.rc=220*10000/S;
     const rp=1/(1/(CAL.rc+220)+1/(CAL.rb+1000));CAL.id=15/(CAL.ra+rp)*1e3;
     CAL.v1=10*4.7/7.9;CAL.v2=10*1/7.9;CAL.v3=10*2.2/7.9;CAL.vt=10;CAL.i1=10;CAL.i2=10/4.7;CAL.i3=10/2.2;CAL.it=CAL.i1+CAL.i2+CAL.i3}
-  /* meters: the shown value (SI) of a meter in a function across two nets (HI on a) */
-  const shown=m=>m.r.shown&&!m.r.ol&&m.r.shown.si!=null?m.r.shown.si:null;
-  const across=(fn,a,b,both)=>{if(a==null||b==null||a===b)return null;for(const m of RT.meters()){if(!m.D.pwr||m.D.fn!==fn)continue;const v=shown(m);if(v==null)continue;
-      if(m.hi===a&&m.lo===b)return v;if(both&&m.hi===b&&m.lo===a)return v}return null};
-  const amm=(a,b)=>{for(const m of RT.meters()){if(!m.D.pwr||m.D.jack!=='A'||m.D.fn!=='DCI')continue;if(m.hi===a&&m.lo===b&&a!==b){const v=shown(m);if(v!=null)return v}}return null};
-  const ammOn=(a,b)=>RT.meters().some(m=>m.D.jack==='A'&&m.hi===a&&m.lo===b&&a!=null&&a!==b);
+  /* the value (SI) a meter shows */
+  const shown=m=>m&&m.r.shown&&!m.r.ol&&m.r.shown.si!=null?m.r.shown.si:null;
   function sup(E){for(const u of [0,1]){const P=RT.leadNet(u?'Rp':'Lp'),M=RT.leadNet(u?'Rm':'Lm');if(P==null||M==null)continue;const U=RT.S.psu.u[u];
       return {P,M,U,ok:RT.S.psu.pwr&&U.on&&Math.abs(U.v-E)<0.006}}return null}
-  const has=(t,a,b)=>RT.between(N(a),N(b)).some(x=>x.p.type===t);
-  const lone=(a,b)=>{const p=RT.between(a,b);return p.length===1&&RT.at(a).length===1&&RT.at(b).length===1?p[0].p.type:null};
-  const box=k=>{const i=RT.inst['yew'+k];return {v:i.value(),H:RT.leadNet('y'+k+'H'),L:RT.leadNet('y'+k+'L')}};
+  const box=k=>RT.inst['yew'+k].value();
   function status(){const st={};const M=RT.meters();const fl=RT.S.hm1,gs=RT.S.hm2;
+    const m1=M.find(m=>m.key==='hm1'),m2=M.find(m=>m.key==='hm2');
     st.flOhm=fl.pwr&&fl.fn==='OHM';st.flV=fl.pwr&&fl.fn==='DCV';st.gs40=gs.pos===6;st.gs400=gs.pos===7;
-    st.parts=RT.S.parts.length;st.clear=!RT.S.parts.length&&!RT.S.wires.length;
-    /* Procedure I: one resistor alone between the ohmmeter's leads */
-    const m1=M.find(m=>m.key==='hm1');if(m1&&m1.D.fn==='OHM'&&m1.hi!=null&&m1.lo!=null&&m1.hi!==m1.lo){const t=lone(m1.hi,m1.lo);const v=shown(m1);
-      if(t&&/^RC/.test(t)&&v!=null)ST['r'+t]=v;
-      /* a decade box alone on the meter's leads */
-      [1,2,3].forEach(k=>{const b=box(k);if(!((b.H===m1.hi&&b.L===m1.lo)||(b.H===m1.lo&&b.L===m1.hi))||RT.between(m1.hi,m1.lo).length)return;st.boxOn=k;
-        BOX.forEach(([key,,val])=>{if(b.v===val&&v!=null)ST[key]=v})})}
-    /* Procedure II: Fig. 5 */
+    const ok=f=>RT.match(f).ok;
+    /* Procedure I: one resistor alone on the ohmmeter, then the decade box alone */
+    if(m1&&st.flOhm){const v=shown(m1);if(v!=null){for(const t in OHM)if(ok(OHM[t]))ST['r'+t]=v;
+      if(ok(OHMBOX)){st.boxOn=true;BOX.forEach(([key,,val])=>{if(box(1)===val)ST[key]=v})}}}
+    /* Procedure II: Fig. 5 at E = 10 V, the voltmeter across R1, R2, R3, the source */
     const s10=sup(10);st.s10=s10;
-    st.fig5=has('R4k7',7,8)&&has('R1k',8,9)&&has('R2k2',9,10)&&s10&&s10.P===N(7)&&s10.M===N(10);
-    if(st.fig5&&s10.ok){[['v1',7,8],['v2',8,9],['v3',9,10],['vt',7,10]].forEach(([k,a,b])=>{const v=across('DCV',N(a),N(b));if(v!=null)ST[k]=v})}
-    /* Procedure III: Fig. 6 (bus 16-17-18, branches 23/24/25 → 30/31/32) */
-    const bot=N(30);st.fig6=has('R1k',23,30)&&has('R4k7',24,31)&&has('R2k2',25,32)&&N(30)===N(31)&&N(31)===N(32)&&s10&&s10.M===bot&&s10.P===N(15);
-    st.fig6closed=st.fig6&&N(15)===N(16)&&N(16)===N(17)&&N(17)===N(18)&&N(16)===N(23)&&N(17)===N(24)&&N(18)===N(25);
-    if(st.fig6&&s10.ok&&st.gs40){
-      [['i1',16,23],['i2',17,24],['i3',18,25]].forEach(([k,a,b],j)=>{const others=[[16,23],[17,24],[18,25]].filter((_,q)=>q!==j).every(([x,y])=>N(x)===N(y));
-        if(others&&N(15)===N(16)&&N(16)===N(17)&&N(17)===N(18)){const v=amm(N(a),N(b));if(v!=null)ST[k]=v}});
-      if(N(16)===N(23)&&N(17)===N(24)&&N(18)===N(25)&&N(16)===N(17)&&N(17)===N(18)){const v=amm(N(15),N(16));if(v!=null)ST.it=v}}
-    st.ammI=[[16,23],[17,24],[18,25],[15,16]].map(([a,b])=>ammOn(N(a),N(b)));
-    /* Procedure IV: Fig. 7 (a = 9, b = 10/17, c = 16, d = 23/24; + on node 2, ammeter 2 → 9) */
-    const s15=sup(15);st.s15=s15;
-    const dRest=has('R220',16,23)&&has('R1k',17,24)&&N(10)===N(17)&&N(23)===N(24)&&s15&&s15.M===N(23)&&s15.P===N(2);st.dRest=dRest;
-    st.fig7=dRest&&has('R220',9,16)&&has('R470',9,10)&&has('R10k',16,17);
-    if(st.fig7&&s15.ok&&st.gs400){const v=amm(N(2),N(9));if(v!=null)ST.id=v}
-    const b1=box(1),b2=box(2),b3=box(3);const n=N(12);
-    st.ySet=Math.abs(b1.v-CAL.ra)<=1&&Math.abs(b2.v-CAL.rb)<=1&&Math.abs(b3.v-CAL.rc)<=1;
-    st.fig8=dRest&&!has('R220',9,16)&&!has('R470',9,10)&&!has('R10k',16,17)&&[[b1,9],[b2,10],[b3,16]].every(([b,x])=>(b.H===n&&b.L===N(x))||(b.L===n&&b.H===N(x)))&&n!==N(9);
-    if(st.fig8&&st.ySet&&s15.ok&&st.gs400){const v=amm(N(2),N(9));if(v!=null)ST.iy=v}
-    st.off=!RT.S.psu.pwr||!RT.S.psu.u.some(U=>U.on);
+    if(s10&&s10.ok&&m1&&st.flV){const v=shown(m1);if(v!=null)for(const k in VM)if(ok(VM[k]))ST[k]=v}
+    /* Procedure III: Fig. 6 at E = 10 V, the GoldStar (40 mA) in place of a branch plug / the I_T plug */
+    if(s10&&s10.ok&&m2&&st.gs40&&gs.fn==='DCI'){const v=shown(m2);if(v!=null)for(const k in AM)if(ok(AM[k]))ST[k]=v}
+    /* Procedure IV: Fig. 7 / Fig. 8 at E = 15 V, the GoldStar on 400 mA in series */
+    const s15=sup(15);st.s15=s15;const amp=s15&&s15.ok&&m2&&st.gs400&&gs.fn==='DCI'?shown(m2):null;
+    if(amp!=null&&ok('7'))ST.id=amp;
+    st.ySet=Math.abs(box(1)-CAL.ra)<=1&&Math.abs(box(2)-CAL.rb)<=1&&Math.abs(box(3)-CAL.rc)<=1;
+    if(amp!=null&&st.ySet&&ok('8'))ST.iy=amp;
     st.ST=ST;return st}
   $('submit').addEventListener('click',()=>{const g=G.grader(),v=G.v,s=G.s;
     g.proc('I');[['RC1','a'],['RC2','b'],['RC3','c']].forEach(([t,c],i)=>{const k=i+1;g.add(s('c'+k)===c,`Table 2 · Resistor ${k} colors`,COLS.find(q=>q[0]===c)[1]);
@@ -137,45 +148,45 @@ setup(RT){
     g.add(ST.iy!=null&&G.near(v('iym'),ST.iy*1e3,0.06),'IY measured',ST.iy!=null?`${(ST.iy*1e3).toFixed(1)} mA (your reading)`:'measure Fig. 8 first');
     g.add(G.near(v('iyc'),CAL.id,0.1),'IY calculated','= ID calculated (Y is equivalent to Δ)');
     g.show($('result'))});
-  const F5='labs/ee205/fig/e1-fig5.png',F6='labs/ee205/fig/e1-fig6.png',F7='labs/ee205/fig/e1-fig7.png',F8='labs/ee205/fig/e1-fig8.png';
-  const ohmStep=(t,k,n)=>({dev:'board',t:`${k===1?'Procedure I (Table 2): ':''}حط <b>Resistor ${k}</b> لحاله على اللوحة بين node 0 و node 1، اقرا ألوانه وسجّلها مع قيمته من الـ color code، وبعدين سجّل قراءة الـ ohmmeter.${k>1?' (شيل المقاومة اللي قبلها)':''}`,
-    lines:[{t:`Resistor ${k}: node 0 ↔ node 1`,part:[t,0,1]},...(k===1?[{t:'M1 VΩ (red) → node 0',lead:'h1v',at:0},{t:'M1 COM (black) → node 1',lead:'h1c',at:1}]:[])],ok:s=>ST['r'+t]!=null});
+  const COLTXT=c=>COLS.find(q=>q[0]===c)[1];
+  const calc=t=>({dev:'board',t,ok:()=>true});
   return {status,
     steps:[
-      {dev:'hm1',t:'Procedure I: شغّل الـ Fluke 77 (M1) بلف الـ rotary switch على Ω (الـ ohmmeter).',ok:s=>s.flOhm},
-      ohmStep('RC1',1),ohmStep('RC2',2),ohmStep('RC3',3),
-      {dev:'board',t:'شيل المقاومة، ووصّل الـ decade box R1 (YEW 2786) على نفس الـ nodes: طرف H على node 0 و L على node 1.',lines:[{t:'R1 H → node 0',lead:'y1H',at:0},{t:'R1 L → node 1',lead:'y1L',at:1}],ok:s=>s.boxOn===1&&!s.parts},
-      ...BOX.map(([k,r,val,tol],i)=>({dev:'yew1',t:`Table 3 · reading ${i+1}: صفّر كل الأقراص واضبط قرص <b>${r}</b> بس لين يصير الصندوق ${val>=1000?val/1000+' kΩ':val+' Ω'}، وسجّل قراءة الـ ohmmeter. التسامح المكتوب تحت القرص ±${tol}%.`,ok:s=>ST[k]!=null})),
-      {dev:'board',t:'Procedure II: فضّ اللوحة (شيل القطع والأسلاك)، وفصّل أطراف الـ decade box.',ok:s=>s.clear&&!s.boxOn},
-      {dev:'board',fig:F5,figCap:'Fig. 5',t:'ركّب Fig. 5: الثلاث مقاومات على التوالي مع المصدر.',lines:[{t:'R1 = 4.7 kΩ: node 7 ↔ node 8',part:['R4k7',7,8]},{t:'R2 = 1 kΩ: node 8 ↔ node 9',part:['R1k',8,9]},{t:'R3 = 2.2 kΩ: node 9 ↔ node 10',part:['R2k2',9,10]},
-        {t:'DC + (L +) → node 7',note:'الوحدة اليسار أو اليمين',lead:'Lp',alt:'Rp',at:7},{t:'DC − (L −) → node 10',lead:'Lm',alt:'Rm',at:10}],ok:s=>s.fig5},
-      {dev:'psu',t:'شغّل الـ POWER، واضبط الوحدة على E = 10.00 V (COARSE ثم FINE) والـ CURRENT LIMIT على 0.1 A تقريباً، وحوّل الـ OUTPUT على ON.',ok:s=>s.fig5&&s.s10.ok},
-      {dev:'hm1',t:'حوّل M1 على V⎓ وقِس V<sub>1</sub> (VΩ على node 7، COM على node 8). سجّلها في Table 4.',lines:[{t:'M1 VΩ → node 7',lead:'h1v',at:7},{t:'M1 COM → node 8',lead:'h1c',at:8}],ok:s=>ST.v1!=null},
-      {dev:'board',t:'قِس V<sub>2</sub> على R2 (VΩ → node 8، COM → node 9) و V<sub>3</sub> على R3 (VΩ → node 9، COM → node 10).',ok:s=>ST.v2!=null&&ST.v3!=null},
-      {dev:'board',t:'قِس E = V<sub>Total</sub> (VΩ → node 7، COM → node 10)، وكمّل Table 4 بالحسابات من الـ voltage division rule.',ok:s=>ST.vt!=null},
-      {dev:'psu',t:'Procedure III: حوّل الـ OUTPUT على OFF وفضّ اللوحة.',ok:s=>s.clear&&(!s.s10||!s.s10.ok)},
-      {dev:'board',fig:F6,figCap:'Fig. 6',t:'ركّب Fig. 6: الثلاث مقاومات على التوازي. كل فرع موصول بالـ bus بـ bridging plug عشان تقدر تحط الأميتر مكانه.',
-        lines:[{t:'R1 = 1 kΩ: node 23 ↔ node 30',part:['R1k',23,30]},{t:'R2 = 4.7 kΩ: node 24 ↔ node 31',part:['R4k7',24,31]},{t:'R3 = 2.2 kΩ: node 25 ↔ node 32',part:['R2k2',25,32]},
-          {t:'bridging plug: node 30 ↔ node 31',wire:[30,31]},{t:'bridging plug: node 31 ↔ node 32',wire:[31,32]},{t:'bridging plug: node 16 ↔ node 17',wire:[16,17]},{t:'bridging plug: node 17 ↔ node 18',wire:[17,18]},
-          {t:'bridging plug: node 16 ↔ node 23',note:'فرع I<sub>1</sub>',wire:[16,23]},{t:'bridging plug: node 17 ↔ node 24',note:'فرع I<sub>2</sub>',wire:[17,24]},{t:'bridging plug: node 18 ↔ node 25',note:'فرع I<sub>3</sub>',wire:[18,25]},
-          {t:'bridging plug: node 15 ↔ node 16',note:'خط I<sub>T</sub>',wire:[15,16]},{t:'DC + → node 15',lead:'Lp',alt:'Rp',at:15},{t:'DC − → node 32',lead:'Lm',alt:'Rm',at:32}],ok:s=>s.fig6closed},
-      {dev:'psu',t:'رجّع الـ OUTPUT على ON (E = 10 V).',ok:s=>s.fig6&&s.s10.ok},
-      {dev:'hm2',t:'شغّل الـ GoldStar (M2) على <b>40mA</b> (عشان دقته 0.01 mA). الأميتر ينركّب على <b>التوالي</b>: شيل الـ plug اللي بين node 16 و node 23، وحط الأميتر مكانه: V·Ω·mA → node 16 و COM → node 23. سجّل I<sub>1</sub>.',
-        lines:[{t:'M2 V·Ω·Hz·mA (red) → node 16',lead:'h2v',at:16},{t:'M2 COM (black) → node 23',lead:'h2c',at:23}],ok:s=>ST.i1!=null},
-      {dev:'board',t:'رجّع الـ plug بين node 16 و node 23، وانقل الأميتر لفرع R2: شيل plug node 17 ↔ node 24، والأحمر → node 17، و COM → node 24. سجّل I<sub>2</sub>.',ok:s=>ST.i2!=null},
-      {dev:'board',t:'بنفس الطريقة: رجّع plug الفرع الثاني، وحط الأميتر مكان plug node 18 ↔ node 25 (الأحمر → node 18). سجّل I<sub>3</sub>.',ok:s=>ST.i3!=null},
-      {dev:'board',t:'رجّع plug الفرع الثالث، وحط الأميتر مكان plug node 15 ↔ node 16 (الأحمر → node 15، COM → node 16): هذا I<sub>T</sub>. كمّل Table 5.',ok:s=>ST.it!=null},
-      {dev:'psu',t:'Procedure IV: حوّل الـ OUTPUT على OFF، وطلّع أطراف الأميتر، وفضّ اللوحة.',ok:s=>s.clear&&!s.ammI.some(Boolean)&&(!s.s10||!s.s10.ok)},
-      {dev:'board',fig:F7,figCap:'Fig. 7',t:'ركّب Fig. 7: a = node 9، b = node 10 (وامتداده node 17)، c = node 16، d = node 23 (وامتداده node 24). الأميتر على التوالي مع المصدر بين node 2 و a.',
-        lines:[{t:'220 Ω (a-c): node 9 ↔ node 16',part:['R220',9,16]},{t:'470 Ω (a-b): node 9 ↔ node 10',part:['R470',9,10]},{t:'bridging plug: node 10 ↔ node 17',note:'b',wire:[10,17]},{t:'10 kΩ (c-b): node 16 ↔ node 17',part:['R10k',16,17]},
-          {t:'220 Ω (c-d): node 16 ↔ node 23',part:['R220',16,23]},{t:'bridging plug: node 23 ↔ node 24',note:'d',wire:[23,24]},{t:'1 kΩ (b-d): node 17 ↔ node 24',part:['R1k',17,24]},
-          {t:'DC + → node 2',lead:'Lp',alt:'Rp',at:2},{t:'DC − → node 23',lead:'Lm',alt:'Rm',at:23},{t:'M2 V·Ω·mA (red) → node 2',lead:'h2v',at:2},{t:'M2 COM → node 9',note:'a',lead:'h2c',at:9}],ok:s=>s.fig7},
-      {dev:'hm2',t:'احسب I<sub>D</sub> بأي طريقة غير Δ-Y. حوّل M2 على <b>400mA</b> (التيار أكثر من 40 mA)، واضبط المصدر على E = 15.00 V وشغّل الـ OUTPUT. سجّل I<sub>D</sub>.',ok:s=>ST.id!=null},
-      {dev:'yew1',t:'احسب الـ Y المكافئ لـ Δ abc (R<sub>a</sub>، R<sub>b</sub>، R<sub>c</sub>) واضبطها على الصناديق لأقرب Ω: R<sub>a</sub> على R1، R<sub>b</sub> على R2، R<sub>c</sub> على R3.',ok:s=>s.ySet},
-      {dev:'board',fig:F8,figCap:'Fig. 8',t:'حوّل الدائرة لـ Fig. 8: شيل مقاومات الـ Δ (220 a-c، 470 a-b، 10 kΩ c-b)، ونقطة الـ Y هي node 12: كل صندوق بين node 12 وطرفه.',
-        lines:[{t:'R1 (R<sub>a</sub>) H → node 12',lead:'y1H',at:12},{t:'R1 L → node 9 (a)',lead:'y1L',at:9},{t:'R2 (R<sub>b</sub>) H → node 12',lead:'y2H',at:12},{t:'R2 L → node 10 (b)',lead:'y2L',at:10},{t:'R3 (R<sub>c</sub>) H → node 12',lead:'y3H',at:12},{t:'R3 L → node 16 (c)',lead:'y3L',at:16}],ok:s=>s.fig8},
-      {dev:'hm2',t:'بنفس E = 15 V سجّل I<sub>Y</sub> من M2 وقارنه بـ I<sub>D</sub>.',ok:s=>ST.iy!=null},
-      {dev:'psu',t:'طفّ الـ OUTPUT والـ POWER ورجّع الأقراص للصفر.',ok:s=>s.off}
+      /* Procedure I (manual p. 13–14), steps 1–4 */
+      {dev:'hm1',t:'Procedure I · 1. عندك على الطاولة ثلاث color coded resistors: حدّد قيمة كل وحدة، أولاً بالحساب من الـ color code، وثانياً بالقياس بالـ ohmmeter. سجّل قراءاتك في Table 2 وعلّق على الفرق.',
+        acts:['حوّل الـ Fluke 77 (M1) على Ω (الـ ohmmeter).','حط Resistor 1 لحاله على اللوحة ووصّل M1 عليه (VΩ و COM)، واقرا ألوانه وقيمته.','كرّر لـ Resistor 2 و Resistor 3 (شيل اللي قبلها).'],
+        ok:s=>ST.rRC1!=null&&ST.rRC2!=null&&ST.rRC3!=null,
+        rec:[1,2,3].flatMap(k=>{const t='RC'+k,c='abc'[k-1];return [{to:'c'+k,val:()=>ST['r'+t]!=null?c:null,txt:()=>COLTXT(c),label:`Resistor ${k} colors`,none:`حط Resistor ${k} لحاله على الـ ohmmeter`},
+          {to:'cm'+k,val:()=>ST['r'+t],unit:'Ω',dec:1,label:`Resistor ${k} (ohmmeter)`}]})},
+      {dev:'yew1',t:'2. بالـ ohmmeter قِس المقاومات المحددة من الـ decade resistance box مثل Table 3، وسجّل قراءاتك. واحسب كمان الـ tolerance المكتوبة على الصندوق والـ errors في قراءاتك.',
+        acts:['شيل المقاومة، ووصّل طرفي الـ decade box (H و L) مع أطراف M1 لحالها.',...BOX.map(([k,r,val])=>`صفّر الأقراص واضبط قرص ${r} لين يصير الصندوق ${val>=1000?val/1000+' kΩ':val+' Ω'}، وسجّل قراءة الـ ohmmeter.`)],
+        ok:s=>BOX.every(([k])=>ST[k]!=null),rec:BOX.map(([k,r,val])=>({to:k,val:()=>ST[k],unit:'Ω',dec:1,label:`${r} · ${val>=1000?val/1000+' kΩ':val+' Ω'}`}))},
+      calc('3. من نسبة الـ % tolerance المكتوبة على كل range في الصندوق، احسب المدى المقبول لكل قيمة وسجّله في Table 3. مثال: ×1 عليه 0.5 %، يعني 4 Ω ± 0.02 Ω (من 3.98 Ω إلى 4.02 Ω).'),
+      calc('4. احسب الـ % error لكل قراءة: % error = (actual meter reading − decade box reading) / decade box reading × 100.'),
+      /* Procedure II (manual p. 14), steps 1–6 */
+      {dev:'board',build:'5',t:'Procedure II · 1. وصّل الدائرة Fig. 5.'},
+      {dev:'hm1',t:'2. قِس V<sub>1</sub> و V<sub>2</sub> و V<sub>3</sub> و E بدقة.',acts:['شغّل الـ POWER، واضبط الوحدة على E = 10 V (COARSE ثم FINE)، وحوّل الـ OUTPUT على ON.','حوّل M1 على V⎓: V<sub>1</sub> على R1، و V<sub>2</sub> على R2، و V<sub>3</sub> على R3، و E على المصدر (VΩ على طرف الـ +).'],
+        ok:s=>['v1','v2','v3','vt'].every(k=>ST[k]!=null),rec:[['v1','V<sub>1</sub>'],['v2','V<sub>2</sub>'],['v3','V<sub>3</sub>'],['vt','E = V<sub>Total</sub>']].map(([k,l])=>({to:k+'m',val:()=>ST[k],unit:'V',dec:3,label:l}))},
+      calc('3. احسب V<sub>1</sub> و V<sub>2</sub> و V<sub>3</sub> بالـ voltage division rule.'),
+      calc('4. قارن قيم V<sub>1</sub> و V<sub>2</sub> و V<sub>3</sub> في الخطوات (2) و (3) و (4).'),
+      calc('5. سجّل نتائجك في Table 4.'),
+      calc('6. علّق على الفرق (إن وجد) بين V<sub>1</sub> و V<sub>2</sub> و V<sub>3</sub> في الخطوات (2) و (3) و (4).'),
+      /* Procedure III (manual p. 15), steps 1–5 */
+      {dev:'board',build:'6',t:'Procedure III · 1. وصّل الدائرة Fig. 6.'},
+      {dev:'hm2',t:'2. قِس I<sub>1</sub> و I<sub>2</sub> و I<sub>3</sub> و I<sub>T</sub> بدقة.',acts:['شغّل الـ OUTPUT على E = 10 V.','حوّل الـ GoldStar (M2) على 40mA. الأميتر ينركّب على التوالي: شيل الـ bridging plug اللي في الفرع وحط الأميتر مكانه (V·Ω·mA على جهة المصدر، COM على جهة المقاومة)، وبعدها رجّع الـ plug.','سجّل I<sub>1</sub> (فرع R1) و I<sub>2</sub> و I<sub>3</sub>، وآخر شي I<sub>T</sub> مكان الـ plug اللي بين المصدر والفروع.'],
+        ok:s=>['i1','i2','i3','it'].every(k=>ST[k]!=null),rec:[['i1','I<sub>1</sub>'],['i2','I<sub>2</sub>'],['i3','I<sub>3</sub>'],['it','I<sub>T</sub>']].map(([k,l])=>({to:k+'m',val:()=>ST[k]!=null?ST[k]*1e3:null,unit:'mA',dec:2,label:l}))},
+      calc('3. احسب I<sub>1</sub> و I<sub>2</sub> و I<sub>3</sub> بالـ current division rule.'),
+      calc('4. سجّل نتائجك في Table 5.'),
+      calc('5. علّق على الفرق (إن وجد) بين I<sub>1</sub> و I<sub>2</sub> و I<sub>3</sub> و I<sub>T</sub> في الخطوات (2) و (3) و (4).'),
+      /* Procedure IV (manual p. 16), steps 1–6 */
+      {dev:'board',build:'7',t:'Procedure IV · 1. وصّل الدائرة Fig. 7 واحسب التيار I<sub>D</sub> بأي طريقة <b>إلا</b> الـ Δ-Y transformation.'},
+      {dev:'hm2',t:'2. قِس I<sub>D</sub> بدقة.',acts:['حوّل M2 على 400mA (I<sub>D</sub> أكبر من 40 mA).','اضبط المصدر على E = 15 V وشغّل الـ OUTPUT، وسجّل I<sub>D</sub>.'],ok:s=>ST.id!=null,
+        rec:[{to:'idm',val:()=>ST.id!=null?ST.id*1e3:null,unit:'mA',dec:2,label:'I<sub>D</sub>'}]},
+      calc('3. قارن قيم I<sub>D</sub>: المحسوبة والمقاسة والـ simulated.'),
+      calc('4. احسب الـ Y المكافئ لـ Δ abc وسجّل قيم المقاومات R<sub>a</sub> و R<sub>b</sub> و R<sub>c</sub>.'),
+      {dev:'board',build:'8',t:'5. وصّل دائرة Fig. 8 وقِس I<sub>Y</sub>.',acts:['اضبط R<sub>a</sub> على الصندوق R1، و R<sub>b</sub> على R2، و R<sub>c</sub> على R3 (لأقرب Ω).','شيل مقاومات الـ Δ abc (220 Ω a-c، 470 Ω a-b، 10 kΩ c-b)، ووصّل الصناديق الثلاث Y: كل صندوق بين نقطة الـ Y وطرفه.','بنفس E = 15 V سجّل I<sub>Y</sub> من M2.'],
+        ok:s=>s.ySet&&ST.iy!=null,rec:[{to:'iym',val:()=>ST.iy!=null?ST.iy*1e3:null,unit:'mA',dec:2,label:'I<sub>Y</sub>'}]},
+      calc('6. قارن قيم I<sub>D</sub> و I<sub>Y</sub>: المقاسة والمحسوبة والـ simulated.')
     ],
     onReset(){ST={};$('result').innerHTML=''}};
 }};})();

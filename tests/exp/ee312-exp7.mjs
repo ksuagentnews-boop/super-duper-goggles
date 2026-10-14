@@ -18,7 +18,7 @@ export async function run(page, vp, ok) {
     let hi = lo; let st = 25; while ((r = await at(hi)) < target && hi < 3000) { lo = hi; hi += st; st *= 2; } hi = Math.min(hi, 3000);
     while (hi - lo > 1) { const m = (lo + hi) >> 1; if ((await at(m)) > target) hi = m; else lo = m; }
     const rl = await at(lo), rh = await at(hi); return Math.abs(rl - target) < Math.abs(rh - target) ? at(lo) : rh; };
-  // ---- A: IRF620 at nodes 15 (G) 16 (D) 17 (S)
+  // ---- A: in a layout of its own (not the reference rectangle): IRF620 at nodes 15 (G) 16 (D) 17 (S)
   await H.focus('board'); await H.placeIC('IRF620', 15, [[0, 0], [1, 0], [2, 0]]);
   await H.place('BR', 15, 16); await H.place('R1k', 16, 23); await H.lead('Lp', 23); await H.lead('Lm', 17); await H.lead('mh', 23); await H.lead('ml', 16); await H.lead('m2h', 15); await H.lead('m2l', 17);
   ok(await done(1), 'A1 Fig. 7.1a');
@@ -38,16 +38,15 @@ export async function run(page, vp, ok) {
   }
   await H.focus('psu'); await H.key('p:PWR'); ok(await done(11), 'B6 supply off');
   // ---- C
-  await H.focus('board'); await H.del(16, 23); await H.place('R270', 16, 23);
-  await H.focus('psu'); await H.key('p:PWR'); await setV('L', 10); await setV('R', +(vth + 0.3).toFixed(2)); ok(await done(12), 'C1 VDD 10 V, VGS = VTH + 0.3, RD 270');
+  await H.focus('psu'); await H.key('p:PWR'); await setV('L', 10); await setV('R', +(vth + 0.3).toFixed(2)); ok(await done(12), 'C1 VDD 10 V, VGS = VTH + 0.3');
   const C = [];
-  for (const [t, n] of [['R270', 13], ['R470', 14], ['R1k', 15]]) {
-    if (t !== 'R270') { await H.focus('board'); await H.del(16, 23); await H.place(t, 16, 23); }
+  for (const [t, n] of [['R270', 14], ['R470', 15], ['R1k', 16]]) {
+    await H.focus('board'); await H.del(16, 23); await H.place(t, 16, 23); if (t === 'R270') ok(await done(13), 'C2 RD = 270 Ω');
     const vds = await rd(1), v = await rd(0); C.push([v, vds]);
     ok(await done(n), `C ${t}: VRD ${v}, VDS ${vds}`);
   }
   await page.screenshot({ path: '/tmp/exp7-' + vp + '-board.png' });
-  await H.focus('psu'); await H.key('p:PWR'); ok(await done(16), 'C6 off — all steps done');
+  await H.focus('psu'); await H.key('p:PWR'); ok(await done(17), 'C6 off — all steps done');
   const r3 = x => x.toFixed(3), F = { a_vth: r3(vth), q1c: 'sat', q1d: 'tri', q4: 'a', q5a: 'a', q5c: 'tri' };
   [1, 2, 3].forEach(k => { tab[k].forEach((x, j) => F[`b${k}_${j}`] = r3(x)); const id = j => +F[`b${k}_${j}`]; F['q2_' + k] = (1.5 / (id(7) - id(6))).toFixed(2); F['q3_' + k] = (0.05 / (id(0) * 1e-3)).toFixed(1); });
   [270, 470, 1000].forEach((R, i) => { F['c_vrd' + i] = r3(C[i][0]); F['c_vds' + i] = r3(C[i][1]); F['c_id' + i] = r3(+F['c_vrd' + i] / R * 1e3); });

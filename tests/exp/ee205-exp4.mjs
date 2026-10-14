@@ -1,5 +1,6 @@
 import { sit, bench } from '../lib.mjs';
-/* EE205 Exp 4: power factor improvement of the fluorescent lamp with the capacitor box (instructor check), full marks */
+/* EE205 Exp 4: power factor improvement of the fluorescent lamp with the capacitor box (instructor check), full marks.
+   Fig. 4 is built in a layout of its own (not the reference rectangle): the matcher compares circuits, not nodes. */
 export async function run(page, vp, ok) {
   await sit(page, 'ee205/exp4', 'exam');
   const H = bench(page); H.touch = vp !== 'desktop';
@@ -7,17 +8,18 @@ export async function run(page, vp, ok) {
   const done = async n => (await H.steps()).done >= n;
   await H.focus('board');
   for (const [k, n] of [['acL', 1], ['acN', 10], ['w1i', 1], ['w1ic', 2], ['w1v', 1], ['w1vc', 10], ['h2ma', 2], ['h2c', 3], ['lpL', 3], ['lpN', 10], ['h1v', 1], ['h1c', 10], ['qa', 4], ['qb', 11]]) await H.lead(k, n);
-  await H.place('BR', 10, 11); await H.place('BR', 3, 4); ok(await done(1), `Fig. 4 built ${JSON.stringify(await status())}`);
-  await H.focus('ac'); await H.key('a:PWR'); ok(!(await done(2)), 'the source stays off until the instructor checks');
+  await H.place('BR', 10, 11);
+  await H.chk(); ok(!(await page.evaluate(() => BENCH.sim.RT.S.ac.ok)), 'the instructor refuses an unfinished circuit (switch S missing)');
+  await H.place('BR', 3, 4); ok((await status()).fig4 && !(await done(1)), `Fig. 4 built in its own layout, step 1 waits for the instructor and the power`);
+  await H.focus('ac'); await H.key('a:PWR'); ok(!(await status()).on, 'the source stays off until the instructor checks');
   await H.chk(); await H.focus('ac'); await H.key('a:PWR'); await H.focus('pw1'); await H.key('w1:PWR'); await H.focus('hm1'); await H.key('h1:SW-'); await H.focus('hm2'); await H.key('h2:SW+', 7);
-  ok(await done(2), 'instructor checked, energized');
+  ok(await done(1), 'step 1: Fig. 4, instructor checked, energized');
   const setC = async c => { await H.focus('cb'); const want = [0, 0, 0, Math.round(c * 10) % 10, Math.floor(c + 1e-9)]; const d = await page.evaluate(() => BENCH.sim.RT.S.cb.d.slice());
     for (let j = 0; j < 5; j++) while (d[j] !== want[j]) { await H.key(`q:D${j}${d[j] < want[j] ? '+' : '-'}`); d[j] += d[j] < want[j] ? 1 : -1; } };
-  await setC(0); ok(await done(3), `no C ${JSON.stringify((await status()).ST)}`);
-  for (const c of [1, 2, 3]) await setC(c); ok(await done(4), 'C = 1, 2, 3 µF');
-  for (let c = 3.2; c <= 6.001; c += 0.2) await setC(+c.toFixed(1)); ok(await done(5), 'C = 3.2 … 6.0 µF');
+  await setC(0); ok(await done(2), `no C ${JSON.stringify((await status()).ST)}`);
+  for (const c of [1, 2, 3]) await setC(c); ok(await done(3), 'C = 1, 2, 3 µF');
+  for (let c = 3.2; c <= 6.001; c += 0.2) await setC(+c.toFixed(1)); ok(await done(6), 'C = 3.2 … 6.0 µF: steps 4–6 done');
   await page.screenshot({ path: `/tmp/ee205-exp4-${vp}.png` });
-  await H.focus('ac'); await H.key('a:PWR'); ok(await done(6), 'all steps done');
   const S = (await status()).ST;
   const F = await page.evaluate(S => { const f = {}, r = (x, d) => (+x).toFixed(d), W = 2 * Math.PI * 60; let best = null;
     for (const [k, q] of Object.entries(S)) { f[k + 'v'] = r(q.V, 1); f[k + 'i'] = r(q.I, 4); f[k + 'p'] = r(q.P, 2); f[k + 'f'] = r(+f[k + 'p'] / (+f[k + 'v'] * +f[k + 'i']), 3); if (!best || q.I < S[best].I) best = k; }

@@ -1,11 +1,17 @@
 /* EE312 · Experiment 10 · The Common Emitter Amplifier (manual v8.8 pp. 73–78).
-   Procedure A: measure RC, RE, R1, R2 with the DMM (Ω), build Fig. 10.1 (VCC = 12 V, R1 = 47 kΩ, R2 = 27 kΩ,
-   RC = 5.6 kΩ, RE = 4.7 kΩ, BD137), measure VBE, VBC, VCE, VR1, VR2, VRC, VRE (Fig. 10.3), Table 10.1.
-   Procedure B: Fig. 10.2 (C1 = C2 = 2.2 µF, CE = 470 µF), 1 kHz sine 20 mVpp then 200 mVpp, Pk-Pk on CH1/CH2,
+   Procedure A (steps 1–4): measure RC, RE, R1, R2 with the DMM (Ω), build Fig. 10.1 (VCC = 12 V, R1 = 47 kΩ, R2 = 27 kΩ,
+   RC = 5.6 kΩ, RE = 4.7 kΩ, BD137), measure VBE, VBC, VCE, VR1, VR2, VRC, VRE (Fig. 10.3), Table 10.1 calculations.
+   Procedure B (steps 1–7): Fig. 10.2 (C1 = C2 = 2.2 µF, CE = 470 µF), 1 kHz sine 20 mVpp then 200 mVpp, Pk-Pk on CH1/CH2,
    Figs 10.4 / 10.5, phase, Av. PLQs 1–4 (5–6 are LTspice work for the report).
+   Steps follow the manual one to one; build steps are checked by circuit equivalence against the figures below (rectangle
+   layout on rows 1–4: V_CC on the left column, the top row V_CC, R_C and R_1 down from it to the BD137 (legs E C B from
+   the left, so the base network and the generator sit on the right column), R_2 / R_E / C_E down to the bottom-row ground).
+   Calculation steps record the computed values in Manual mode («Capture» fills the sheet).
    Assumptions: resistors are at their nominal values (the DMM reads them exactly); the transient starts from the
    dc operating point (the supply has been on for a while); the electrolytics' + sides go to the base, the collector
-   and the emitter (their dc potentials); a reversed electrolytic with more than 1 V across it bursts. */
+   and the emitter (their dc potentials); a reversed electrolytic with more than 1 V across it bursts; V_CC = 12 V is set
+   and switched on as part of building Fig. 10.1 (the figure gives it); the scope probes are not part of Fig. 10.2 (step 2
+   connects them); either supply unit may be V_CC. */
 EXP_DEFS['ee312/exp10']=(()=>{const H=ENGINE.sheet;
 const t101=`<table class="tbl"><caption>Table 10.1</caption>
 <tr data-proc="A"><th>R<sub>C</sub></th><td>${H.num('t_rc','0.001',80)} kΩ</td><th>R<sub>E</sub></th><td>${H.num('t_re','0.001',80)} kΩ</td><th>R<sub>1</sub></th><td>${H.num('t_r1','0.001',80)} kΩ</td><th>R<sub>2</sub></th><td>${H.num('t_r2','0.001',80)} kΩ</td></tr>
@@ -26,7 +32,13 @@ const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
 <li class="plq">PLQs 5–6 (LTspice .op and .tran of your design with a 2N2222) go in your report.</li></ol>`;
 const E96=[100,102,105,107,110,113,115,118,121,124,127,130,133,137,140,143,147,150,154,158,162,165,169,174,178,182,187,191,196,200,205,210,215,221,226,232,237,243,249,255,261,267,274,280,287,294,301,309,316,324,332,340,348,357,365,374,383,392,402,412,422,432,442,453,464,475,487,499,511,523,536,549,562,576,590,604,619,634,649,665,681,698,715,732,750,768,787,806,825,845,866,887,909,931,953,976];
 const nearE96=x=>{const e=Math.floor(Math.log10(x))-2;let best=null;[e-1,e,e+1].forEach(k=>E96.forEach(m=>{const v=m*Math.pow(10,k);if(best==null||Math.abs(Math.log(v/x))<Math.abs(Math.log(best/x)))best=v}));return best};
-return {procs:[{id:'A',title:'dc bias point: Fig. 10.1 (Fig. 10.3, Table 10.1)'},{id:'B',title:'The CE amplifier: Fig. 10.2 (Figs 10.4–10.5)'}],
+/* the figures' reference wiring */
+const VCC=[{lead:'Lp',alt:'Rp',at:8},{lead:'Lm',alt:'Rm',at:29},{wire:[8,9]},{wire:[9,10]},{wire:[10,11]},{wire:[11,12]}],GND=[{wire:[29,30]},{wire:[30,31]},{wire:[31,32]},{wire:[32,33]}];
+const DC=[...VCC,{ic:'BD137',pins:{E:17,C:18,B:19}},{part:['R5k6',11,18]},{part:['R47k',12,19]},{part:['R27k',19,26]},{wire:[26,33]},{part:['R4k7',17,24]},{wire:[24,31]},...GND];
+const figs={'10.1':{img:'labs/ee312/fig/fig10-1.png',cap:'Fig. 10.1 · V<sub>CC</sub> = 12 V, R<sub>1</sub> = 47 kΩ, R<sub>2</sub> = 27 kΩ, R<sub>C</sub> = 5.6 kΩ, R<sub>E</sub> = 4.7 kΩ',lines:DC},
+  '10.2':{img:'labs/ee312/fig/fig10-2.png',cap:'Fig. 10.2 · C<sub>1</sub> = C<sub>2</sub> = 2.2 µF, C<sub>E</sub> = 470 µF',lines:[...DC,{wire:[16,17]},{part:['C470',16,23],pol:true},{wire:[23,30]},
+    {part:['C2u2',19,20],pol:true},{lead:'gr',at:20},{wire:[33,34]},{lead:'gb',at:34},{part:['C2u2',18,25],pol:true}]}};
+return {figs,procs:[{id:'A',title:'dc bias point: Fig. 10.1 (Fig. 10.3, Table 10.1)'},{id:'B',title:'The CE amplifier: Fig. 10.2 (Figs 10.4–10.5)'}],
 sheet:`<div class="paper" id="paper">
 <h2>Experiment 10 · The Common Emitter Amplifier</h2>
 <div style="display:flex;gap:8px;flex-wrap:wrap"><div class="figbox" style="padding:8px;flex:1;min-width:200px"><img class="figimg" src="labs/ee312/fig/fig10-1.png" alt="Fig. 10.1"></div><div class="figbox" style="padding:8px;flex:1;min-width:200px"><img class="figimg" src="labs/ee312/fig/fig10-2.png" alt="Fig. 10.2"></div></div>
@@ -90,9 +102,12 @@ setup(RT){
     const sg=[RT.dsig(0),RT.dsig(1)];st.pp=[sg[0].max-sg[0].min,sg[1].max-sg[1].min];
     const fitC=k=>{const ch=sc.ch[k];const t=sg[k].max/ch.vd+ch.pos,b=sg[k].min/ch.vd+ch.pos;return t<=4.3&&b>=-4.3&&(t-b)>=1};const cyc=10*sc.td*g.freq;
     st.fit=sc.pwr&&!sc.xy&&cyc>=1&&cyc<=10&&fitC(0)&&fitC(1);st.probe1=sc.ch.slice(0,2).every(ch=>ch.probe===1&&!ch.inv);
-    if(ST.c105&&!(g.pwr&&g.out)&&!(S.psu.pwr&&S.psu.u.some(u=>u.on)))ST.end=true;
     return st}
   const CAPS={};
+  /* phase between vi (CH1) and vo (CH2) over one period: the sign of their ac correlation */
+  function phase(){if(RT.dirty)RT.recompute();const a=RT.dsig(0),b=RT.dsig(1);if(!a.has||!b.has)return null;const N=360,x=[],y=[];for(let i=0;i<N;i++){const ph=2*Math.PI*i/N;x.push(a.fn(ph));y.push(b.fn(ph))}
+    const m=v=>v.reduce((p,q)=>p+q,0)/N,mx=m(x),my=m(y);let c=0;for(let i=0;i<N;i++)c+=(x[i]-mx)*(y[i]-my);return c<0?'180':'0'}
+  $('paper').addEventListener('change',()=>BENCH.onRender());
   document.querySelectorAll('[data-cap]').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.cap;G.capture(RT,id);CAPS[id]=status();ST['c'+id.slice(1)]=true;BENCH.onRender()}));
   const capOK=(id,amp)=>{const c=CAPS[id];if(!c)return [false,'ما سجّلت الشاشة'];const pr=[];if(c.kind!=='AC'||!c.on)pr.push('الدائرة لازم Fig. 10.2 و VCC = 12 V شغّال');if(!c.sig||A(c.amp-amp)>5e-4)pr.push(`الجنريتر: Sine، 1 kHz، ${amp*1000} mVpp`);
     if(!c.probes)pr.push('CH1 على v<sub>i</sub> و CH2 على v<sub>o</sub>');if(!c.chs||!c.fit||!c.probe1)pr.push('الموجتين لازم تبان واضحة على الشاشة');return [!pr.length,pr.join('، ')]};
@@ -117,24 +132,31 @@ setup(RT){
     g.show($('result'))});
   return {status,
     steps:[
-      {dev:'dmm',lines:[{t:'DMM 1 HI → node 0',note:'أو DMM 2',lead:'mh',alt:'m2h',at:0},{t:'DMM 1 COM → node 1',note:'كل مقاومة لحالها بين node 0 و node 1',lead:'ml',alt:'m2l',at:1}],t:'Procedure A: DMM 1 على Ω: قِس كل مقاومة (5.6k، 4.7k، 47k، 27k) وهي لحالها على اللوحة، وسجّلها في Table 10.1.',ok:s=>s.rAll},
-      {dev:'board',fig:'labs/ee312/fig/fig10-1.png',figCap:'Fig. 10.1',
-        lines:[{t:'BD137: E → node 15, C → node 16, B → node 17',note:'الوجه المكتوب عليه للأمام',ic:'BD137',pins:{E:15,C:16,B:17}},{t:'R<sub>C</sub> = 5.6 kΩ: node 16 ↔ node 23',part:['R5k6',16,23]},
-          {t:'R<sub>1</sub> = 47 kΩ: node 17 ↔ node 24',part:['R47k',17,24]},{t:'bridging plug: node 23 ↔ node 24',note:'V<sub>CC</sub>',wire:[23,24]},{t:'R<sub>2</sub> = 27 kΩ: node 17 ↔ node 18',part:['R27k',17,18]},
-          {t:'R<sub>E</sub> = 4.7 kΩ: node 15 ↔ node 14',part:['R4k7',15,14]},{t:'wire: node 18 ↔ node 14',note:'الأرضي',wire:[18,14]},{t:'DC + (L +) → node 23',note:'V<sub>CC</sub> = 12 V',lead:'Lp',at:23},{t:'DC − (L −) → node 14',lead:'Lm',at:14}],
-        t:'ركّب Fig. 10.1: R<sub>1</sub> = 47 kΩ من V<sub>CC</sub> للـ base، R<sub>2</sub> = 27 kΩ من الـ base للأرضي، R<sub>C</sub> = 5.6 kΩ من V<sub>CC</sub> للـ collector، R<sub>E</sub> = 4.7 kΩ من الـ emitter للأرضي. المصدر 12.00 V وشغّله.',ok:s=>s.kind==='DC'&&s.on},
-      {dev:'dmm',lines:[{t:'DMM 2 red → DMM 2 HI',note:'من «Coaxial cables & wires»',jack:'m2h'},{t:'DMM 2 black → DMM 2 COM',note:'وبعدها حرّك أطراف الملتيميترين على النقاط اللي تقيسها',jack:'m2l'}],t:'الملتيميترين على DCV (اقسم القياسات بينهم): قِس V<sub>BE</sub> و V<sub>BC</sub> (الأحمر على B) و V<sub>CE</sub> و V<sub>R1</sub> و V<sub>R2</sub> و V<sub>RC</sub> و V<sub>RE</sub> وسجّلها على Fig. 10.3.',ok:s=>s.vAll},
-      {dev:'board',fig:'labs/ee312/fig/fig10-2.png',figCap:'Fig. 10.2',
-        lines:[{t:'C<sub>E</sub> = 470 µF: + → node 15, − → node 22',note:'على R<sub>E</sub>',part:['C470',15,22],pol:true},{t:'bridging plug: node 21 ↔ node 22',wire:[21,22]},{t:'bridging plug: node 14 ↔ node 21',note:'الأرضي',wire:[14,21]},
-          {t:'wire: node 17 ↔ node 11',note:'من B',wire:[17,11]},{t:'C<sub>1</sub> = 2.2 µF: + → node 11, − → node 12',part:['C2u2',11,12],pol:true},{t:'wire: node 16 ↔ node 3',note:'من C',wire:[16,3]},
-          {t:'C<sub>2</sub> = 2.2 µF: + → node 3, − → node 4',note:'v<sub>o</sub> على node 4',part:['C2u2',3,4],pol:true},{t:'GEN OUT → node 12',note:'v<sub>i</sub>',lead:'gr',at:12},{t:'GEN ⏚ → node 14',lead:'gb',at:14}],
-        t:'Procedure B: ركّب Fig. 10.2: C<sub>1</sub> = 2.2 µF من GEN OUT للـ base، C<sub>2</sub> = 2.2 µF من الـ collector لـ v<sub>o</sub>، C<sub>E</sub> = 470 µF على R<sub>E</sub> (+ جهة الـ emitter). GEN ⏚ على الأرضي.',ok:s=>s.kind==='AC'&&s.on},
-      {dev:'scope',fig:'labs/ee312/fig/fig10-2.png',figCap:'Fig. 10.2',lines:[{t:'CH1 → node 12',note:'v<sub>i</sub>',lead:'c1r',at:12},{t:'CH1 ⏚ → node 14',lead:'c1b',at:14},{t:'CH2 → node 4',note:'v<sub>o</sub>',lead:'c2r',at:4},{t:'CH2 ⏚ → node 14',lead:'c2b',at:14}],t:'شغّل الإسكوب، Default وبعدها Autoset. CH1 على v<sub>i</sub> و CH2 على v<sub>o</sub> (الأسود على الأرضي)، وشغّل CH2.',ok:s=>ST.auto&&s.probes&&s.chs},
-      {dev:'gen',t:'الجنريتر: Sine، 1 kHz، 20 mVpp، Offset 0، وشغّل CH1.',ok:s=>s.kind==='AC'&&s.sig&&A(s.amp-0.02)<5e-4},
-      {dev:'scope',t:'أضف Pk-Pk لـ CH1 و CH2 (Measure ← Add Measurement).',ok:s=>s.meas},
-      {dev:'scope',t:'اضبط الـ SCALE والـ time/div، وصوّر v<sub>i</sub>(t) و v<sub>o</sub>(t) في Fig. 10.4. كم فرق الطور؟ احسب A<sub>v</sub> وسجّله.',ok:s=>!!CAPS.f104},
-      {dev:'gen',t:'ارفع V<sub>i(p-p)</sub> لـ 200 mV، وصوّر في Fig. 10.5.',ok:s=>!!CAPS.f105},
-      {dev:'gen',t:'طفّ الجنريتر والمصدر، وفصّل القطع.',ok:s=>!!ST.end}
+      /* Procedure A (manual p. 76), steps 1–4 */
+      {dev:'dmm',t:'Procedure A · 1. بالـ DMM قِس كل مقاومة (وهي لحالها) وسجّل قيمتها في Table 10.1.',acts:['الـ DMM على Ω، الطرفين على مقاومة لحالها على اللوحة (مو موصولة بشي ثاني).','R<sub>C</sub> = 5.6 kΩ، R<sub>E</sub> = 4.7 kΩ، R<sub>1</sub> = 47 kΩ، R<sub>2</sub> = 27 kΩ.'],ok:s=>s.rAll,
+        rec:[['t_rc','R5k6','R<sub>C</sub>'],['t_re','R4k7','R<sub>E</sub>'],['t_r1','R47k','R<sub>1</sub>'],['t_r2','R27k','R<sub>2</sub>']].map(([to,k,label])=>({to,val:()=>ST.r[k]!=null?ST.r[k]/1e3:null,unit:'kΩ',dec:3,label,none:'قِس هذي المقاومة لحالها بالـ DMM على Ω أول'}))},
+      {dev:'board',build:'10.1',t:'2. وصّل الدائرة Fig. 10.1.',acts:['ركّب الدائرة مثل الشكل.','V<sub>CC</sub> = 12 V من الـ dc supply، وشغّل الـ dc.'],ok:s=>s.on},
+      {dev:'dmm',t:'3. بالـ DMM على قياس الجهد المستمر (DCV)، قِس وسجّل V<sub>BE</sub> و V<sub>BC</sub> و V<sub>CE</sub> و V<sub>R1</sub> و V<sub>R2</sub> و V<sub>RC</sub> و V<sub>RE</sub> على Fig. 10.3.',
+        acts:['تقدر تقسم القياسات بين الملتيميترين.','V<sub>BC</sub>: الأحمر على B والأسود على C.'],ok:s=>s.vAll,
+        rec:[['be','V<sub>BE</sub>'],['bc','V<sub>BC</sub>'],['ce','V<sub>CE</sub>'],['r1','V<sub>R1</sub>'],['r2','V<sub>R2</sub>'],['rc','V<sub>RC</sub>'],['re','V<sub>RE</sub>']].map(([k,label])=>({to:'v_'+k,val:()=>ST.v[k]?(ST.v[k].lo+ST.v[k].hi)/2:null,unit:'V',dec:3,label,none:'قِس هذا الجهد بالـ DMM على DCV أول'}))},
+      {dev:'board',t:'4. بالقيم المقاسة للمقاومات والجهود، احسب I<sub>C</sub> و I<sub>E</sub> و I<sub>1</sub> و I<sub>2</sub> بقانون أوم، وبعدها احسب I<sub>B</sub> بقانون كيرشوف للتيار (KCL).',
+        ok:()=>['t_ic','t_ie','t_i1','t_i2','t_ib'].every(k=>isFinite(G.v(k))),
+        rec:[['t_ic','rc','t_rc','I<sub>C</sub> = V<sub>RC</sub>/R<sub>C</sub>'],['t_ie','re','t_re','I<sub>E</sub> = V<sub>RE</sub>/R<sub>E</sub>'],['t_i1','r1','t_r1','I<sub>R1</sub> = V<sub>R1</sub>/R<sub>1</sub>'],['t_i2','r2','t_r2','I<sub>R2</sub> = V<sub>R2</sub>/R<sub>2</sub>']]
+          .map(([to,vk,rk,label])=>({to,val:()=>{const x=G.v('v_'+vk)/G.v(rk);return isFinite(x)?x:null},unit:'mA',dec:4,label,none:'سجّل الجهد والمقاومة أول'}))
+          .concat([{to:'t_ib',val:()=>{const x=G.v('t_i1')-G.v('t_i2');return isFinite(x)?x:null},unit:'mA',dec:4,label:'I<sub>B</sub> = I<sub>R1</sub> − I<sub>R2</sub>'}])},
+      /* Procedure B (manual p. 77), steps 1–7 */
+      {dev:'board',build:'10.2',t:'Procedure B · 1. وصّل الدائرة Fig. 10.2.',acts:['انتبه لقطبية المكثفات الكيميائية: الطرف + جهة الـ base والـ collector والـ emitter.']},
+      {dev:'scope',t:'2. شغّل الإسكوب، انتظر كم ثانية، اضغط Default وبعدها Autoset. اعرض v<sub>i</sub>(t) على CH1 و v<sub>O</sub>(t) على CH2.',
+        acts:['CH1 على v<sub>i</sub> (طرف GEN OUT)، و CH2 على v<sub>O</sub> (بعد C<sub>2</sub>)، والأسود للاثنين على الأرضي.','شغّل CH2.'],ok:s=>ST.auto&&s.probes&&s.chs},
+      {dev:'gen',t:'3. من الـ signal generator طبّق على الدائرة إشارة sine بـ 20 mVp-p و 1 kHz.',ok:s=>s.kind==='AC'&&s.sig&&A(s.amp-0.02)<5e-4},
+      {dev:'scope',t:'4. أضف قياس Pk-Pk التلقائي لـ CH1 و CH2 في الإسكوب مثل ما تعلمت قبل.',ok:s=>s.meas},
+      {dev:'scope',t:'5. اعرض وسجّل الموجتين v<sub>i</sub>(t) و v<sub>O</sub>(t) على Fig. 10.4. كم فرق الطور بينهم؟',ok:s=>!!CAPS.f104&&!!G.s('ph'),
+        rec:[{scope:'f104',label:'Fig. 10.4'},{to:'ph',val:()=>phase(),txt:v=>v+'°',label:'Phase difference'}]},
+      {dev:'board',t:'6. احسب الكسب الفعلي A<sub>v</sub> = V<sub>o(pp)</sub>/V<sub>i(pp)</sub> والكسب النظري بدون حمل من المعادلة (10.5)، وسجّل الاثنين في Table 10.1.',
+        ok:()=>isFinite(G.v('t_avm'))&&isFinite(G.v('t_avt')),
+        rec:[{to:'t_avm',val:()=>{const p=(CAPS.f104||status()).pp;return p&&p[0]>0?-p[1]/p[0]:null},dec:1,label:'A<sub>v</sub> = V<sub>o(pp)</sub>/V<sub>i(pp)</sub>',none:'سجّل Fig. 10.4 أول'},
+          {to:'t_avt',val:()=>{const x=-G.v('t_ic')*G.v('t_rc')/0.0259;return isFinite(x)?x:null},dec:1,label:'A<sub>v</sub> = −I<sub>C</sub>R<sub>C</sub>/V<sub>T</sub>',none:'سجّل I<sub>C</sub> و R<sub>C</sub> أول'}]},
+      {dev:'gen',t:'7. ارفع V<sub>i(p-p)</sub> لـ 200 mV، وسجّل الموجتين v<sub>i</sub>(t) و v<sub>O</sub>(t) على Fig. 10.5.',ok:s=>!!CAPS.f105,rec:[{scope:'f105',label:'Fig. 10.5'}]}
     ],
     onReset(){for(const k in ST)delete ST[k];ST.r={};ST.v={};['f104','f105'].forEach(id=>{$(id).textContent=id==='f104'?'Fig. 10.4':'Fig. 10.5';delete CAPS[id]});$('result').innerHTML=''}};
 }};})();

@@ -1,12 +1,19 @@
 /* EE312 · Experiment 9 · The BJT CE Circuit with Emphasis on Switching (manual v8.8 pp. 66–72).
-   Procedure A: VTC of the CE circuit (Fig. 9.2a: RB = 27 kΩ, RC = 2.7 kΩ, VCC = 5 V, VI from the second unit),
+   Procedure A (steps a–c): VTC of the CE circuit (Fig. 9.2a: RB = 27 kΩ, RC = 2.7 kΩ, VCC = 5 V, VI from the second unit),
    Table 9.2 (VO = 4.9 … 0.1 V: VBE, VI measured; VBC, mode, IB, IC, IE calculated).
-   Procedure B: LED switch (Fig. 9.2b): design RC, IB, RB (eqs 9.3–9.5), two decade boxes, square VControl
+   Procedure B (steps 1–5): LED switch (Fig. 9.2b): design RC, IB, RB (eqs 9.3–9.5), two decade boxes, square VControl
    0 / 5 V at 0.2, 2 and 60 Hz. PLQs 1–6.
+   Steps follow the manual one to one; build steps are checked by circuit equivalence against the figures below (rectangle
+   layout: V_CC on the left column, top row V_CC, the input source on the right column — the BD137's legs run E C B from
+   the left, so the base and its source sit on the right —, bottom row = emitter / ground). Calculation steps record the
+   computed values in Manual mode («Capture» fills the sheet).
    Assumptions: the Table 9.2 values follow the manual (the slides list 4.950/2.500/1.500 instead); the first row's
    VBC is −5.000 V (the manual prints 5.000); BD137 legs E C B from the left (TO-225 front view); the LED is the
    green 5 mm LED of Exp 1 (≈ 2 V at 10 mA); the supply knobs move 0.1 V (COARSE) and 1 mV (FINE) per step here
-   (the real pots are continuous) so VO can be set within ±8 mV of the table values. */
+   (the real pots are continuous) so VO can be set within ±8 mV of the table values; either supply unit may be V_CC or V_I;
+   either decade box may be R_C or R_B, its red post (1) on the source side (V_CC / GEN OUT); the meters
+   in Fig. 9.2a sit on its vO = vCE and vBE terminals (DMM 1 on C–E, DMM 2 on B–E; DMM 2 then moves to VI); the standard values captured in
+   Manual are E24 (270 Ω, 4.3 kΩ). */
 EXP_DEFS['ee312/exp9']=(()=>{const H=ENGINE.sheet;
 const VO=[4.9,4.5,3.5,3.4,2,1,0.5,0.2,0.1];
 const MODES=[['cut','Cutoff'],['act','Active'],['sat','Saturation']];
@@ -30,7 +37,16 @@ const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
   <div>${H.sel('q5',[['a','Only part of ΔvI appears across the base-emitter junction: most of it drops on RB (ΔvBE = ΔvI · rπ/(RB + rπ))'],['b','Because the collector current is larger than the base current'],['c','Because RC is smaller than RB'],['d','They are always equal']])}</div></li>
 <li class="plq" data-proc="B">Blue LED (3.4 V at 30 mA), β<sub>forced</sub> = 10: required R<sub>C</sub> and R<sub>B</sub>, and the nearest standard values (Appendix F).
   <div>${H.row('R<sub>C</sub> =',H.num('q6rc','0.01'),'Ω')}${H.row('R<sub>B</sub> =',H.num('q6rb','0.1'),'Ω')}${H.row('Standard R<sub>C</sub> =',H.num('q6rcs','0.1'),'Ω')}${H.row('Standard R<sub>B</sub> =',H.num('q6rbs','1'),'Ω')}</div></li></ol>`;
-return {procs:[{id:'A',title:'VTC of the CE circuit: Fig. 9.2a (Table 9.2)'},{id:'B',title:'The BJT as an LED switch: Fig. 9.2b'}],
+/* the figures' reference wiring (rows 1–3, columns 1–5 of the panel) */
+const GND=[{wire:[22,23]},{wire:[23,24]},{wire:[24,25]},{wire:[25,26]}],Q={ic:'BD137',pins:{E:16,C:17,B:18}};
+/* Fig. 9.2a draws v_O = v_CE and v_BE: DMM 1 on C–E, DMM 2 on B–E (either meter may take either place) */
+const FIG='labs/ee312/fig/fig9-2.png';
+const figs={'9.2a':{img:FIG,cap:'Fig. 9.2a · R<sub>B</sub> = 27 kΩ, R<sub>C</sub> = 2.7 kΩ, V<sub>CC</sub> = 5 V',lines:[{lead:'Lp',alt:'Rp',at:8},{lead:'Lm',alt:'Rm',at:22},{wire:[8,9]},{wire:[9,10]},
+    {part:['R2k7',10,17]},Q,{wire:[16,23]},...GND,{part:['R27k',18,11]},{wire:[11,12]},{lead:'Rp',alt:'Lp',at:12},{lead:'Rm',alt:'Lm',at:26},
+    {lead:'mh',alt:'m2h',at:17},{lead:'ml',alt:'m2l',at:16},{lead:'m2h',alt:'mh',at:18},{lead:'m2l',alt:'ml',at:16}]},
+  '9.2b':{img:FIG,cap:'Fig. 9.2b · R<sub>C</sub> and R<sub>B</sub> on the two decade boxes',lines:[{lead:'gr',at:8},{lead:'gb',at:22},{lead:'dB1',alt:'dA1',at:8},{lead:'dB2',alt:'dA2',at:18},Q,{wire:[16,23]},...GND,
+    {part:['LED',10,17],pol:true},{lead:'dA2',alt:'dB2',at:10},{lead:'dA1',alt:'dB1',at:12},{lead:'Rp',alt:'Lp',at:12},{lead:'Rm',alt:'Lm',at:26}]}};
+return {figs,procs:[{id:'A',title:'VTC of the CE circuit: Fig. 9.2a (Table 9.2)'},{id:'B',title:'The BJT as an LED switch: Fig. 9.2b'}],
 sheet:`<div class="paper" id="paper">
 <h2>Experiment 9 · The BJT CE Circuit with Emphasis on Switching</h2>
 <div class="figbox" style="padding:8px"><img class="figimg" src="labs/ee312/fig/fig9-2.png" alt="Fig. 9.2"></div>
@@ -85,9 +101,13 @@ setup(RT){
         if(blink&&A(g.freq-0.2)<1e-4)ST.f02=true;if(blink&&ST.f02&&A(g.freq-2)<1e-4)ST.f2=true;if(blink&&ST.f2&&A(g.freq-60)<1e-3)ST.f60=true}}
     st.rows=j=>j.every(i=>ST.vbe[i]!=null&&ST.vi[i]!=null);
     st.boxes=[DB.value('a'),DB.value('b')].sort((a,b)=>a-b);st.boxOK=A(st.boxes[0]-280)<=3&&A(st.boxes[1]-4300)<=50;
-    st.design=G.near(G.v('d_rc'),280,1)&&G.near(G.v('d_ib'),1,0.01)&&G.near(G.v('d_rb'),4300,10);
-    if(ST.f60&&!(g.pwr&&g.out)&&!(S.psu.pwr&&S.psu.u.some(u=>u.on)))ST.end=true;
     return st}
+  /* Manual «Capture» of a Table 9.2 row's calculations, from the row's recorded V_BE and V_I (eqs 9.1–9.3) */
+  function calcRow(j){const vbe=G.v('vbe'+j),vi=G.v('vi'+j),vo=VO[j];if(!isFinite(vbe)||!isFinite(vi))return null;
+    const vbc=vbe-vo,md=vbe<0.5?'cut':vbc>=0.4?'sat':'act',ib=(vi-vbe)/27,ic=(5-vo)/2.7,ie=+ib.toFixed(3)+ +ic.toFixed(3);
+    const put=(id,x)=>{const e=$(id);if(e){e.value=x;e.classList.add('captured')}};
+    put('vbc'+j,vbc.toFixed(3));put('md'+j,md);put('ib'+j,ib.toFixed(3));put('ic'+j,ic.toFixed(3));put('ie'+j,ie.toFixed(3));
+    return `V<sub>BC</sub> ${vbc.toFixed(3)} V · ${MODES.find(m=>m[0]===md)[1]} · I<sub>B</sub> ${ib.toFixed(3)} · I<sub>C</sub> ${ic.toFixed(3)} · I<sub>E</sub> ${ie.toFixed(3)} mA`}
   function plot(){const pts=[[0,5],...VO.map((v,j)=>[G.v('vi'+j),v]).filter(p=>isFinite(p[0]))].sort((a,b)=>a[0]-b[0]);const W=420,Hh=240,xm=Math.max(1.4,...pts.map(p=>p[0]))*1.05,X=v=>36+v/xm*(W-50),Y=v=>Hh-24-v/5.2*(Hh-40);
     let s=`<svg viewBox="0 0 ${W} ${Hh}" style="width:100%;background:#fff;border:1px solid var(--line);border-radius:8px;direction:ltr" font-family="IBM Plex Mono, monospace" font-size="10">`;
     s+=`<line x1="${X(0)}" y1="${Y(0)}" x2="${X(xm)}" y2="${Y(0)}" stroke="#555"/><line x1="${X(0)}" y1="${Y(0)}" x2="${X(0)}" y2="${Y(5.2)}" stroke="#555"/>`;
@@ -115,26 +135,28 @@ setup(RT){
     g.show($('result'))});
   return {status,
     steps:[
-      {dev:'board',fig:'labs/ee312/fig/fig9-2.png',figCap:'Fig. 9.2',
-        lines:[{t:'BD137: E → node 15, C → node 16, B → node 17',note:'الوجه المكتوب عليه للأمام',ic:'BD137',pins:{E:15,C:16,B:17}},{t:'R<sub>C</sub> = 2.7 kΩ: node 16 ↔ node 23',part:['R2k7',16,23]},{t:'R<sub>B</sub> = 27 kΩ: node 17 ↔ node 24',part:['R27k',17,24]},
-          {t:'DC + (L +) → node 23',note:'V<sub>CC</sub>',lead:'Lp',at:23},{t:'DC − (L −) → node 15',note:'على E',lead:'Lm',at:15},{t:'DC + (R +) → node 24',note:'V<sub>I</sub>',lead:'Rp',at:24},{t:'DC − (R −) → node 15',lead:'Rm',at:15}],
-        t:'Procedure A: ركّب Fig. 9.2a: الـ BD137 (E C B)، R<sub>C</sub> = 2.7 kΩ من + وحدة V<sub>CC</sub> للـ collector، و R<sub>B</sub> = 27 kΩ من + وحدة V<sub>I</sub> للـ base، والسالب للوحدتين على الـ emitter.',ok:s=>s.kind==='A'},
-      {dev:'psu',t:'شغّل المصدر: V<sub>CC</sub> = 5.00 V، ووحدة V<sub>I</sub> تبدأ من 0 V، وشغّل الـ dc للوحدتين.',ok:s=>s.kind==='A'&&s.vcc5&&s.c.vi.on},
-      {dev:'psu',fig:'labs/ee312/fig/fig9-2.png',figCap:'Fig. 9.2',lines:[{t:'DMM 1 HI → node 16',note:'v<sub>O</sub> = v<sub>CE</sub>',lead:'mh',at:16},{t:'DMM 1 COM → node 15',lead:'ml',at:15},{t:'DMM 2 HI → node 17',note:'v<sub>BE</sub> (وبعدها node 24 لـ V<sub>I</sub>)',lead:'m2h',at:17},{t:'DMM 2 COM → node 15',lead:'m2l',at:15}],t:'الملتيميترين على DCV: DMM 1 على C–E و DMM 2 على B–E. ارفع V<sub>I</sub> لين DMM 1 يقرا V<sub>O</sub> = 4.900 V ثم 4.500 V، وفي كل مرة سجّل V<sub>BE</sub> من DMM 2، وبعدها انقل HI حق DMM 2 لـ node 24 وسجّل V<sub>I</sub>.',ok:s=>s.rows([0,1])},
-      {dev:'psu',t:'كمّل: V<sub>O</sub> = 3.500 و 3.400 V.',ok:s=>s.rows([2,3])},
-      {dev:'psu',t:'كمّل: V<sub>O</sub> = 2.000 و 1.000 و 0.500 V.',ok:s=>s.rows([4,5,6])},
-      {dev:'psu',t:'كمّل: V<sub>O</sub> = 0.200 و 0.100 V (الـ FINE بشويش).',ok:s=>s.rows([7,8])},
-      {dev:'board',t:'Procedure B: احسب R<sub>C</sub> و I<sub>B</sub> و R<sub>B</sub> (eq. 9.3–9.5) واكتبهم في الـ sheet.',ok:s=>s.design},
-      {dev:'dbox',t:'اضبط صندوقي المقاومات: واحد على R<sub>C</sub> = 280 Ω والثاني على R<sub>B</sub> = 4.3 kΩ.',ok:s=>s.boxOK},
-      {dev:'board',fig:'labs/ee312/fig/fig9-2.png',figCap:'Fig. 9.2',
-        lines:[{t:'LED: anode → node 23, cathode → node 16',note:'الرجل الطويلة جهة V<sub>CC</sub> (شيل R<sub>C</sub> و R<sub>B</sub>)',part:['LED',23,16],pol:true},{t:'DC + (L +) → node 30',lead:'Lp',at:30},
-          {t:'R<sub>C</sub> box: A1 → node 30, A2 → node 23',note:'صندوق A',lead:'dA1',at:30},{t:'A2 → node 23',lead:'dA2',at:23},{t:'GEN OUT → node 25',lead:'gr',at:25},
-          {t:'R<sub>B</sub> box: B1 → node 25',note:'صندوق B',lead:'dB1',at:25},{t:'B2 → node 17',note:'على B',lead:'dB2',at:17},{t:'GEN ⏚ → node 15',note:'على E',lead:'gb',at:15}],
-        t:'ركّب Fig. 9.2b: صندوق R<sub>C</sub> والـ LED (الأنود جهة V<sub>CC</sub>) للـ collector، وصندوق R<sub>B</sub> من GEN OUT للـ base، والـ emitter على الأرضي (GEN ⏚ و − الـ V<sub>CC</sub>). V<sub>CC</sub> = 5 V شغّال.',ok:s=>s.kind==='B'&&s.vcc5},
-      {dev:'gen',t:'الجنريتر: Square، Hi_Level (F4) = 5 V و Lo_Level (F5) = 0 V، والتردد 0.2 Hz، وشغّل CH1. لاحظ الـ LED يولّع ويطفي.',ok:s=>!!ST.f02},
-      {dev:'gen',t:'غيّر التردد لـ 2 Hz.',ok:s=>!!ST.f2},
-      {dev:'gen',t:'غيّر التردد لـ 60 Hz: ليش ما تلاحظ الـ switching؟ جاوب في الـ sheet.',ok:s=>!!ST.f60},
-      {dev:'gen',t:'طفّ مخرج الجنريتر والمصدر، ورتّب طاولتك.',ok:s=>!!ST.end}
+      /* Procedure A (manual p. 70), steps a–c */
+      {dev:'board',build:'9.2a',t:'Procedure A · a. وصّل الدائرة Fig. 9.2a.'},
+      {dev:'psu',t:'b. بوحدة dc ثبّت V<sub>CC</sub> على 5 V، وبوحدة ثانية غيّر V<sub>I</sub> لين تحصل قيم V<sub>O</sub> اللي في Table 9.2. لكل قيمة V<sub>O</sub> قِس V<sub>BE</sub> و V<sub>I</sub> وسجّلها في الجدول.',
+        acts:['وحدة V<sub>CC</sub> على 5.00 V، ووحدة V<sub>I</sub> تبدأ من 0 V، وشغّل الـ dc للوحدتين.','الملتيميترين على DCV: واحد على C–E يقرا V<sub>O</sub>، والثاني على B–E يقرا V<sub>BE</sub>.',
+          'ارفع V<sub>I</sub> (COARSE وبعدها FINE) لين V<sub>O</sub> = 4.900 V، سجّل V<sub>BE</sub>، وبعدها انقل الطرف الأحمر للملتيميتر الثاني على + وحدة V<sub>I</sub> وسجّل V<sub>I</sub>.',
+          'كرّر لباقي قيم V<sub>O</sub>: 4.500، 3.500، 3.400، 2.000، 1.000، 0.500، 0.200، 0.100 V.'],ok:s=>s.rows(VO.map((_,j)=>j)),
+        rec:VO.flatMap((vo,j)=>[{to:'vbe'+j,val:()=>ST.vbe[j]!=null?ST.vbe[j]:null,unit:'V',dec:3,label:`V<sub>BE</sub> @ V<sub>O</sub> = ${vo.toFixed(3)}`,none:'اضبط V<sub>O</sub> وقِس V<sub>BE</sub> أول'},
+          {to:'vi'+j,val:()=>ST.vi[j]!=null?ST.vi[j]:null,unit:'V',dec:3,label:`V<sub>I</sub> @ V<sub>O</sub> = ${vo.toFixed(3)}`,none:'قِس V<sub>I</sub> (على + وحدة V<sub>I</sub>) أول'}])},
+      {dev:'board',t:'c. سوّ الحسابات المطلوبة في Table 9.2 بالمعادلات I<sub>B</sub> = (V<sub>I</sub> − V<sub>BE</sub>)/R<sub>B</sub> (9.1)، I<sub>C</sub> = (V<sub>CC</sub> − V<sub>O</sub>)/R<sub>C</sub> (9.2)، I<sub>E</sub> = I<sub>C</sub> + I<sub>B</sub> (9.3).',
+        ok:()=>VO.every((_,j)=>['vbc','ib','ic','ie'].every(k=>isFinite(G.v(k+j)))&&G.s('md'+j)),
+        rec:VO.map((vo,j)=>({val:()=>calcRow(j),label:`V<sub>O</sub> = ${vo.toFixed(3)} V`,none:'سجّل V<sub>BE</sub> و V<sub>I</sub> لهذا السطر أول'}))},
+      /* Procedure B (manual pp. 70–71), steps 1–5 */
+      {dev:'board',t:'Procedure B · 1. احسب قيمة R<sub>C</sub> المطلوبة من المعادلة (9.3): R<sub>C</sub> = (V<sub>CC</sub> − V<sub>LED</sub> − 0.2)/I<sub>Csat</sub>.',ok:()=>G.near(G.v('d_rc'),280,1),
+        rec:[{to:'d_rc',val:()=>(5-2-0.2)/0.01,unit:'Ω',dec:0,label:'R<sub>C</sub>'},{to:'d_rcs',val:()=>270,unit:'Ω',label:'Standard R<sub>C</sub> (E24)'}]},
+      {dev:'board',t:'2. افترض β<sub>forced</sub> = 10 واحسب I<sub>B</sub> المطلوب من (9.4): I<sub>B</sub> = I<sub>Csat</sub>/β<sub>forced</sub>.',ok:()=>G.near(G.v('d_ib'),1,0.01),
+        rec:[{to:'d_ib',val:()=>10/10,unit:'mA',dec:3,label:'I<sub>B</sub>'},{to:'d_is',val:()=>1,unit:'mA',dec:3,label:'Current of the controlling source ≈ I<sub>B</sub>'}]},
+      {dev:'board',t:'3. احسب R<sub>B</sub> المطلوبة من (9.5): R<sub>B</sub> = (V<sub>Control_Hi</sub> − 0.7)/I<sub>B</sub>.',ok:()=>G.near(G.v('d_rb'),4300,10),
+        rec:[{to:'d_rb',val:()=>(5-0.7)/1e-3,unit:'Ω',dec:0,label:'R<sub>B</sub>'},{to:'d_rbs',val:()=>4300,unit:'Ω',label:'Standard R<sub>B</sub> (E24)'}]},
+      {dev:'board',build:'9.2b',t:'4. ركّب الدائرة (Fig. 9.2b) واختبرها بموجة square لـ V<sub>Control</sub>: Hi_Level = 5 V و Lo_Level = 0 V، والتردد 0.2 Hz. لـ R<sub>C</sub> و R<sub>B</sub> استخدم صندوقين مقاومات (decade boxes).',
+        acts:['اضبط صندوق على R<sub>C</sub> = 280 Ω والثاني على R<sub>B</sub> = 4.3 kΩ.','وصّل Fig. 9.2b، و V<sub>CC</sub> = 5 V شغّال.','الجنريتر: Square، Hi_Level (F4) = 5 V، Lo_Level (F5) = 0 V، 0.2 Hz، وشغّل CH1. لاحظ الـ LED يولّع ويطفي.'],
+        ok:s=>s.kind==='B'&&s.vcc5&&s.boxOK&&!!ST.f02},
+      {dev:'gen',t:'5. اختبر الدائرة لما يزيد تردد الـ controlling signal لـ 2 Hz و 60 Hz. ليش الـ switching ما ينلاحظ على 60 Hz؟',acts:['غيّر التردد لـ 2 Hz.','غيّر التردد لـ 60 Hz، وجاوب في الـ sheet.'],ok:s=>!!ST.f2&&!!ST.f60}
     ],
     onReset(){for(const k in ST)delete ST[k];ST.vbe={};ST.vi={};$('result').innerHTML='';$('ivplot').innerHTML=''}};
 }};})();

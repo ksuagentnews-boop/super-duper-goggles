@@ -1,4 +1,5 @@
-/* EE205 · Experiment 8 · Resonance in Series and Parallel Circuits (manual pp. 64–75).
+/* EE205 · Experiment 8 · Resonance in Series and Parallel Circuits (manual pp. 64–75). Steps follow the manual's procedure,
+   one per numbered step.
    Procedure I: Fig. 6, series 100 Ω + 17.5 mH + 4.7 µF → E, I, VR, VL, VC, Z = E/I, θ, P, PF.
    Procedure II: Fig. 7, 4.7 µF ∥ 100 Ω ∥ 17.5 mH → E, I, IR, IC, IL, ZL, Z, θ (10 Ω in series, CRO), the phase between
    IC and IL (10 Ω in series with each).
@@ -7,6 +8,13 @@
    Procedure IV: Fig. 9, 5 kΩ ∥ 4.38 mH ∥ 0.1 µF, V = 2 Vrms, 6 → 9 kHz in 200 Hz steps → I, Z = V/I (Table 2) → fop, f1,
    f2, B, Qo.
    Instruments: Metrix MTX 3240, Hameg HM 203-7 (CRO), Fluke 77 (voltmeter), BK 2704B (ammeter, as on the table photo).
+   Figures in the lab's rectangle layout: the generator on the left (OUT 8, ⏚ 22), the voltmeter (Fluke, or CH I in III / IV)
+   across it, the ammeter along the top (8 → 9), series parts along the top and down the right side, parallel branches
+   hanging from the top bus (plugs 9–16, 10–17, 11–18 where the ammeter goes) onto the bottom bus 23-24-25.
+   Assumptions: Figs. 6 and 7 draw no meters; the manual's step measures E and I, so Fig. 6 carries the BK in series and the
+   Fluke across E, and Fig. 7 the Fluke across E with plugs in the four ammeter places (the BK goes into each in turn and
+   the plug back). "Fig. 7 · 10 Ω with C and L" is the circuit of step II.4. Readings across parts and through branches are
+   checked by topology (which part, which net), never by panel node numbers.
    Decisions: Procedures I and II give no source values: E = 2 Vrms at 1 kHz (the lab video's Procedure II readings
    IR 20.17, I 48.1, IC 60.9 mA are exactly what 2 Vrms at 1 kHz gives). Coil resistances: 17.5 mH (1000 turns) 17.6 Ω,
    4.38 mH (500 turns) 5.2 Ω (videos). In Procedures III and IV the handheld voltmeter cannot follow 7.5–15 kHz, so
@@ -42,7 +50,18 @@ ${F4.map(f=>`<tr><td>${fk(f)}</td><td>${H.num('q'+f,'0.001',70)}</td><td>${H.num
 <tr><td class="l">Measured</td>${['fop','f1p','f2p','bp','qp'].map(k=>`<td>${H.num(k,'1',66)}</td>`).join('')}</tr><tr><td class="l">Theoretical</td>${['fopt','f1pt','f2pt','bpt','qpt'].map(k=>`<td>${H.num(k,'1',66)}</td>`).join('')}</tr></table>
 <div class="row" style="margin-top:12px"><button class="t on" id="submit">صحّح إجاباتي</button></div><div id="result"></div>
 </div></div>`;
-return {procs:[{id:'I',title:'Series RLC circuit (Fig. 6)'},{id:'II',title:'Parallel RLC circuit (Fig. 7)'},{id:'III',title:'Series resonance (Fig. 8, Table 1)'},{id:'IV',title:'Parallel resonance (Fig. 9, Table 2)'}],
+/* the figures' reference wiring (rectangle layout, bottom-left node 22, top row 8–11, right column 11–25) */
+const GN=[{lead:'gr',at:8},{lead:'gb',at:22}],FL=[{lead:'h1v',at:8},{lead:'h1c',at:22}],CR=[{lead:'c1r',at:8},{lead:'c1b',at:22}],BK=[{lead:'h2ma',at:8},{lead:'h2c',at:9}];
+const SER=(r,l,c)=>[{part:[r,9,10]},{part:[l,10,11]},{part:[c,11,18]},{wire:[18,25]},{wire:[25,24]},{wire:[24,23]},{wire:[23,22]}];
+const BUS=[{wire:[9,10]},{wire:[10,11]},{wire:[9,16]},{wire:[10,17]},{wire:[11,18]}],PAR=(r,l,c)=>[{part:[c,16,23]},{part:[r,17,24]},{part:[l,18,25]}],FG='labs/ee205/fig/';
+const figs={
+  '6':{img:FG+'e8-fig6.png',cap:'Fig. 6 · series RLC (E = 2 Vrms, 1 kHz; the BK in series, the Fluke across E)',lines:[...GN,...FL,...BK,...SER('R100','L175','C47')]},
+  '7':{img:FG+'e8-fig7.png',cap:'Fig. 7 · parallel RLC (E = 2 Vrms, 1 kHz; plugs where the ammeter goes, the Fluke across E)',lines:[...GN,...FL,{wire:[8,9]},...BUS,...PAR('R100','L175','C47'),{wire:[23,24]},{wire:[24,25]},{wire:[22,23]}]},
+  '7cl':{img:FG+'e8-fig7.png',cap:'Fig. 7 · 10 Ω in series with C and with L (CH I across the one under C, CH II under L)',lines:[...GN,...FL,{wire:[8,9]},...BUS,...PAR('R100','L175','C47'),
+    {part:['R10',23,30]},{part:['R10',25,32]},{wire:[24,31]},{wire:[22,29]},{wire:[29,30]},{wire:[30,31]},{wire:[31,32]},{lead:'c1r',at:23},{lead:'c1b',at:22},{lead:'c2r',at:25},{lead:'c2b',at:22}]},
+  '8':{img:FG+'e8-fig8.png',cap:'Fig. 8 · series resonance (100 Ω, 17.5 mH, 10 nF; V on CH I)',lines:[...GN,...CR,...BK,...SER('R100','L175','C10n')]},
+  '9':{img:FG+'e8-fig9.png',cap:'Fig. 9 · parallel resonance (5 kΩ, 4.38 mH, 0.1 µF; V on CH I)',lines:[...GN,...CR,...BK,...BUS,...PAR('R5k','L438','C01'),{wire:[23,24]},{wire:[24,25]},{wire:[22,23]}]}};
+return {figs,procs:[{id:'I',title:'Series RLC circuit (Fig. 6)'},{id:'II',title:'Parallel RLC circuit (Fig. 7)'},{id:'III',title:'Series resonance (Fig. 8, Table 1)'},{id:'IV',title:'Parallel resonance (Fig. 9, Table 2)'}],
 sheet,params:()=>({}),
 instruments:[
   {type:'metrix',prev:{freq:5000,amp:3,wave:'Sine'}},
@@ -64,38 +83,42 @@ setup(RT){
   const genV=()=>{const gn=RT.leadNet('gr');if(gn==null||gn<0)return 0;const v=RT.samples(gn,300);const m=v.reduce((a,b)=>a+b,0)/v.length;return Math.sqrt(v.reduce((a,b)=>a+(b-m)*(b-m),0)/v.length)};
   const sine=f=>{const g=K.gen();return g.on&&g.wave==='Sine'&&g.f===f&&Math.abs(g.off)<1e-9};
   const v2=()=>Math.abs(genV()-2)<=0.05;
-  const ACV=(a,b)=>K.across('ACV',N(a),b===-1?-1:N(b),true),ACI=(a,b)=>K.amm(N(a),N(b),'ACI');
-  const meterOut=()=>!RT.meters().some(m=>m.D.jack==='A'&&m.hi!=null&&m.lo!=null&&m.hi!==m.lo);
-  function status(){const st={};const gn=RT.leadNet('gr'),gb=RT.leadNet('gb');st.v=genV();st.v2=v2();
-    /* Procedure I · Fig. 6: gen 1, plug / ammeter 1–2, 100 Ω 2–3, coil 3–4, 4.7 µF 4–11, gen ⏚ 11 */
-    st.fig6=gn===N(1)&&gb===-1&&N(11)===-1&&K.has('R100',2,3)&&K.has('L175',3,4)&&K.has('C47',4,11)&&(N(1)===N(2)||K.ammOn(N(1),N(2)));
-    st.run1=st.fig6&&sine(1000)&&st.v2;
-    if(st.run1){[['e1',1,-1],['vr1',2,3],['vl1',3,4],['vc1',4,-1]].forEach(([k,a,b])=>{const v=ACV(a,b);if(v!=null&&(k!=='e1'||N(1)===N(2)))ST[k]=v});const i=ACI(1,2);if(i!=null)ST.i1=i}
-    /* Procedure II · Fig. 7: gen 7, plug 7–8 (I); top bus 8-9-10; plugs 8–15 (IC), 9–16 (IR), 10–17 (IL); 4.7 µF 15–22, 100 Ω 16–23, coil 17–24;
-       bottom bus 22-23-24; 23 → 30 (plug, or 10 Ω for θ); gen ⏚ 30 (ground row 29-30-31) */
-    const br=K.has('C47',15,22)&&K.has('R100',16,23)&&K.has('L175',17,24);st.br=br;
-    const top=N(8)===N(9)&&N(9)===N(10);const pl=(a,b)=>N(a)===N(b)||K.ammOn(N(a),N(b));
-    st.fig7=gn===N(7)&&gb===-1&&N(30)===-1&&br&&top&&pl(7,8)&&pl(8,15)&&pl(9,16)&&pl(10,17)&&N(22)===N(23)&&N(23)===N(24)&&N(23)===-1;
-    st.closed7=st.fig7&&N(7)===N(8)&&N(8)===N(15)&&N(9)===N(16)&&N(10)===N(17);
-    st.run2=st.fig7&&sine(1000)&&st.v2;
-    if(st.run2){if(st.closed7){const v=ACV(8,-1);if(v!=null)ST.e2=v}
-      const only=(a,b)=>[[7,8],[8,15],[9,16],[10,17]].every(([x,y])=>(x===a&&y===b)||N(x)===N(y));
-      [['i2',7,8],['ic2',8,15],['ir2',9,16],['il2',10,17]].forEach(([k,a,b])=>{if(only(a,b)){const i=ACI(a,b);if(i!=null)ST[k]=i}})}
-    /* θ: 10 Ω from the bottom bus to ground (23–30), CH I = E (top bus), CH II = across the 10 Ω */
-    const S=RT.S.sc,md=RT.inst.sc.mode();const dual=S.pwr&&(md==='DUAL'||md==='CHOP')&&!S.xy;
-    st.th=gn===N(7)&&br&&top&&N(7)===N(8)&&N(8)===N(15)&&N(9)===N(16)&&N(10)===N(17)&&N(22)===N(23)&&N(23)===N(24)&&K.has('R10',23,30)&&N(23)!==-1&&N(30)===-1&&sine(1000);
-    if(st.th&&RT.leadNet('c1r')===N(8)&&RT.leadNet('c2r')===N(23)&&dual)ST.th2=true;
-    /* IC vs IL: 10 Ω under C (22–29) and under L (24–31), R straight to ground (23–30 plug); CH I on 22, CH II on 24 */
-    st.cl=gn===N(7)&&br&&top&&N(7)===N(8)&&N(8)===N(15)&&N(9)===N(16)&&N(10)===N(17)&&K.has('R10',22,29)&&K.has('R10',24,31)&&N(23)===-1&&N(29)===-1&&N(31)===-1&&N(22)!==-1&&N(24)!==-1&&N(22)!==N(24)&&sine(1000);
-    if(st.cl&&RT.leadNet('c1r')===N(22)&&RT.leadNet('c2r')===N(24)&&dual)ST.cl2=true;
-    /* Procedure III · Fig. 8: gen 1, ammeter 1 → 2, 100 Ω 2–3, coil 3–4, 10 nF 4–11, gen ⏚ 11, CH I on 1 */
-    st.fig8=gn===N(1)&&gb===-1&&N(11)===-1&&K.has('R100',2,3)&&K.has('L175',3,4)&&K.has('C10n',4,11)&&K.ammOn(N(1),N(2));
-    st.cro=RT.leadNet('c1r')===gn&&gn!=null&&S.pwr;
-    if(st.fig8&&st.v2){const g=K.gen();if(sine(g.f)&&F3.includes(g.f)){const i=ACI(1,2);if(i!=null)ST['s'+g.f]=i}}
-    /* Procedure IV · Fig. 9: gen 1, ammeter 1 → 2, top bus 2-3-4, 5 kΩ 2–9, 4.38 mH 3–10, 0.1 µF 4–11, bottom bus 9-10-11, gen ⏚ 9 */
-    st.fig9=gn===N(1)&&gb===-1&&N(9)===-1&&N(10)===-1&&N(11)===-1&&N(2)===N(3)&&N(3)===N(4)&&K.has('R5k',2,9)&&K.has('L438',3,10)&&K.has('C01',4,11)&&K.ammOn(N(1),N(2));
-    if(st.fig9&&st.v2){const g=K.gen();if(sine(g.f)&&F4.includes(g.f)){const i=ACI(1,2);if(i!=null)ST['p'+g.f]=i}}
-    st.clear=!RT.S.parts.length&&!RT.S.wires.length;st.genOff=!RT.S.gen.out||!RT.S.gen.pwr;st.mOut=meterOut();
+  const ACV=(a,b)=>K.across('ACV',a,b,true),ACI=(a,b)=>{const i=K.amm(a,b,'ACI');return i!=null?i:K.amm(b,a,'ACI')};
+  /* topology, never panel nodes: the nets of the one part of a type, a part between two nets */
+  const one=t=>{const ps=RT.S.parts.filter(p=>p.type===t);return ps.length===1?RT.partNets(ps[0]):null};
+  const has=(t,a,b)=>a!=null&&b!=null&&RT.between(a,b).some(x=>x.p.type===t);
+  /* a series chain source → (ammeter) → r → l → c → ground: {r0, x, y} (x = r–l, y = l–c) */
+  function chain(r,l,c){const R=one(r),L=one(l),C=one(c);if(!R||!L||!C)return null;const x=R.find(n=>L.includes(n)),y=L.find(n=>C.includes(n));if(x==null||y==null||x===y)return null;
+    const r0=R[0]===x?R[1]:R[0],c0=C[0]===y?C[1]:C[0];if(c0!==-1||r0===x||r0===-1)return null;return {r0,x,y}}
+  /* parallel branches of the given types: each part's bottom is ground (or a net with a 10 Ω to ground), the tops meet on the bus T */
+  const gndish=n=>n===-1||has('R10',n,-1);
+  function branches(types){const out=[];for(const t of types){const P=one(t);if(!P)return null;const g0=gndish(P[0]),g1=gndish(P[1]);if(g0===g1)return null;out.push(g0?{t,top:P[1],bot:P[0]}:{t,top:P[0],bot:P[1]})}
+    const cnt={};out.forEach(b=>cnt[b.top]=(cnt[b.top]||0)+1);const T=+Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];if(cnt[T]<2)return null;return {B:out,T}}
+  /* the phase (°) between two node voltages, from their fundamental phasors */
+  function phasor(net){const N=360,v=RT.samples(net,N);let re=0,im=0;for(let k=0;k<N;k++){re+=v[k]*Math.cos(2*Math.PI*k/N);im-=v[k]*Math.sin(2*Math.PI*k/N)}return Math.atan2(im,re)*180/Math.PI}
+  const phase=(a,b)=>{let d=Math.abs(phasor(a)-phasor(b))%360;return d>180?360-d:d};
+  function status(){const st={};const g=RT.leadNet('gr'),gb=RT.leadNet('gb');st.v=genV();st.v2=v2();const sc=RT.S.sc,md=RT.inst.sc.mode();const dual=sc.pwr&&(md==='DUAL'||md==='CHOP')&&!sc.xy;
+    /* Procedure I · Fig. 6: E, VR, VL, VC with the Fluke wherever it sits, I with the BK in series */
+    const c6=g!=null&&gb===-1?chain('R100','L175','C47'):null;st.c6=c6;
+    if(c6&&(c6.r0===g||K.ammOn(g,c6.r0))&&sine(1000)&&st.v2){[['e1',g,-1],['vr1',c6.r0,c6.x],['vl1',c6.x,c6.y],['vc1',c6.y,-1]].forEach(([k,a,b])=>{const v=ACV(a,b);if(v!=null)ST[k]=v});
+      if(c6.r0!==g){const i=ACI(g,c6.r0);if(i!=null)ST.i1=i}}
+    /* Procedure II · Fig. 7: the BK in the main line or in one branch (plugs elsewhere), θ with 10 Ω under the bus, IC vs IL with 10 Ω under C and L */
+    const b7=g!=null&&gb===-1?branches(['C47','R100','L175']):null;
+    if(b7&&sine(1000)){const {B,T}=b7,bot=k=>B.find(b=>b.t===k).bot,top=k=>B.find(b=>b.t===k).top;const allBot=B.every(b=>b.bot===-1),closed=g===T&&B.every(b=>b.top===T);
+      st.closed7=closed&&allBot;
+      if(st.v2&&allBot){if(st.closed7){const v=ACV(T,-1);if(v!=null)ST.e2=v}
+        const open=[g!==T?['i2',g,T]:null,...B.map(b=>b.top!==T?[{C47:'ic2',R100:'ir2',L175:'il2'}[b.t],T,b.top]:null)].filter(Boolean);
+        if(open.length===1){const [k,a,c]=open[0];const i=K.ammOn(a,c)?ACI(a,c):null;if(i!=null)ST[k]=i}}
+      const Bn=bot('C47');st.thc=closed&&Bn!==-1&&B.every(b=>b.bot===Bn)&&has('R10',Bn,-1);
+      if(st.thc&&RT.leadNet('c1r')===T&&RT.leadNet('c2r')===Bn&&dual){ST.th2=true;st.th=phase(T,Bn)}
+      const cb=bot('C47'),lb=bot('L175');st.clc=closed&&bot('R100')===-1&&cb!==-1&&lb!==-1&&cb!==lb&&has('R10',cb,-1)&&has('R10',lb,-1);
+      if(st.clc&&RT.leadNet('c1r')===cb&&RT.leadNet('c2r')===lb&&dual){ST.cl2=true;st.cl=phase(cb,lb)}}
+    /* Procedure III · Fig. 8: the BK in series from the source */
+    const c8=g!=null&&gb===-1?chain('R100','L175','C10n'):null;
+    if(c8&&c8.r0!==g&&K.ammOn(g,c8.r0)&&st.v2){const f=K.gen().f;if(sine(f)&&F3.includes(f)){const i=ACI(g,c8.r0);if(i!=null)ST['s'+f]=i}}
+    /* Procedure IV · Fig. 9: the BK in the main line, the three branches between the bus and ground */
+    const b9=g!=null&&gb===-1?branches(['R5k','L438','C01']):null;
+    if(b9&&b9.B.every(b=>b.bot===-1&&b.top===b9.T)&&b9.T!==g&&K.ammOn(g,b9.T)&&st.v2){const f=K.gen().f;if(sine(f)&&F4.includes(f)){const i=ACI(g,b9.T);if(i!=null)ST['p'+f]=i}}
     st.ST=ST;return st}
   $('submit').addEventListener('click',()=>{const g=G.grader(),v=G.v;const rd=(k,sc=1,u='')=>[ST[k]!=null&&G.near(v(k),ST[k]*sc,Math.abs(ST[k]*sc)*0.003+0.011),ST[k]!=null?`${(ST[k]*sc).toFixed(sc>1?2:3)} ${u}`:'measure it'];
     g.proc('I');[['e1','E','V'],['vr1','VR','V'],['vl1','VL','V'],['vc1','VC','V']].forEach(([k,t,u])=>g.add(...rd(k,1,u).slice(0,1),t,rd(k,1,u)[1]));g.add(...rd('i1',1e3,'mA').slice(0,1),'I',rd('i1',1e3,'mA')[1]);
@@ -118,38 +141,40 @@ setup(RT){
     g.add(G.near(v('fopt'),T.fop,40),'fop theoretical',`1/(2π√LC) = ${T.fop.toFixed(0)} Hz`);g.add(G.near(v('bpt'),T.bp,40)||G.near(v('bpt'),1/(2*Math.PI*5000*0.1e-6),15),'B theoretical',`1/(2πRC) ≈ ${T.bp.toFixed(0)} Hz`);
     g.add(G.near(v('f1pt'),v('fopt')-v('bpt')/2,30),'f1 theoretical');g.add(G.near(v('f2pt'),v('fopt')+v('bpt')/2,30),'f2 theoretical');g.add(G.near(v('qpt'),v('fopt')/v('bpt'),0.3),'Qo theoretical');
     g.show($('result'))});
-  const P6='labs/ee205/fig/e8-fig6.png',P7='labs/ee205/fig/e8-fig7.png',P8='labs/ee205/fig/e8-fig8.png',P9='labs/ee205/fig/e8-fig9.png';
+  const mA=k=>()=>ST[k]!=null?ST[k]*1e3:null;
+  const sweep=(pre,list,id)=>list.map(f=>({to:id+f,label:fk(f),unit:'mA',dec:pre==='p'?3:2,val:mA(pre+f)}));
   return {status,
     steps:[
-      {dev:'board',fig:P6,figCap:'Fig. 6',t:'Procedure I: ركّب Fig. 6 (series). بين node 1 و node 2 bridging plug مكان الأميتر بعدين.',
-        lines:[{t:'bridging plug: node 1 ↔ node 2',wire:[1,2]},{t:'R = 100 Ω: node 2 ↔ node 3',part:['R100',2,3]},{t:'L = 17.5 mH: node 3 ↔ node 4',part:['L175',3,4]},{t:'C = 4.7 µF: node 4 ↔ node 11',part:['C47',4,11]},
-          {t:'GEN OUT red → node 1',lead:'gr',at:1},{t:'GEN ⏚ black → node 11',lead:'gb',at:11}],ok:s=>s.fig6},
-      {dev:'gen',t:'شغّل الـ generator: Sine، 1 kHz، و OUTPUT ON. حط الـ Fluke على V~ على المصدر (VΩ → node 1، COM → node 11) وعدّل AMPL لين E = 2.00 V.',lines:[{t:'Fluke VΩ → node 1',lead:'h1v',at:1},{t:'Fluke COM → node 11',lead:'h1c',at:11}],ok:s=>ST.e1!=null},
-      {dev:'hm1',t:'1. قِس V<sub>R</sub> (node 2 ↔ 3)، و V<sub>L</sub> (node 3 ↔ 4)، و V<sub>C</sub> (node 4 ↔ 11).',ok:s=>ST.vr1!=null&&ST.vl1!=null&&ST.vc1!=null},
-      {dev:'hm2',t:'وقِس I: شيل الـ plug بين node 1 و node 2، وحط الـ BK على ACA 200m مكانه (mA → node 1، COM → node 2). احسب Z = E/I و θ و P و PF.',lines:[{t:'BK mA (red) → node 1',lead:'h2ma',at:1},{t:'BK COM → node 2',lead:'h2c',at:2}],ok:s=>ST.i1!=null},
-      {dev:'board',t:'Procedure II: طفّ الـ OUTPUT، شيل أطراف الأجهزة من اللوحة، وفضّها.',ok:s=>s.clear&&s.genOff},
-      {dev:'board',fig:P7,figCap:'Fig. 7',t:'ركّب Fig. 7 (parallel): الـ top bus = node 8-9-10، وكل فرع ينزل له بـ plug (مكان الأميتر)، والـ bottom bus = node 22-23-24 ينزل للأرضي (node 30) بـ plug.',
-        lines:[{t:'C = 4.7 µF: node 15 ↔ node 22',part:['C47',15,22]},{t:'R = 100 Ω: node 16 ↔ node 23',part:['R100',16,23]},{t:'L = 17.5 mH: node 17 ↔ node 24',part:['L175',17,24]},
-          {t:'bridging plug: node 8 ↔ node 9',wire:[8,9]},{t:'bridging plug: node 9 ↔ node 10',wire:[9,10]},{t:'bridging plug: node 8 ↔ node 15',note:'I<sub>C</sub>',wire:[8,15]},{t:'bridging plug: node 9 ↔ node 16',note:'I<sub>R</sub>',wire:[9,16]},{t:'bridging plug: node 10 ↔ node 17',note:'I<sub>L</sub>',wire:[10,17]},
-          {t:'bridging plug: node 22 ↔ node 23',wire:[22,23]},{t:'bridging plug: node 23 ↔ node 24',wire:[23,24]},{t:'bridging plug: node 23 ↔ node 30',wire:[23,30]},{t:'bridging plug: node 7 ↔ node 8',note:'I',wire:[7,8]},
-          {t:'GEN OUT red → node 7',lead:'gr',at:7},{t:'GEN ⏚ black → node 30',lead:'gb',at:30}],ok:s=>s.closed7},
-      {dev:'hm1',t:'شغّل الـ OUTPUT (1 kHz) وعدّل AMPL لين الـ Fluke يقرا E = 2.00 V على الـ top bus (VΩ → node 8، COM → node 30).',lines:[{t:'Fluke VΩ → node 8',lead:'h1v',at:8},{t:'Fluke COM → node 30',lead:'h1c',at:30}],ok:s=>ST.e2!=null},
-      {dev:'hm2',t:'قِس I (الـ BK مكان plug node 7 ↔ 8)، وبعدين I<sub>C</sub> (مكان 8 ↔ 15)، و I<sub>R</sub> (9 ↔ 16)، و I<sub>L</sub> (10 ↔ 17). رجّع كل plug بعد ما تقيس.',ok:s=>ST.i2!=null&&ST.ic2!=null&&ST.ir2!=null&&ST.il2!=null},
-      {dev:'sc',t:'θ: شيل الأميتر ورجّع الـ plugs، وحط 10 Ω مكان plug node 23 ↔ 30. CH I على node 8 (E) و CH II على node 23 (جهد الـ 10 Ω ∝ I)، والأرضي node 30، و DUAL: قِس فرق الطور.',
-        lines:[{t:'10 Ω: node 23 ↔ node 30',part:['R10',23,30]},{t:'CH I red → node 8',lead:'c1r',at:8},{t:'CH I ⏚ → node 30',lead:'c1b',at:30},{t:'CH II red → node 23',lead:'c2r',at:23},{t:'CH II ⏚ → node 30',lead:'c2b',at:30}],ok:s=>ST.th2},
-      {dev:'board',t:'4. الطور بين I<sub>C</sub> و I<sub>L</sub>: رجّع plug node 23 ↔ 30 مكان الـ 10 Ω، وشيل plugs 22 ↔ 23 و 23 ↔ 24. حط 10 Ω تحت المكثف (node 22 ↔ 29) و 10 Ω تحت الـ coil (node 24 ↔ 31)، و plugs 29 ↔ 30 و 30 ↔ 31. CH I على node 22 و CH II على node 24.',
-        lines:[{t:'10 Ω: node 22 ↔ node 29',part:['R10',22,29]},{t:'10 Ω: node 24 ↔ node 31',part:['R10',24,31]},{t:'bridging plug: node 29 ↔ node 30',wire:[29,30]},{t:'bridging plug: node 30 ↔ node 31',wire:[30,31]},{t:'CH I red → node 22',lead:'c1r',at:22},{t:'CH II red → node 24',lead:'c2r',at:24}],ok:s=>ST.cl2},
-      {dev:'board',t:'Procedure III: طفّ الـ OUTPUT وفضّ اللوحة.',ok:s=>s.clear&&s.genOff},
-      {dev:'board',fig:P8,figCap:'Fig. 8',t:'1. ركّب Fig. 8: الأميتر (BK على ACA 20m) على التوالي من node 1 لـ node 2، و CH I على المصدر عشان تثبّت V (الـ Fluke ما يلحق الـ kHz العالية).',
-        lines:[{t:'R = 100 Ω: node 2 ↔ node 3',part:['R100',2,3]},{t:'L = 17.5 mH: node 3 ↔ node 4',part:['L175',3,4]},{t:'C = 10 nF: node 4 ↔ node 11',part:['C10n',4,11]},{t:'BK mA (red) → node 1',lead:'h2ma',at:1},{t:'BK COM → node 2',lead:'h2c',at:2},
-          {t:'GEN OUT red → node 1',lead:'gr',at:1},{t:'GEN ⏚ black → node 11',lead:'gb',at:11},{t:'CH I red → node 1',lead:'c1r',at:1},{t:'CH I ⏚ → node 11',lead:'c1b',at:11}],ok:s=>s.fig8&&s.cro},
-      ...[F3.slice(0,8),F3.slice(8)].map((L,j)=>({dev:'gen',t:`2. ${j?'كمّل':'ابدأ'} من ${fk(L[0])} لـ ${fk(L[L.length-1])} كل 500 Hz: عند كل تردد ثبّت V على 2 Vrms (5.66 Vpp على CH I)، وسجّل I في Table 1.`,ok:s=>L.every(f=>ST['s'+f]!=null)})),
-      {dev:'board',t:'3–5. احسب P = I²R وارسم P ضد التردد، وطلّع f<sub>os</sub> و f<sub>1</sub> و f<sub>2</sub> و B و Q<sub>o</sub>. Procedure IV: طفّ الـ OUTPUT وفضّ القطع.',ok:s=>!RT.S.parts.length&&s.genOff},
-      {dev:'board',fig:P9,figCap:'Fig. 9',t:'1. ركّب Fig. 9: الأميتر بين node 1 و node 2، والـ top bus = node 2-3-4، والـ bottom bus = node 9-10-11 (الأرضي). حط الـ BK على ACA 2m.',
-        lines:[{t:'R = 5 kΩ: node 2 ↔ node 9',part:['R5k',2,9]},{t:'L = 4.38 mH: node 3 ↔ node 10',part:['L438',3,10]},{t:'C = 0.1 µF: node 4 ↔ node 11',part:['C01',4,11]},{t:'bridging plug: node 2 ↔ node 3',wire:[2,3]},{t:'bridging plug: node 3 ↔ node 4',wire:[3,4]},
-          {t:'bridging plug: node 9 ↔ node 10',wire:[9,10]},{t:'bridging plug: node 10 ↔ node 11',wire:[10,11]},{t:'GEN ⏚ black → node 9',lead:'gb',at:9},{t:'CH I ⏚ → node 9',lead:'c1b',at:9}],ok:s=>s.fig9},
-      ...[F4.slice(0,8),F4.slice(8)].map((L,j)=>({dev:'gen',t:`2. ${j?'كمّل':'ابدأ'} من ${fk(L[0])} لـ ${fk(L[L.length-1])} كل 200 Hz: ثبّت V على 2 Vrms وسجّل I، واحسب Z = V/I في Table 2.`,ok:s=>L.every(f=>ST['p'+f]!=null)})),
-      {dev:'gen',t:'4. ارسم Z ضد التردد وطلّع f<sub>op</sub> و f<sub>1</sub> و f<sub>2</sub> و B و Q<sub>o</sub>. وبعدين طفّ الـ generator.',ok:s=>s.genOff&&F4.every(f=>ST['p'+f]!=null)}
+      /* Procedure I (manual p. 72), steps 1–4 */
+      {dev:'board',build:'6',t:'Procedure I · 1. وصّل دائرة Fig. 6 وقِس E و I و V<sub>R</sub> و V<sub>L</sub> و V<sub>C</sub> و Z = E/I.',
+        acts:['وصّل Fig. 6 مع الـ BK (ACA 200m) على التوالي من المصدر، والـ Fluke (V~) على E.','الـ generator: Sine، 1 kHz، و OUTPUT ON، وعدّل AMPL لين E = 2.00 V.','قِس V<sub>R</sub> و V<sub>L</sub> و V<sub>C</sub> بالـ Fluke، وبعدين رجّعه على E.'],
+        ok:s=>['e1','i1','vr1','vl1','vc1'].every(k=>ST[k]!=null),
+        rec:[{to:'e1',label:'E',unit:'V',dec:3,val:()=>ST.e1},{to:'i1',label:'I',unit:'mA',dec:2,val:mA('i1')},{to:'vr1',label:'V<sub>R</sub>',unit:'V',dec:3,val:()=>ST.vr1},{to:'vl1',label:'V<sub>L</sub>',unit:'V',dec:3,val:()=>ST.vl1},{to:'vc1',label:'V<sub>C</sub>',unit:'V',dec:3,val:()=>ST.vc1}]},
+      {dev:'board',t:'2. بالـ impedance diagram أثبت إن Z = Z<sub>R</sub> + Z<sub>L</sub> + Z<sub>C</sub> تساوي قيمة Z المقاسة في خطوة 1، واحسب θ.',ok:s=>ST.i1!=null},
+      {dev:'board',t:'3. أثبت إن E = V<sub>R</sub> + V<sub>L</sub> + V<sub>C</sub> (phasors).',ok:s=>ST.vc1!=null},
+      {dev:'board',t:'4. احسب الـ Average Power والـ Power Factor لدائرة Fig. 6.',ok:s=>ST.i1!=null},
+      /* Procedure II (manual p. 73), steps 1–4 */
+      {dev:'board',build:'7',t:'Procedure II · 1. وصّل دائرة Fig. 7 وقِس E و V<sub>R</sub> و V<sub>C</sub> و V<sub>L</sub> و I و I<sub>R</sub> و I<sub>C</sub> و I<sub>L</sub> و Z<sub>L</sub> و Z و θ و F<sub>P</sub> و P (تلميح: استخدم مقاومة 10 Ω على التوالي عشان تلقى θ). لاحظ إن Z = V/I.',
+        acts:['وصّل Fig. 7: bridging plug في كل مكان يروح له الأميتر (الخط الرئيسي وكل فرع)، والـ Fluke (V~) على E.','OUTPUT ON على 1 kHz، وعدّل AMPL لين E = 2.00 V.','قِس I و I<sub>C</sub> و I<sub>R</sub> و I<sub>L</sub>: الـ BK مكان الـ plug، وبعدين رجّع الـ plug.','θ: 10 Ω بين الـ bottom bus والأرضي، CH I على E و CH II على الـ 10 Ω، و DUAL. بعدها رجّع الـ plug مكان الـ 10 Ω.'],
+        ok:s=>['e2','i2','ir2','ic2','il2'].every(k=>ST[k]!=null)&&ST.th2,
+        rec:[{to:'e2',label:'E',unit:'V',dec:3,val:()=>ST.e2},{to:'i2',label:'I',unit:'mA',dec:2,val:mA('i2')},{to:'ir2',label:'I<sub>R</sub>',unit:'mA',dec:2,val:mA('ir2')},{to:'ic2',label:'I<sub>C</sub>',unit:'mA',dec:2,val:mA('ic2')},{to:'il2',label:'I<sub>L</sub>',unit:'mA',dec:2,val:mA('il2')},
+          {to:'th2',label:'θ (CRO)',unit:'°',dec:1,val:()=>{const s=BENCH.sim.status();return s.th!=null?s.th:null},none:'حط الـ 10 Ω بين الـ bottom bus والأرضي، و CH I على E و CH II على الـ 10 Ω، و DUAL'}]},
+      {dev:'board',t:'2. احسب Z<sub>R</sub> و Z<sub>C</sub> و Z<sub>L</sub> و Z بقانون أوم.',ok:s=>ST.il2!=null},
+      {dev:'board',t:'3. احسب I من I = E/Z = EY وقارن النتيجة بالقيمة المقاسة.',ok:s=>ST.i2!=null},
+      {dev:'sc',build:'7cl',t:'4. باستخدام الـ CRO قِس زاوية الطور بين I<sub>C</sub> و I<sub>L</sub> (تلميح: استخدم مقاومة 10 Ω على التوالي مع L ومع C عشان تلقى الزاوية).',
+        acts:['10 Ω تحت المكثف و 10 Ω تحت الـ coil، والـ R على الأرضي مباشرة.','CH I على الـ 10 Ω اللي مع C، و CH II على اللي مع L، والأرضي على الأرضي، و DUAL.'],ok:s=>ST.cl2,
+        rec:[{to:'cl2',label:'I<sub>C</sub> ↔ I<sub>L</sub>',unit:'°',dec:1,val:()=>{const s=BENCH.sim.status();return s.cl!=null?s.cl:null}}]},
+      /* Procedure III (manual p. 73), steps 1–5 */
+      {dev:'board',build:'8',t:'Procedure III · 1. وصّل الدائرة اللي في Fig. 8.',acts:['الـ BK على ACA 20m على التوالي، و CH I على المصدر يقيس V (الـ Fluke ما يلحق الـ kHz العالية).']},
+      {dev:'gen',t:'2. خلّ جهد الدخل الـ sinusoidal على 2 V<sub>rms</sub> وغيّر التردد من 7.5 kHz لين 15 kHz بخطوات 500 Hz. عند كل تردد ثبّت V على 2 V<sub>rms</sub> (5.66 Vpp على CH I)، وقِس التيار I، وسجّل القيم في Table 1.',ok:s=>F3.every(f=>ST['s'+f]!=null),rec:sweep('s',F3,'s')},
+      {dev:'gen',t:'3. احسب P = I²R وكمّل Table 1 (P = I²R إذا I قيمة rms، و P = ½I²R إذا I قيمة peak).',ok:s=>F3.every(f=>ST['s'+f]!=null)},
+      {dev:'gen',t:'4. ارسم P ضد التردد، ومن الرسم طلّع الـ resonant frequency f<sub>os</sub>، والـ half-power frequencies f<sub>1</sub> و f<sub>2</sub>، والـ bandwidth B، والـ quality factor Q<sub>o</sub>.',ok:s=>F3.every(f=>ST['s'+f]!=null)},
+      {dev:'gen',t:'5. قارن f<sub>os</sub> و f<sub>1</sub> و f<sub>2</sub> و B و Q<sub>o</sub> المقاسة بالقيم النظرية من Eqs. 6-a و 6-b و 6-c و 7 و 9.',ok:s=>F3.every(f=>ST['s'+f]!=null)},
+      /* Procedure IV (manual pp. 74–75), steps 1–4 */
+      {dev:'board',build:'9',t:'Procedure IV · 1. وصّل الدائرة اللي في Fig. 9.',acts:['الـ BK على ACA 2m على التوالي، و CH I على المصدر.']},
+      {dev:'gen',t:'2. خلّ جهد الدخل الـ sinusoidal على 2 V<sub>rms</sub> وغيّر التردد من 6 kHz لين 9 kHz بخطوات 200 Hz. عند كل تردد حاول تثبّت V على 2 V<sub>rms</sub>، وقِس I وسجّله في Table 2.',ok:s=>F4.every(f=>ST['p'+f]!=null),rec:sweep('p',F4,'q')},
+      {dev:'gen',t:'3. احسب Z = V/I وكمّل Table 2.',ok:s=>F4.every(f=>ST['p'+f]!=null)},
+      {dev:'gen',t:'4. ارسم Z ضد التردد، ومنه طلّع الـ resonant frequency f<sub>op</sub>، والـ half-power frequencies f<sub>1</sub> و f<sub>2</sub>، والـ bandwidth B، والـ quality factor Q<sub>o</sub>.',ok:s=>F4.every(f=>ST['p'+f]!=null)}
     ],
     onReset(){ST={};$('result').innerHTML=''}};
 }};})();

@@ -1,10 +1,17 @@
-/* EE205 · Experiment 7 · Magnetically Coupled Circuits (manual pp. 53–63).
+/* EE205 · Experiment 7 · Magnetically Coupled Circuits (manual pp. 53–63). Steps follow the manual's procedure, one per numbered step.
    Procedure I: Rdc of each coil, R = 1.15 Rdc; coil 1 (1000 turns) on the variable 60 Hz supply at 2 Vrms → V, I → Z, X, L1;
    the same for coil 2 (500 turns) → L2 (Fig. 7).
    Procedure II: coil 1 driven at 2 Vrms, V1, I1 and V2 on coil 2 → XM = V2 / I1, M = XM / ω (Fig. 8).
    Procedure III: coil 2's B joined to the bottom of coil 1, VT across the two tops (Fig. 9) → the dot at A or at B.
    Procedure IV: series aiding (Fig. 10) and opposing at 2 Vrms → Xeq1, Xeq2, M12 = (Xeq1 − Xeq2)/4ω, k = M12/√(L1L2).
-   Instruments: the variable ac supply (60 Hz, instructor check before power), four Fluke 77 (M1 V1, M2 V2, M3 VT, M4 ammeter).
+   Instruments: the variable ac supply (60 Hz, instructor check before power: «المشرف يتأكد من التوصيل», Manual / Exam only),
+   four Fluke 77 (M1 V1, M2 V2, M3 VT, M4 ammeter).
+   Figures in the lab's rectangle layout: the supply on the left (8 / 22), M1 across it, the ammeter M4 along the top (8 → 9),
+   the U-core at node 10 (coil 1 = 10–17 down the middle, coil 2 = A 11 – B 18 on the right), returns along the bottom row.
+   Assumptions: the U-core and its coils go on the board in step I.1 (the manual measures Rdc there); a separate instructor
+   check step follows the first Fig. 7 build (each later power-on asks for the check from the step card); Fig. 7b = Fig. 7
+   with coil 2 on the source (step I.7 "Repeat for coil 2"); Fig. 9 has no ammeter (as drawn); Fig. 10b = the opposing
+   connection of step IV.4.
    Decisions: the two coils on the U-core with its yoke: coil 1 Rdc = 17.6 Ω, L1 = 1.715 H; coil 2 Rdc = 5.2 Ω, L2 = 0.429 H;
    M = 0.781 H (k = 0.91). These reproduce the lab video at 5 V (I1 7.76 mA, V2 2.285 V, VT = V1 + V2 = 7.5 V → the dot
    at B) and its R2 = 5.2 Ω. The manual lists two ammeters and three voltmeters; one ammeter is enough for every step, so the
@@ -37,7 +44,17 @@ ${tr('R<sub>dc</sub> of coil 2','rdc2','Ω','0.1')}${tr('R<sub>2</sub> = 1.15 R<
 ${tr('Opposing: V','vop','V')}${tr('Opposing: I','iop','mA','0.01')}${tr('X<sub>eq2</sub>','xe2','Ω','0.1')}${tr('M<sub>12</sub> = (X<sub>eq1</sub> − X<sub>eq2</sub>)/4ω','m12','H')}${tr('k = M<sub>12</sub>/√(L<sub>1</sub>L<sub>2</sub>)','kk','')}</table>
 <div class="row" style="margin-top:12px"><button class="t on" id="submit">صحّح إجاباتي</button></div><div id="result"></div>
 </div></div>`;
-return {procs:[{id:'I',title:'Self inductance (Fig. 7)'},{id:'II',title:'Mutual inductance (Fig. 8)'},{id:'III',title:'Polarity (Fig. 9)'},{id:'IV',title:'Series aiding / opposing (Fig. 10)'}],
+/* the figures' reference wiring (rectangle layout; U-core pins: P1 = 1 (dot), P2 = 2, A, B (dot)) */
+const SRC=[{lead:'acL',at:8},{lead:'acN',at:22},{lead:'h1v',at:8},{lead:'h1c',at:22}],AMM=[{lead:'h4ma',at:8},{lead:'h4c',at:9}],UCX={ic:'UC',pins:{P1:10,A:11,P2:17,B:18}};
+const BOT=[{wire:[17,24]},{wire:[24,23]},{wire:[23,22]}],F='labs/ee205/fig/';
+const figs={
+  '7':{img:F+'e7-fig7.png',cap:'Fig. 7 · coil 1 on the 60 Hz source (A in series, V across the source)',lines:[UCX,...SRC,...AMM,{wire:[9,10]},...BOT]},
+  '7b':{img:F+'e7-fig7.png',cap:'Fig. 7 · repeated for coil 2 (A → B)',lines:[UCX,...SRC,...AMM,{wire:[9,2]},{wire:[2,3]},{wire:[3,4]},{wire:[4,11]},{wire:[18,25]},{wire:[25,24]},{wire:[24,23]},{wire:[23,22]}]},
+  '8':{img:F+'e7-fig8.png',cap:'Fig. 8 · V<sub>2</sub> on coil 2',lines:[UCX,...SRC,...AMM,{wire:[9,10]},...BOT,{lead:'h2v',at:11},{lead:'h2c',at:18}]},
+  '9':{img:F+'e7-fig9.png',cap:'Fig. 9 · B joined to coil 1, V<sub>T</sub> across 1 and A',lines:[UCX,...SRC,{wire:[8,9]},{wire:[9,10]},...BOT,{wire:[17,18]},{lead:'h2v',at:11},{lead:'h2c',at:18},{lead:'h3v',at:10},{lead:'h3c',at:11}]},
+  '10':{img:F+'e7-fig10.png',cap:'Fig. 10 · series aiding (2 joined to B)',lines:[UCX,...SRC,...AMM,{wire:[9,10]},{wire:[17,18]},{wire:[11,12]},{wire:[12,19]},{wire:[19,26]},{wire:[26,25]},{wire:[25,24]},{wire:[24,23]},{wire:[23,22]}]},
+  '10b':{img:F+'e7-fig10.png',cap:'Fig. 10 · the coils connected in opposition (2 joined to A)',lines:[UCX,...SRC,...AMM,{wire:[9,10]},{wire:[17,11]},{wire:[18,25]},{wire:[25,24]},{wire:[24,23]},{wire:[23,22]}]}};
+return {figs,procs:[{id:'I',title:'Self inductance (Fig. 7)'},{id:'II',title:'Mutual inductance (Fig. 8)'},{id:'III',title:'Polarity (Fig. 9)'},{id:'IV',title:'Series aiding / opposing (Fig. 10)'}],
 sheet,params:()=>({}),
 instruments:[
   {type:'variac',prev:d=>{d.v=3}},
@@ -89,25 +106,42 @@ setup(RT){
     add('vop','opposing V',1,'V');add('iop','opposing I',1e3,'mA');g.add(G.near(v('xe2'),Math.sqrt(Math.max(0,(v('vop')/v('iop')*1e3)**2-(v('r1')+v('r2'))**2)),2),'Xeq2',`≈ ${T.xe2.toFixed(0)} Ω`);
     g.add(G.near(v('m12'),(v('xe1')-v('xe2'))/(4*W),0.002)&&G.near(v('m12'),M,M*0.05),'M12',`≈ ${M} H`);g.add(G.near(v('kk'),v('m12')/Math.sqrt(v('l1')*v('l2')),0.01),'k',`≈ ${T.k.toFixed(2)}`);
     g.show($('result'))});
-  const F7='labs/ee205/fig/e7-fig7.png',F8='labs/ee205/fig/e7-fig8.png',F9='labs/ee205/fig/e7-fig9.png',F10='labs/ee205/fig/e7-fig10.png';
   return {status,
     steps:[
-      {dev:'board',t:'Procedure I: حط الـ coils على الـ U-core في اللوحة (coil 1 = 1000 turns بين node 16 و node 23، coil 2 = 500 turns بين node 17 و node 24).',lines:[{t:'U-core: 1 → node 16, 2 → node 23, A → node 17, B → node 24',ic:'UC',pins:{P1:16,P2:23,A:17,B:24}}],ok:s=>s.uc},
-      {dev:'hm4',t:'1. قِس R<sub>dc</sub> لـ coil 1 بـ M4 على Ω (VΩ → node 16، COM → node 23) والمصدر طافي.',lines:[{t:'M4 VΩ → node 16',lead:'h4v',at:16},{t:'M4 COM → node 23',lead:'h4c',at:23}],ok:s=>ST.rdc1!=null},
-      {dev:'hm4',t:'3. وقِس R<sub>dc</sub> لـ coil 2 (VΩ → node 17، COM → node 24). احسب R = 1.15 R<sub>dc</sub> لكل واحد.',ok:s=>ST.rdc2!=null},
-      {dev:'board',fig:F7,figCap:'Fig. 7',t:'4. ركّب Fig. 7 لـ coil 1: مخرج الـ variac، والأميتر M4 على التوالي (300mA → node 14، COM → node 15)، و bridging plug بين node 15 و node 16. الرجوع من node 23 للـ variac عن طريق node 22. والـ voltmeter M1 على المصدر.',
-        lines:[{t:'bridging plug: node 15 ↔ node 16',wire:[15,16]},{t:'bridging plug: node 22 ↔ node 23',wire:[22,23]},{t:'VAR OUT (red) → node 14',lead:'acL',at:14},{t:'VAR OUT (blue) → node 22',lead:'acN',at:22},
-          {t:'M4 300mA (red) → node 14',lead:'h4ma',at:14},{t:'M4 COM → node 15',lead:'h4c',at:15},{t:'M1 VΩ → node 14',lead:'h1v',at:14},{t:'M1 COM → node 22',lead:'h1c',at:22}],ok:s=>RT.instructor().ok&&s.uc},
-      {dev:'ac',t:'⚠ اضغط «المشرف يتأكد من التوصيل» في هذي البطاقة: المشرف يشيّك التوصيل. بعدها شغّل الـ POWER.',ok:s=>s.on&&RT.S.ac.ok},
-      {dev:'ac',t:'5. حوّل M1 على V~ و M4 على A~، واضبط الـ variac لين M1 يقرا 2.00 V. سجّل V و I واحسب Z<sub>1</sub> و X<sub>1</sub> و L<sub>1</sub>.',ok:s=>ST.va!=null},
-      {dev:'board',t:'7. كرّر لـ coil 2: طفّ المصدر، انقل COM حق M4 لـ node 17 (A)، وشيل plug node 22 ↔ 23 وانقل الطرف الأزرق للـ variac لـ node 24 (B) مع COM حق M1. اطلب المشرف، شغّل، اضبط 2 V، وسجّل.',ok:s=>ST.vb!=null},
-      {dev:'board',fig:F8,figCap:'Fig. 8',t:'Procedure II: رجّع توصيل coil 1 (M4 COM → node 15، plug 15 ↔ 16، plug 22 ↔ 23، الأزرق و M1 COM → node 22)، وحط M2 على V~ على coil 2 (node 17 ↔ node 24). عند 2 V سجّل V<sub>1</sub> و I<sub>1</sub> و V<sub>2</sub>.',
-        lines:[{t:'M2 VΩ → node 17 (A)',lead:'h2v',at:17},{t:'M2 COM → node 24 (B)',lead:'h2c',at:24}],ok:s=>ST.v2m!=null},
-      {dev:'board',fig:F9,figCap:'Fig. 9',t:'Procedure III: وصّل B بأسفل coil 1 (bridging plug node 23 ↔ node 24)، وحط M3 على V~ بين node 16 (1) و node 17 (A): هذا V<sub>T</sub>. عند 2 V سجّل V<sub>1</sub> و V<sub>2</sub> و V<sub>T</sub>.',
-        lines:[{t:'bridging plug: node 23 ↔ node 24',note:'B ↔ 2',wire:[23,24]},{t:'M3 VΩ → node 16',lead:'h3v',at:16},{t:'M3 COM → node 17',lead:'h3c',at:17}],ok:s=>ST.vtp!=null},
-      {dev:'board',fig:F10,figCap:'Fig. 10',t:'Procedure IV (aiding): خلّ plug 23 ↔ 24، وشيل plug 22 ↔ 23، وانقل الأزرق و M1 COM لـ node 17 (A): الملفين على التوالي. اطلب المشرف، اضبط 2 V، وسجّل V و I.',ok:s=>ST.vad!=null},
-      {dev:'board',t:'4. Opposing: شيل plug 23 ↔ 24، ووصّل node 23 بـ node 17 بسلك (W)، وانقل الأزرق و M1 COM لـ node 24 (B). اطلب المشرف، 2 V، وسجّل V و I. احسب M<sub>12</sub> و k.',ok:s=>ST.vop!=null},
-      {dev:'ac',t:'طفّ الـ variac.',ok:s=>s.off&&ST.vop!=null}
+      /* Procedure I (manual pp. 60–61), steps 1–7 */
+      {dev:'hm4',t:'Procedure I · 1. قِس المقاومة R<sub>dc</sub> لـ coil 1 بالـ multimeter: هذي الـ dc resistance لـ coil 1.',
+        acts:['حط الـ 2 coils على الـ U-core في اللوحة (coil 1 = 1000 turns: 1 و 2، coil 2 = 500 turns: A و B).','الملتيميتر على Ω: VΩ على 1 و COM على 2، والمصدر طافي.'],ok:s=>ST.rdc1!=null,
+        rec:[{to:'rdc1',label:'R<sub>dc</sub> coil 1',unit:'Ω',dec:1,val:()=>ST.rdc1}]},
+      {dev:'hm4',t:'2. احسب الـ ac resistance لـ coil 1: R<sub>1</sub> = 1.15 R<sub>dc</sub> (زيادة 15 % بسبب الـ skin effect).',ok:s=>ST.rdc1!=null},
+      {dev:'hm4',t:'3. بنفس الطريقة طلّع R<sub>2</sub>، الـ ac resistance لـ coil 2 (قِس R<sub>dc</sub> بين A و B).',ok:s=>ST.rdc2!=null,
+        rec:[{to:'rdc2',label:'R<sub>dc</sub> coil 2',unit:'Ω',dec:1,val:()=>ST.rdc2}]},
+      {dev:'board',build:'7',t:'4. وصّل coil 1 على مصدر جهد متغير 60 Hz مثل Fig. 7 (coil 1: 1000 turns، coil 2: 500 turns).'},
+      {dev:'ac',t:'⚠ «Get the connection checked by the instructor»: اضغط «المشرف يتأكد من التوصيل» في هذي البطاقة، وبعدين شغّل الـ POWER.',ok:s=>s.on&&RT.S.ac.ok},
+      {dev:'ac',t:'5. اضبط الجهد المطبّق على 2 V<sub>rms</sub>، وخذ قراءة الأميتر والفولتميتر.',acts:['M1 على V~ و M4 على A~.','لفّ الـ variac لين M1 يقرا 2.00 V.'],ok:s=>ST.va!=null,
+        rec:[{to:'va',label:'V',unit:'V',dec:3,val:()=>ST.va},{to:'ia',label:'I',unit:'mA',dec:2,val:()=>ST.ia!=null?ST.ia*1e3:null}]},
+      {dev:'ac',t:'6. احسب الـ self inductance لـ coil 1: Z<sub>1</sub> = V/I = √(R<sub>1</sub>² + X<sub>1</sub>²)، و X<sub>1</sub> = √(Z<sub>1</sub>² − R<sub>1</sub>²)، و L<sub>1</sub> = X<sub>1</sub>/ω.',ok:s=>ST.va!=null},
+      {dev:'board',build:'7b',t:'7. كرّر لـ coil 2 عشان تطلع L<sub>2</sub>.',acts:['طفّ المصدر ووصّل coil 2 (A و B) مكان coil 1 في Fig. 7.','المشرف يتأكد، شغّل، واضبط 2 V<sub>rms</sub>، وسجّل V و I.'],ok:s=>ST.vb!=null,
+        rec:[{to:'vb',label:'V',unit:'V',dec:3,val:()=>ST.vb},{to:'ib',label:'I',unit:'mA',dec:2,val:()=>ST.ib!=null?ST.ib*1e3:null}]},
+      /* Procedure II (manual p. 62), steps 1–3 */
+      {dev:'board',build:'8',t:'Procedure II · 1. وصّل الدائرة Fig. 8، و coil 2 مقترن مغناطيسياً مع coil 1.'},
+      {dev:'ac',t:'2. اضبط الجهد المطبّق على 2 V<sub>rms</sub>، وخذ القراءات V<sub>1</sub> و I<sub>1</sub> و V<sub>2</sub>.',acts:['المشرف يتأكد وشغّل الـ POWER.','M2 على V~، واضبط الـ variac لين M1 = 2.00 V.'],ok:s=>ST.v2m!=null,
+        rec:[{to:'v1m',label:'V<sub>1</sub>',unit:'V',dec:3,val:()=>ST.v1m},{to:'i1m',label:'I<sub>1</sub>',unit:'mA',dec:2,val:()=>ST.i1m!=null?ST.i1m*1e3:null},{to:'v2m',label:'V<sub>2</sub>',unit:'V',dec:3,val:()=>ST.v2m}]},
+      {dev:'ac',t:'3. احسب الـ mutual inductance: X<sub>M</sub> = V<sub>2</sub>/I<sub>1</sub>، و M = X<sub>M</sub>/ω.',ok:s=>ST.v2m!=null},
+      /* Procedure III (manual pp. 62–63), steps 1–3 */
+      {dev:'board',build:'9',t:'Procedure III · 1. وصّل الدائرة الكهربائية Fig. 9.'},
+      {dev:'ac',t:'2. والجهد المحدد مطبّق على coil 1، خذ قراءة V<sub>T</sub>.',acts:['المشرف يتأكد وشغّل الـ POWER.','M3 على V~، واضبط 2.00 V على M1، وسجّل V<sub>1</sub> و V<sub>2</sub> و V<sub>T</sub>.'],ok:s=>ST.vtp!=null,
+        rec:[{to:'v1p',label:'V<sub>1</sub>',unit:'V',dec:3,val:()=>ST.v1p},{to:'v2p',label:'V<sub>2</sub>',unit:'V',dec:3,val:()=>ST.v2p},{to:'vtp',label:'V<sub>T</sub>',unit:'V',dec:3,val:()=>ST.vtp}]},
+      {dev:'ac',t:'3. إذا V<sub>T</sub> هو الفرق بين V<sub>1</sub> و V<sub>2</sub>، النقطة (dot) تنحط عند A، وإلا تنحط عند B.',ok:s=>ST.vtp!=null},
+      /* Procedure IV (manual p. 63), steps 1–7 */
+      {dev:'board',build:'10',t:'Procedure IV · 1. حسب الـ polarity اللي طلّعتها، وصّل الدائرة Fig. 10.'},
+      {dev:'ac',t:'2. اضبط جهد المصدر على 2 V<sub>rms</sub> وخذ قراءة الجهد والتيار.',acts:['المشرف يتأكد وشغّل الـ POWER.','اضبط الـ variac لين M1 = 2.00 V.'],ok:s=>ST.vad!=null,
+        rec:[{to:'vad',label:'V (aiding)',unit:'V',dec:3,val:()=>ST.vad},{to:'iad',label:'I (aiding)',unit:'mA',dec:2,val:()=>ST.iad!=null?ST.iad*1e3:null}]},
+      {dev:'ac',t:'3. احسب الـ equivalent impedance في هذي الحالة: X<sub>eq1</sub> = √((V/I)² − (R<sub>1</sub> + R<sub>2</sub>)²) = ω(L<sub>1</sub> + L<sub>2</sub> + 2M).',ok:s=>ST.vad!=null},
+      {dev:'board',build:'10b',t:'4. كرّر خطوة 1 و 2 بس والـ 2 coils موصّلة بالعكس (in opposition): X<sub>eq2</sub> = ω(L<sub>1</sub> + L<sub>2</sub> − 2M).',acts:['طفّ المصدر، ووصّل 2 بـ A بدال B، و B يرجع للمصدر.','المشرف يتأكد، شغّل، 2 V<sub>rms</sub>، وسجّل V و I.'],ok:s=>ST.vop!=null,
+        rec:[{to:'vop',label:'V (opposing)',unit:'V',dec:3,val:()=>ST.vop},{to:'iop',label:'I (opposing)',unit:'mA',dec:2,val:()=>ST.iop!=null?ST.iop*1e3:null}]},
+      {dev:'ac',t:'5. طلّع الـ mutual inductance: M<sub>12</sub> = (X<sub>eq1</sub> − X<sub>eq2</sub>)/4ω.',ok:s=>ST.vop!=null},
+      {dev:'ac',t:'6. قارنها بالقيمة اللي طلعت قبل (Procedure II) وعلّق على أي فرق بينهم.',ok:s=>ST.vop!=null},
+      {dev:'ac',t:'7. احسب الـ coupling coefficient: k = M<sub>12</sub>/√(L<sub>1</sub>L<sub>2</sub>).',ok:s=>ST.vop!=null}
     ],
     onReset(){ST={};$('result').innerHTML=''}};
 }};})();

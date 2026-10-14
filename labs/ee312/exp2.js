@@ -1,8 +1,12 @@
 /* EE312 · Experiment 2 · Terminal Characteristics of Junction Diodes (manual v8.8 pp. 14–20).
-   Fig. 2.3a (reverse, VBB) and Fig. 2.3b (forward, VFF): one EL302RD unit, RS = 1 kΩ, the 1N4001 and the 1N4733A,
-   one MT3805 moved between RS (VRS = ID in mA) and the diode (VD). Table 2.2 and PLQs 1–5.
-   Assumptions: reverse-bias readings are compared by magnitude (the sign depends on how the meter leads sit);
-   PLQ 1's MATLAB plot is replaced by a plot drawn from the student's own table; Eq. 2.2 uses VT = 26 mV. */
+   Fig. 2.3a (reverse, VBB) and Fig. 2.3b (forward, VFF): one EL302RD unit, RS = 1 kΩ, the 1N4001 then the 1N4733A,
+   two MT3805 as Fig. 2.3 draws them (DMM 1 on RS: VRS = ID in mA, DMM 2 on the diode: VD; either meter may take either
+   place). Table 2.2 and PLQs 1–5. Steps follow the manual's procedure (A 1–6, B 1–5) one by one; figures in the lab's
+   rectangle layout (supply on the left column, RS and D down the right column, the meters on them).
+   Assumptions: in Fig. 2.3a the supply's + goes to the diode's cathode and RS stays on the anode side (exactly as drawn),
+   so the reverse readings come out negative; they are compared by magnitude. Procedure B step 1 starts again with the
+   rectifier (step 4 then "replaces the rectifier diode with a Zener"). PLQ 1's MATLAB plot is replaced by a plot drawn
+   from the student's own table; Eq. 2.2 uses VT = 26 mV. */
 EXP_DEFS['ee312/exp2']=(()=>{const H=ENGINE.sheet;
 const REV=[25,20,15,10,7,5,4,3],FWD=[0.3,0.4,0.5,0.55,0.6,0.65,0.75,1.7,10.7,20.7];
 const key=(t,b,v)=>`${t}_${b}_${String(v).replace('.','p')}`;
@@ -28,7 +32,19 @@ const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
 <li class="plq" data-proc="B">Load line V<sub>FF</sub> = I<sub>D</sub> × R<sub>S</sub> + V<sub>D</sub> for V<sub>FF</sub> = 10.7 V on the rectifier's i-v curve: find the dc operating point (V<sub>DQ</sub>, I<sub>DQ</sub>) and compare it with your measurement.
   <div>${H.row('V<sub>DQ</sub> =',H.num('q5v'),'V')}${H.row('I<sub>DQ</sub> =',H.num('q5i'),'mA')}
   ${H.row('Comparison:',H.sel('q5c',[['a','The operating point agrees with the measured VD and ID at VFF = 10.7 V'],['b','IDQ = 10.7 mA because the diode drop can be ignored'],['c','The load line never meets the curve']]))}</div></li></ol>`;
-return {procs:[{id:'A',title:'Reverse bias: Fig. 2.3a (Table 2.2)'},{id:'B',title:'Forward bias: Fig. 2.3b (Table 2.2)'}],
+/* the figures' reference wiring, in the lab's rectangle layout (bottom-left node 22, left column 22–8, top row 8–10,
+   right column 10–24, bottom row back to 22): the supply on the left side (Fig. 2.3a: − at the top, + at the bottom;
+   Fig. 2.3b: + at the top), RS down the right column (10–17) and the diode under it (17–24, anode up);
+   DMM 1 on RS (+ at the top), DMM 2 on the diode (+ on the anode) */
+const RING=[{wire:[8,9]},{wire:[9,10]},{part:['R1k',10,17]},{wire:[24,23]},{wire:[23,22]}];
+const DMMS=[{lead:'mh',alt:'m2h',at:10},{lead:'ml',alt:'m2l',at:17},{lead:'m2h',alt:'mh',at:17},{lead:'m2l',alt:'ml',at:24}];
+const fig23=(rev,t)=>[...(rev?[{lead:'Lm',alt:'Rm',at:8},{lead:'Lp',alt:'Rp',at:22}]:[{lead:'Lp',alt:'Rp',at:8},{lead:'Lm',alt:'Rm',at:22}]),...RING,{part:[t,17,24],pol:true},...DMMS];
+const FIG='labs/ee312/fig/fig2-3.png';
+const figs={'2.3a':{img:FIG,cap:'Fig. 2.3a · reverse bias, the rectifier 1N4001',lines:fig23(true,'D4001')},
+  '2.3a-Z':{img:FIG,cap:'Fig. 2.3a · reverse bias, the Zener 1N4733A',lines:fig23(true,'Z4733')},
+  '2.3b':{img:FIG,cap:'Fig. 2.3b · forward bias, the rectifier 1N4001',lines:fig23(false,'D4001')},
+  '2.3b-Z':{img:FIG,cap:'Fig. 2.3b · forward bias, the Zener 1N4733A',lines:fig23(false,'Z4733')}};
+return {figs,procs:[{id:'A',title:'Reverse bias: Fig. 2.3a (Table 2.2)'},{id:'B',title:'Forward bias: Fig. 2.3b (Table 2.2)'}],
 sheet:`<div class="paper" id="paper">
 <h2>Experiment 2 · Terminal Characteristics of Junction Diodes</h2>
 <div class="figbox" style="padding:8px"><img class="figimg" src="labs/ee312/fig/fig2-3.png" alt="Fig. 2.3"></div>
@@ -57,19 +73,19 @@ setup(RT){
     const r=SOLVER.point({n:2,els,dcs:[0]},0);return what==='vd'?s*r.x[1]:r.x[0]-r.x[1]}
   const EXPV={};['D4001','Z4733'].forEach(t=>{REV.forEach(v=>['vd','vrs'].forEach(w=>EXPV[key(t,'R',v)+'_'+w]=ref(t,false,v,w)));FWD.forEach(v=>['vd','vrs'].forEach(w=>EXPV[key(t,'F',v)+'_'+w]=ref(t,true,v,w)))});
   let ST={};
-  /* series loop on a supply unit: RS on one terminal, the diode between RS and the other terminal */
-  function loop(){const S=RT.S;for(const u of [0,1]){const P=RT.leadNet(u?'Rp':'Lp'),N=RT.leadNet(u?'Rm':'Lm');if(P==null||N==null||P===N)continue;
-      for(const [T1,T2] of [[P,N],[N,P]]){for(const rs of RT.at(T1).filter(p=>p.type==='R1k')){const [a,b]=RT.partNets(rs);const X=a===T1?b:a;if(X===T2)continue;
-        const ds=RT.between(X,T2).filter(x=>MOD[x.p.type]);if(ds.length!==1||RT.at(X).length!==2)continue;const d=ds[0];
-        /* forward when current from + enters the anode */
-        const fwd=T1===P?d.dir===1:d.dir===-1;const U=S.psu.u[u];return {u,U,P,N,X,T1,T2,rs,d:d.p,type:d.p.type,fwd,on:S.psu.pwr&&U.on}}}}
+  /* the matched figure (circuit equivalence, any layout): the unit whose + lead is on the figure's + net,
+     the diode's nets (anode / cathode) and RS's nets as the figure orients them */
+  const FIGS=[['2.3a','D4001',false],['2.3a-Z','Z4733',false],['2.3b','D4001',true],['2.3b-Z','Z4733',true]];
+  function loop(){const S=RT.S;for(const [id,type,fwd] of FIGS){const M=RT.match(id);if(!M.ok)continue;const P=M.net(fwd?8:22);
+      for(const u of [0,1]){if(RT.leadNet(u?'Rp':'Lp')!==P)continue;const U=S.psu.u[u];
+        return {id,u,U,type,fwd,rsT:M.net(10),X:M.net(17),K:M.net(24),on:S.psu.pwr&&U.on}}}
     return null}
   function snap(v,list){return list.find(x=>Math.abs(x-v)<0.006)}
-  /* Fig. 2.3 draws two meters: DMM 1 on R_S (V_RS), DMM 2 on the diode (V_D); any meter on the right nodes counts */
+  /* Fig. 2.3 draws two meters: DMM 1 on R_S (V_RS), DMM 2 on the diode (V_D), + leads as drawn */
   function status(){const S=RT.S,M=RT.meters();const L=loop();const st={L,dcv:M.some(m=>m.D.pwr&&m.D.fn==='DCV'&&m.D.jack==='HI')};
     if(L&&L.on){const b=L.fwd?'F':'R';const v=snap(L.U.v,L.fwd?FWD:REV);
-      if(v!=null&&L.U.ilim<=0.0501){const k=key(L.type,b,v);const qd=RT.meterOn(L.X,L.T2),qr=RT.meterOn(L.T1,L.X);
-        if(qd)ST[k+'_vd']=qd.val;if(qr)ST[k+'_vrs']=qr.val}}
+      if(v!=null&&L.U.ilim<=0.0501){const k=key(L.type,b,v);const qd=RT.meterOn(L.X,L.K,true),qr=RT.meterOn(L.rsT,L.X,true);
+        if(qd&&qr){ST[k+'_vd']=qd.val;ST[k+'_vrs']=qr.val}}}
     if(L&&!L.on&&ST._revAll&&!L.fwd)ST.offA=true;
     const all=(t,b,list)=>list.every(v=>ST[key(t,b,v)+'_vd']!=null&&ST[key(t,b,v)+'_vrs']!=null);
     st.revR=all('D4001','R',REV);st.revZ=all('Z4733','R',REV);if(st.revR&&st.revZ)ST._revAll=true;
@@ -77,6 +93,11 @@ setup(RT){
     if(ST._fwdAll&&(!S.psu.pwr||(L&&!L.on)))ST.offB=true;
     st.has=(t,b,v)=>ST[key(t,b,v)+'_vd']!=null&&ST[key(t,b,v)+'_vrs']!=null;
     return st}
+  /* Manual-mode «Capture» targets: the readings of one row (V_D on DMM 2, V_RS on DMM 1), taken when that row was set */
+  const recRow=(t,b,v)=>{const k=key(t,b,v),nm=t==='D4001'?'1N4001':'1N4733A',sv=(b==='R'?'V<sub>BB</sub>':'V<sub>FF</sub>')+' = '+v+' V',
+      none=`اضبط ${b==='R'?'V_BB':'V_FF'} = ${v} V والـ ${nm} في الدائرة والـ dc ON`;
+    return [{to:k+'_vd',val:()=>ST[k+'_vd']==null?null:ST[k+'_vd'],unit:'V',dec:3,label:`${nm} · ${sv} · V<sub>D</sub>`,none},{to:k+'_vrs',val:()=>ST[k+'_vrs']==null?null:ST[k+'_vrs'],unit:'V',dec:3,label:`${nm} · ${sv} · V<sub>RS</sub>`,none}]};
+  const recRows=(b,list)=>list.flatMap(v=>[...recRow('D4001',b,v),...recRow('Z4733',b,v)]);
   /* PLQ 1: plot the student's own table */
   function plot(){const pts={D4001:[],Z4733:[]};['D4001','Z4733'].forEach(t=>{[...REV.map(v=>['R',v]),...FWD.map(v=>['F',v])].forEach(([b,v])=>{const vd=G.v(key(t,b,v)+'_vd'),id=G.v(key(t,b,v)+'_vrs');
       if(isFinite(vd)&&isFinite(id))pts[t].push(b==='R'?[-Math.abs(vd),-Math.abs(id)]:[vd,id])});pts[t].push([0,0],[-2,0]);pts[t].sort((a,b)=>a[0]-b[0])});
@@ -107,22 +128,22 @@ setup(RT){
     g.show($('result'))});
   return {status,
     steps:[
-      {dev:'board',fig:'labs/ee312/fig/fig2-3.png',figCap:'Fig. 2.3',t:'Procedure A: ركّب Fig. 2.3a بالـ 1N4001 reverse biased (الكاثود جهة R<sub>S</sub> و +).',
-        lines:[{t:'R<sub>S</sub> = 1 kΩ: node 14 ↔ node 15',part:['R1k',14,15]},{t:'1N4001: cathode → node 15, anode → node 22',note:'الحلقة جهة R<sub>S</sub>',part:['D4001',22,15],pol:true},
-          {t:'DC + (L +) → node 14',note:'الوحدة اليسار أو اليمين',lead:'Lp',alt:'Rp',at:14},{t:'DC − (L −) → node 22',lead:'Lm',alt:'Rm',at:22}],ok:s=>s.L&&s.L.type==='D4001'&&!s.L.fwd},
-      {dev:'psu',t:'شغّل ∼POWER، واضبط CURRENT على 0.05 A و V<sub>BB</sub> = 25 V، وبعدها حوّل الـ dc على ON.',ok:s=>s.L&&!s.L.fwd&&s.L.on&&Math.abs(s.L.U.v-25)<0.006&&s.L.U.ilim<=0.0501},
-      {dev:'board',fig:'labs/ee312/fig/fig2-3.png',figCap:'Fig. 2.3',t:'وصّل الملتيميترين مثل Fig. 2.3 (الاثنين على DCV): DMM 1 يقيس V<sub>RS</sub> و DMM 2 يقيس V<sub>D</sub>. سجّلهم في Table 2.2.',
-        lines:[{t:'DMM 1 HI → node 14',note:'V<sub>RS</sub>',lead:'mh',at:14},{t:'DMM 1 COM → node 15',lead:'ml',at:15},{t:'DMM 2 HI → node 22',note:'V<sub>D</sub>',lead:'m2h',at:22},{t:'DMM 2 COM → node 15',lead:'m2l',at:15}],ok:s=>s.has('D4001','R',25)},
-      {dev:'board',t:'بدّل الـ 1N4001 بالزينر 1N4733A (نفس الاتجاه)، وسجّل V<sub>D</sub> (DMM 2) و V<sub>RS</sub> (DMM 1).',
-        lines:[{t:'1N4733A: cathode → node 15, anode → node 22',note:'الحلقة جهة R<sub>S</sub>',part:['Z4733',22,15],pol:true}],ok:s=>s.has('Z4733','R',25)},
-      {dev:'psu',t:'كرّر للقيم الباقية من V<sub>BB</sub> (20، 15، 10، 7، 5، 4، 3 V) للدايودين.',ok:s=>ST._revAll},
-      {dev:'psu',t:'طفّ مفتاح الـ dc.',ok:s=>ST.offA||ST._fwdAll},
-      {dev:'board',fig:'labs/ee312/fig/fig2-3.png',figCap:'Fig. 2.3',t:'Procedure B: اعكس طرفي الوحدة بس عشان يصير Fig. 2.3b (forward bias). الملتيميترات تبقى مكانها.',
-        lines:[{t:'DC + (L +) → node 22',lead:'Lp',alt:'Rp',at:22},{t:'DC − (L −) → node 14',lead:'Lm',alt:'Rm',at:14}],ok:s=>s.L&&s.L.fwd},
-      {dev:'psu',t:'اضبط V<sub>FF</sub> = 0.3 V بمقابض VOLTAGE، وشغّل الـ dc، وسجّل V<sub>RS</sub> (DMM 1) و V<sub>D</sub> (DMM 2) للـ 1N4001.',ok:s=>s.has('D4001','F',0.3)},
-      {dev:'board',t:'بدّل بالزينر وسجّل V<sub>RS</sub> و V<sub>D</sub>.',ok:s=>s.has('Z4733','F',0.3)},
-      {dev:'psu',t:'كرّر لباقي قيم V<sub>FF</sub> (0.4 … 20.7 V) للدايودين.',ok:s=>ST._fwdAll},
-      {dev:'psu',t:'طفّ الـ dc supply (وفصّل القطع ورتّب طاولتك).',ok:s=>ST.offB}
+      /* Procedure A (manual p. 18), steps 1–6 */
+      {dev:'board',build:'2.3a',t:'Procedure A · 1. وصّل الدائرة Fig. 2.3a، في البداية بالـ rectifier diode.'},
+      {dev:'psu',t:'2. شغّل الـ dc supply بمفتاح ∼ POWER.',acts:['بالـ CURRENT خلّ حد التيار 0.05 A.','بالـ COARSE و FINE خلّ الجهد V<sub>BB</sub> = 25 V.','شغّل مفتاح الـ dc ⎓ ON.'],
+        ok:s=>s.L&&!s.L.fwd&&s.L.on&&Math.abs(s.L.U.v-25)<0.006&&s.L.U.ilim<=0.0501},
+      {dev:'dmm',t:'3. بالـ DMM قِس V<sub>D</sub> و V<sub>RS</sub> وسجّلهم في Table 2.2 (3 خانات عشرية). لاحظ إن V<sub>RS</sub> بالـ V = I<sub>D</sub> بالـ mA.',
+        ok:s=>s.has('D4001','R',25),rec:recRow('D4001','R',25)},
+      {dev:'board',build:'2.3a-Z',t:'4. بدّل الـ rectifier diode بـ Zener diode، وسجّل V<sub>D</sub> و V<sub>RS</sub> في الجدول.',ok:s=>s.has('Z4733','R',25),rec:recRow('Z4733','R',25)},
+      {dev:'psu',t:'5. كرّر الخطوات اللي فوق لباقي قيم V<sub>BB</sub> في الجدول (20، 15، 10، 7، 5، 4، 3 V).',ok:s=>ST._revAll,rec:recRows('R',REV.slice(1))},
+      {dev:'psu',t:'6. طفّ مفتاح الـ dc في الـ power supply.',ok:s=>ST.offA||ST._fwdAll},
+      /* Procedure B (manual p. 18), steps 1–5 */
+      {dev:'board',build:'2.3b',t:'Procedure B · 1. غيّر توصيل المصدر بس عشان تصير الدائرة Fig. 2.3b.'},
+      {dev:'psu',t:'2. بمقابض الـ VOLTAGE في الـ dc power supply خلّ الجهد 0.3 V.',ok:s=>s.L&&s.L.fwd&&Math.abs(s.L.U.v-0.3)<0.006},
+      {dev:'psu',t:'3. شغّل مفتاح الـ dc. سجّل قراءات الملتيميتر للمقاومة والدايود في Table 2.2.',ok:s=>s.has('D4001','F',0.3),rec:recRow('D4001','F',0.3)},
+      {dev:'board',build:'2.3b-Z',t:'4. بدّل الـ rectifier diode بـ Zener diode وقِس وسجّل V<sub>RS</sub> و V<sub>D</sub>. كرّر الخطوات اللي فوق لباقي قيم V<sub>FF</sub> في الجدول.',
+        ok:s=>ST._fwdAll,rec:[...recRow('Z4733','F',0.3),...recRows('F',FWD.slice(1))]},
+      {dev:'psu',t:'5. طفّ الـ dc supply، وفكّ القطع، ورتّب طاولتك.',ok:s=>ST.offB}
     ],
 
     onReset(){ST={};$('result').innerHTML='';$('ivplot').innerHTML=''}};

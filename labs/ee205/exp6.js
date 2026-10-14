@@ -1,11 +1,14 @@
-/* EE205 · Experiment 6 · Transients in DC Circuits (manual pp. 41–52).
+/* EE205 · Experiment 6 · Transients in DC Circuits (manual pp. 41–52). Steps follow the manual's procedure, one per numbered step.
    Procedure I: Fig. 9, RC: square wave 0 → +10 V at about 200 Hz, R = 10 kΩ on the decade box (+ the generator's Rs),
    C = 0.047 µF → vc(t) at six times while charging and while discharging (Table 1), τ (Table 2); vR(t), ic(t).
    Procedure II: Fig. 10, RLC: R ≈ 600 Ω (box), 17.5 mH, 0.047 µF → underdamped; raise R until the overshoot just
-   vanishes (Rc = 2√(L/C)); raise it further → overdamped; trace the three curves.
+   vanishes (Rc = 2√(L/C)); raise it further → overdamped; trace the three curves (manual numbers its steps 1 and 3).
+   Figures in the lab's rectangle layout (generator on the left, the box along the top, C down the right side, CH I across C).
    Instruments: Metrix MTX 3240 (square, 10 Vpp, offset 5 V = 0 … +10 V), Hameg HM 203-7 (CH I on the capacitor), YEW box.
    Decisions: Rs = 50 Ω (the MTX 3240 output), so τ = (10 kΩ + 50 Ω)·0.047 µF = 0.472 ms; the coil's RL = 17.6 Ω adds to R
-   in Procedure II (critical box setting ≈ 2√(L/C) − Rs − RL ≈ 1.15 kΩ). The six times of Table 1 are the student's own. */
+   in Procedure II (critical box setting ≈ 2√(L/C) − Rs − RL ≈ 1.15 kΩ). The six times of Table 1 are the student's own
+   (Manual «Capture» reads v_c at 0.1, 0.25, 0.5, 0.75, 1, 1.5 ms after the edge). Procedure II's three curves are captured
+   into three screen slots added to the sheet. The box's two terminals may go either way round. */
 EXP_DEFS['ee205/exp6']=(()=>{const H=ENGINE.sheet;
 const PARTS={C047:{t:'C',c:0.047e-6,np:true,mark:'47n',lab:'0.047µF'},L175:{t:'L',l:0.0175,rs:17.6,lab:'17.5mH'},BR:{t:'BR',lab:''}};
 const RS=50,C=0.047e-6,L=0.0175,RL=17.6,TAU=(10000+RS)*C,RC=2*Math.sqrt(L/C);
@@ -34,9 +37,16 @@ ${H.row('v<sub>R</sub>(0<sup>+</sup>) charging =',H.num('vr0','0.01'),'V')}${H.r
 <tr><td class="l">Theoretical R<sub>c</sub> = 2√(L/C) (Ω)</td><td>${H.num('rcth','1',80)}</td></tr>
 <tr><td class="l">Ringing frequency seen at R ≈ 600 Ω (Hz)</td><td>${H.num('fd','1',80)}</td></tr>
 <tr><td class="l">Observation</td><td>${H.sel('obs',[['a','R < Rc: overshoot and ringing (underdamped); R = Rc: fastest rise without overshoot (critically damped); R > Rc: slower rise without overshoot (overdamped)'],['b','The overshoot grows as R increases'],['c','R has no effect on the response']])}</td></tr></table>
+<div class="caps3">${H.cap('cu','Under damped (R ≈ 600 Ω)')}${H.cap('cc','Critically damped (R = Rc)')}${H.cap('co','Over damped (R > Rc)')}</div>
 <div class="row" style="margin-top:12px"><button class="t on" id="submit">صحّح إجاباتي</button></div><div id="result"></div>
 </div></div>`;
-return {procs:[{id:'I',title:'RC charging and discharging (Fig. 9, Tables 1, 2)'},{id:'II',title:'RLC: under, critical and over damping (Fig. 10)'}],
+/* the figures' reference wiring, rectangle layout: bottom-left node 22, left column 22–8, top row 8–10, right column
+   10–24, bottom row back to 22. Generator on the left (OUT 8, ⏚ 22), the decade box along the top (8–9), C down the right
+   side (10–17), CH I across C (10, ⏚ 22). Fig. 10 puts the coil along the top (9–10) between the box and C. */
+const GEN=[{lead:'gr',at:8},{lead:'gb',at:22}],BOX=[{lead:'y1H',alt:'y1L',at:8},{lead:'y1L',alt:'y1H',at:9}],RET=[{wire:[17,24]},{wire:[24,23]},{wire:[23,22]}],CH1=[{lead:'c1r',at:10},{lead:'c1b',at:22}];
+const figs={'9':{img:'labs/ee205/fig/e6-fig9.png',cap:'Fig. 9 · RC: R = 10 kΩ (decade box), C = 0.047 µF',lines:[...GEN,...BOX,{wire:[9,10]},{part:['C047',10,17]},...RET,...CH1]},
+  '10':{img:'labs/ee205/fig/e6-fig10.png',cap:'Fig. 10 · RLC: R (decade box), L = 17.5 mH, C = 0.047 µF',lines:[...GEN,...BOX,{part:['L175',9,10]},{part:['C047',10,17]},...RET,...CH1]}};
+return {figs,procs:[{id:'I',title:'RC charging and discharging (Fig. 9, Tables 1, 2)'},{id:'II',title:'RLC: under, critical and over damping (Fig. 10)'}],
 sheet,params:()=>({}),cycles:2,sub:12,
 instruments:[
   {type:'metrix',prev:{freq:1000,amp:2,wave:'Sine'}},
@@ -45,29 +55,40 @@ instruments:[
 parts:PARTS,
 tray:[['C047','0.047 µF'],['L175','17.5 mH coil'],['BR','Bridging plug'],['W','Wire']],
 setup(RT){
-  const K=ENGINE.labkit(RT),N=K.N,G=ENGINE.sheet;let ST={};
+  const K=ENGINE.labkit(RT),G=ENGINE.sheet;let ST={};
   const sc=()=>RT.S.sc;const box=()=>RT.inst.yew1.value();
   const sq=()=>{const g=K.gen();return g.on&&g.wave==='Square'&&Math.abs(g.vpp-10)<0.011&&Math.abs(g.off-5)<0.006&&g.f>=100&&g.f<=500};
-  const bL=()=>RT.leadNet('y1L'),bH=()=>RT.leadNet('y1H');
   /* the capacitor voltage over one period and where the beam starts (trigger level on CH I) */
   function trace(net){const v=RT.samples(net,300);let mx=-1e9,mn=1e9;v.forEach(x=>{mx=Math.max(mx,x);mn=Math.min(mn,x)});
     const S=sc(),t=S.trig,mean=v.reduce((a,b)=>a+b,0)/v.length,vd=RT.inst.sc.vdEff(0);const Lv=(t.cpl==='DC'?0:mean)+t.level*vd;return {mx,mn,Lv,slope:t.slope}}
   const view=()=>{const S=sc(),ch=S.ch[0];return S.pwr&&!S.xy&&ch.cpl==='DC'&&!ch.var&&!S.tvar&&!S.xmag&&(RT.inst.sc.mode()==='I'||RT.inst.sc.mode()==='DUAL')&&S.trig.src===0&&ch.vd>=1.25&&ch.vd<=5&&S.td>=1e-4&&S.td<=1e-3};
-  function status(){const st={};const gn=RT.leadNet('gr');st.sq=sq();st.box=box();
-    /* Fig. 9: gen 1, box 1 → 2, C 2–9, gen ⏚ 9, CH I on 2 */
-    const boxIn=(a,b)=>(bH()===N(a)&&bL()===N(b))||(bL()===N(a)&&bH()===N(b));
-    st.fig9=gn===N(1)&&boxIn(1,2)&&K.has('C047',2,9)&&N(9)===-1&&RT.leadNet('c1r')===N(2);
-    st.r10k=st.box===10000;
-    if(st.fig9&&st.r10k&&st.sq&&view()){const tr=trace(N(2));st.tr=tr;const ch=sc().ch[0];tr.fits=tr.mx/ch.vd+ch.pos<=4.05&&tr.mn/ch.vd+ch.pos>=-4.05;if(tr.fits){
+  /* v_c after the generator's rising (charging) or falling (discharging) edge, from the solved period (Fig. 9) */
+  const NSMP=1200;
+  function edge(rise){const M=RT.match('9');if(!M.ok||!sq()||box()!==10000)return null;const g=RT.leadNet('gr');const vg=RT.samples(g,NSMP),vc=RT.samples(M.net(10),NSMP);
+    let i0=-1;for(let i=0;i<NSMP;i++){const p=vg[(i+NSMP-1)%NSMP],q=vg[i];if(rise?(p<5&&q>=5):(p>5&&q<=5)){i0=i;break}}if(i0<0)return null;return {vc,i0,dt:1/K.gen().f/NSMP,half:0.5/K.gen().f}}
+  function vcAt(t,rise){const e=edge(rise);if(!e||t>e.half)return null;const u=e.i0-0.5+t/e.dt,k=Math.floor(u),f=u-k;const a=e.vc[((k%NSMP)+NSMP)%NSMP],b=e.vc[(((k+1)%NSMP)+NSMP)%NSMP];return a*(1-f)+b*f}
+  /* τ: the time from the edge to 63.2 % of the step (6.32 V charging, 3.68 V discharging) */
+  function tauOf(rise){const e=edge(rise);if(!e)return null;const lv=rise?6.32:3.68;for(let j=0;j*e.dt<e.half;j++){const a=e.vc[(e.i0+j-1+NSMP)%NSMP],b=e.vc[(e.i0+j)%NSMP];
+      if(rise?(a<lv&&b>=lv):(a>lv&&b<=lv))return (j-0.5+(lv-a)/(b-a))*e.dt}return null}
+  const TS=[0.1e-3,0.25e-3,0.5e-3,0.75e-3,1e-3,1.5e-3];
+  const put=(id,v)=>{const el=document.getElementById(id);if(el){el.value=v;el.classList.add('captured')}};
+  const tRec=(p,rise)=>TS.map((t,i)=>({to:p+'v'+i,label:`v<sub>c</sub>(${+(t*1e3).toFixed(2)} ms)`,unit:'V',dec:2,val:()=>{if(!(rise?ST.charge:ST.dis))return null;const v=vcAt(t,rise);if(v!=null)put(p+'t'+i,+(t*1e3).toFixed(2));return v}}));
+  /* the ringing frequency of the underdamped response: two successive upward crossings of the final value after the edge */
+  function ring(){const M=RT.match('10');if(!M.ok||!sq())return null;const g=RT.leadNet('gr');const vg=RT.samples(g,NSMP),v=RT.samples(M.net(10),NSMP);let i0=-1;
+    for(let i=0;i<NSMP;i++)if(vg[(i+NSMP-1)%NSMP]<5&&vg[i]>=5){i0=i;break}if(i0<0)return null;const dt=1/K.gen().f/NSMP,n=Math.floor(NSMP/2),fin=v[(i0+n-2)%NSMP];const up=[];
+    for(let j=1;j<n&&up.length<2;j++){const a=v[(i0+j-1)%NSMP]-fin,b=v[(i0+j)%NSMP]-fin;if(a<0&&b>=0)up.push(j-1+a/(a-b))}return up.length===2?1/((up[1]-up[0])*dt):null}
+  function status(){const st={};st.sq=sq();st.box=box();st.r10k=st.box===10000;
+    /* Fig. 9 (matched as a circuit): the capacitor's net is the reference node 10 */
+    const M9=RT.match('9');st.fig9=M9.ok;
+    if(M9.ok&&st.r10k&&st.sq&&view()){const tr=trace(M9.net(10));st.tr=tr;const ch=sc().ch[0];tr.fits=tr.mx/ch.vd+ch.pos<=4.05&&tr.mn/ch.vd+ch.pos>=-4.05;if(tr.fits){
       if(tr.slope==='+'&&tr.Lv>tr.mn&&tr.Lv<tr.mn+1.5)ST.charge=true;
       if(tr.slope==='-'&&tr.Lv<tr.mx&&tr.Lv>tr.mx-1.5)ST.dis=true}}
-    /* Fig. 10: gen 1, box 1 → 2, coil 2–3, C 3–10, gen ⏚ 9 with plug 9–10, CH I on 3 */
-    st.fig10=gn===N(1)&&boxIn(1,2)&&K.has('L175',2,3)&&K.has('C047',3,10)&&N(10)===-1&&N(9)===-1&&RT.leadNet('c1r')===N(3);
-    if(st.fig10&&st.sq&&sc().pwr){const v=RT.samples(N(3),300);const mx=Math.max(...v);const os=(mx-10)/10;st.os=os;const b=st.box;
+    /* Fig. 10: the overshoot of v_c over the 10 V step */
+    const M10=RT.match('10');st.fig10=M10.ok;
+    if(M10.ok&&st.sq&&sc().pwr){const v=RT.samples(M10.net(10),300);const mx=Math.max(...v);const os=(mx-10)/10;st.os=os;const b=st.box;
       if(b>=400&&b<=800&&os>0.05)ST.under=b;
       if(ST.under!=null&&b>=850&&b<=1600&&os<0.01){if(ST.rc==null||b<ST.rc)ST.rc=b}
       if(ST.rc!=null&&b>=1.5*ST.rc&&os<0.002)ST.over=b}
-    st.genOff=!RT.S.gen.out||!RT.S.gen.pwr;
     st.ST=ST;return st}
   const th=(t,ch)=>ch?10*(1-Math.exp(-t/TAU)):10*Math.exp(-t/TAU);
   $('submit').addEventListener('click',()=>{const g=G.grader(),v=G.v,s=G.s;
@@ -84,23 +105,29 @@ setup(RT){
     const fd=Math.sqrt(1/(L*C)-Math.pow((600+RL+RS)/(2*L),2))/(2*Math.PI);g.add(G.near(v('fd'),fd,fd*0.1),'ringing frequency',`≈ ${fd.toFixed(0)} Hz (ωd = √(1/LC − α²))`);
     g.add(s('obs')==='a','observation');
     g.show($('result'))});
-  const F9='labs/ee205/fig/e6-fig9.png',F10='labs/ee205/fig/e6-fig10.png';
   return {status,
     steps:[
-      {dev:'board',fig:F9,figCap:'Fig. 9',t:'Procedure I: ركّب Fig. 9: الـ decade box هو R بين node 1 و node 2، و C = 0.047 µF بين node 2 والأرضي (node 9). CH I على المكثف.',
-        lines:[{t:'R1 H → node 1',lead:'y1H',at:1},{t:'R1 L → node 2',lead:'y1L',at:2},{t:'C = 0.047 µF: node 2 ↔ node 9',part:['C047',2,9]},{t:'GEN OUT red → node 1',lead:'gr',at:1},{t:'GEN ⏚ black → node 9',lead:'gb',at:9},
-          {t:'CH I red → node 2',lead:'c1r',at:2},{t:'CH I ⏚ → node 9',lead:'c1b',at:9}],ok:s=>s.fig9},
-      {dev:'yew1',t:'1. اضبط الـ decade box على 10 kΩ (×10K على 1 والباقي صفر).',ok:s=>s.fig9&&s.r10k},
-      {dev:'gen',t:'اضبط الـ generator: Square، FREQ ≈ 200 Hz، AMPL = 10 Vpp و OFFSET = 5 V (يعني من 0 لـ +10 V)، و OUTPUT ON.',ok:s=>s.fig9&&s.sq},
-      {dev:'sc',t:'2. اعرض v<sub>c</sub> على CH I (DC، 2 V/div، VAR على CAL)، ونزّل خط الصفر بـ Y-POS I لأسفل الشاشة عشان تبين الموجة كلها من 0 لـ 10 V. اختر TIME/DIV يبين حافة الشحن كاملة (مثلاً 0.2 ms/div)، والـ slope على + و LEVEL تحت (قريب من 0 V) عشان يبدأ الخط من بداية الشحن. سجّل v<sub>c</sub> عند ست أوقات و τ (عند 6.32 V).',ok:s=>ST.charge},
-      {dev:'sc',t:'3. للتفريغ: حوّل الـ slope على − وارفع LEVEL قريب من 10 V عشان يبدأ الخط من بداية التفريغ. سجّل ست قراءات و τ (عند 3.68 V).',ok:s=>ST.dis},
-      {dev:'gen',t:'4–5. احسب القيم النظرية (τ = (R + R<sub>s</sub>)C)، وارسم v<sub>R</sub>(t) و i<sub>c</sub>(t). وبعدين طفّ الـ OUTPUT.',ok:s=>s.genOff&&ST.dis},
-      {dev:'board',fig:F10,figCap:'Fig. 10',t:'Procedure II: ركّب Fig. 10: شيل المكثف من node 2، وحط الـ coil بين node 2 و node 3 والمكثف بين node 3 و node 10، و bridging plug بين node 9 و node 10. انقل CH I على node 3.',
-        lines:[{t:'17.5 mH coil: node 2 ↔ node 3',part:['L175',2,3]},{t:'C = 0.047 µF: node 3 ↔ node 10',part:['C047',3,10]},{t:'bridging plug: node 9 ↔ node 10',wire:[9,10]},{t:'CH I red → node 3',lead:'c1r',at:3}],ok:s=>s.fig10},
-      {dev:'yew1',t:'1. حط الـ decade box على 600 Ω وشغّل الـ OUTPUT (نفس الـ square wave): تشوف overshoot و ringing (underdamped).',ok:s=>ST.under!=null},
-      {dev:'yew1',t:'3. ارفع R شوي شوي لين يختفي الـ overshoot بالضبط: هذا الـ critical resistance (قارنه بـ R<sub>c</sub> = 2√(L/C) بعد ما تضيف R<sub>L</sub> و R<sub>s</sub>).',ok:s=>ST.rc!=null},
-      {dev:'yew1',t:'ارفع R أكثر (مثلاً الضعف أو أكثر): overdamped، الطلعة أبطأ وبدون overshoot. ارسم الثلاث منحنيات وسجّل ملاحظاتك.',ok:s=>ST.over!=null},
-      {dev:'gen',t:'طفّ الـ generator.',ok:s=>s.genOff&&ST.over!=null}
+      /* Procedure I (manual p. 50), steps 1–5 */
+      {dev:'board',build:'9',t:'Procedure I · 1. وصّل الدائرة Fig. 9، واضبط الـ square wave يتنقّل بين 0 V و +10 V بتردد حوالي 200 Hz، وحط الـ decade resistance box على 10 kΩ. R<sub>s</sub> (المقاومة الداخلية للـ generator) تنضاف لـ R في الحساب.',
+        acts:['وصّل Fig. 9: الـ box هو R، و C = 0.047 µF، و CH I على المكثف.','الـ generator: Square، FREQ ≈ 200 Hz، AMPL = 10 Vpp و OFFSET = 5 V (من 0 لـ +10 V)، و OUTPUT ON.','الـ decade box على 10 kΩ (×10K على 1 والباقي صفر).'],ok:s=>s.r10k&&s.sq},
+      {dev:'sc',t:'2. اعرض جهد المكثف على الـ oscilloscope. اختر time base يبين الموجة كاملة (حافة الطلوع والـ steady state). عدّل تردد الـ square wave إذا احتجت. سجّل v<sub>c</sub>(t) عند ست أوقات مختلفة في Table 1، وقِس الـ time constant واكتبه في Table 2.',
+        acts:['CH I على DC، 2 V/div، و VAR على CAL، ونزّل خط الصفر بـ Y-POS I لأسفل الشاشة.','TIME/DIV مثلاً 0.2 ms/div، والـ slope على + و LEVEL قريب من 0 V عشان يبدأ الخط من بداية الشحن.','τ = الوقت لين v<sub>c</sub> = 6.32 V.'],ok:s=>ST.charge,
+        rec:[...tRec('c',true),{to:'tce',label:'τ (charging)',unit:'ms',dec:3,val:()=>{const t=ST.charge?tauOf(true):null;return t==null?null:t*1e3}}]},
+      {dev:'sc',t:'3. اعرض موجة التفريغ (discharging) لجهد المكثف على الـ oscilloscope، وعدّل التردد بحيث يبين جزء التناقص كامل لـ v<sub>c</sub>(t). قِس t و v<sub>c</sub>(t) عند ست أوقات في جزء التناقص وسجّلها في Table 1، وقِس الـ time constant واكتبه في Table 2.',
+        acts:['حوّل الـ slope على − وارفع LEVEL قريب من 10 V عشان يبدأ الخط من بداية التفريغ.','τ = الوقت لين v<sub>c</sub> = 3.68 V.'],ok:s=>ST.dis,
+        rec:[...tRec('d',false),{to:'tde',label:'τ (discharging)',unit:'ms',dec:3,val:()=>{const t=ST.dis?tauOf(false):null;return t==null?null:t*1e3}}]},
+      {dev:'sc',t:'4. للحالتين (2) و (3) قارن القيم النظرية لـ v<sub>c</sub>(t) و τ مع المقاسة، وكمّل Table 1 و Table 2.',ok:s=>ST.dis},
+      {dev:'sc',t:'5. من موجة v<sub>c</sub>(t) في خطوة (2) و (3) للشحن والتفريغ، طلّع موجة v<sub>R</sub>(t) و i<sub>c</sub>(t) لـ R = 10 kΩ.',ok:s=>ST.dis,
+        rec:[{to:'vr0',label:'v<sub>R</sub>(0<sup>+</sup>) = E − v<sub>c</sub>(0)',unit:'V',dec:2,val:()=>{const v=vcAt(0,true);return v==null?null:10-v}},
+          {to:'ic0',label:'i<sub>c</sub>(0<sup>+</sup>) charging',unit:'mA',dec:3,val:()=>{const v=vcAt(0,true);return v==null?null:(10-v)/(10000+RS)*1e3}},
+          {to:'id0',label:'i<sub>c</sub>(0<sup>+</sup>) discharging',unit:'mA',dec:3,val:()=>{const v=vcAt(0,false);return v==null?null:-v/(10000+RS)*1e3}}]},
+      /* Procedure II (manual p. 52), steps 1 and 3 */
+      {dev:'board',build:'10',t:'Procedure II · 1. وصّل الدائرة Fig. 10، واضبط الـ square wave بين 0 V و +10 V بتردد حوالي 200 Hz، وحط الـ decade resistance box على قيمة مناسبة مثل 600 Ω، و C = 0.047 µF، عشان تطلع under damped response. R<sub>s</sub> تنضاف لـ R في الحساب.',
+        acts:['وصّل Fig. 10: الـ coil 17.5 mH بين الـ box والمكثف، و CH I على المكثف.','الـ generator نفس الـ square wave (0 → +10 V، 200 Hz)، و OUTPUT ON.','الـ decade box على 600 Ω: تشوف overshoot و ringing.'],ok:s=>ST.under!=null},
+      {dev:'yew1',t:'3. اعرض جهد المكثف على الـ oscilloscope واختر time base يبين الموجة كاملة. ارفع R لين يختفي الـ overshoot بالضبط: هذي الـ critical resistance (R<sub>c</sub> = 2√(L/C)). ارفع R أكثر عشان تطلع over damped response. ارسم الثلاث منحنيات وسجّل ملاحظاتك.',
+        acts:['ارفع R شوي شوي (مثلاً 50 Ω كل مرة) لين يختفي الـ overshoot.','ارفع R أكثر (الضعف أو أكثر): الطلعة أبطأ وبدون overshoot.'],ok:s=>ST.over!=null,
+        rec:[{scope:'cu',label:'Under damped'},{to:'fd',label:'Ringing frequency',unit:'Hz',dec:0,val:()=>{const b=box();return b>=400&&b<=800?ring():null},none:'رجّع الـ box على 600 Ω عشان تقيس تردد الـ ringing'},
+          {to:'rcm',label:'R<sub>c</sub> (box)',unit:'Ω',dec:0,val:()=>ST.rc},{scope:'cc',label:'Critically damped'},{scope:'co',label:'Over damped'}]}
     ],
     onReset(){ST={};$('result').innerHTML=''}};
 }};})();

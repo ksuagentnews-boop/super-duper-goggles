@@ -2,9 +2,15 @@
    Procedure A: VGS(TH) at VRD = 0.25 V (Fig. 7.1a, gate tied to drain, current limit 0.100 A).
    Procedure B: iD–vDS curves (Fig. 7.1b, second supply unit on the gate) at VGS(TH) + 0.15 / 0.30 / 0.45 V,
    VDS = 0.05 … 3 V (Table 7.1). Procedure C: VDD = 10 V, VGS = VGS(TH) + 0.3 V, RD = 270 Ω / 470 Ω / 1 kΩ (Table 7.2).
-   Assumptions: one MT3805 on the bench (the student moves its leads between RD, D–S and G–S); the IRF620 sits on
-   three neighbouring nodes in the order G D S (TO-220 seen from the front); RD values for Procedure C (270 Ω,
-   470 Ω) are on the bench although the materials list names only the 1 kΩ. */
+   Steps follow the manual one by one (A 1–5, B 1–6, C 1–6); build steps are checked by circuit equivalence
+   (engine/match.js), the readings by the circuit's topology (no node numbers). The figures' reference wiring is in the
+   lab's rectangle layout: VDD down the left column (+ top-left, − bottom-left), the top row to RD, RD down to the drain,
+   the IRF620 across the middle row (G D S), the source back along the bottom row; the VGS unit from the gate down to the
+   bottom row; DMM 1 across RD, DMM 2 across G–S (Fig. 7.1a) or D–S (Figs. 7.1b/c).
+   Assumptions: two MT3805 meters (DMM 1 on RD for VRD, DMM 2 on G–S / D–S; either meter may take either place); the IRF620
+   sits on three neighbouring nodes in the order G D S (TO-220 seen from the front); RD values for Procedure C (270 Ω,
+   470 Ω) are on the bench although the materials list names only the 1 kΩ; Procedure C step 1 sets VDD and VGS with the
+   1 kΩ still in place, step 2 then swaps RD to 270 Ω (the manual's order). */
 EXP_DEFS['ee312/exp7']=(()=>{const H=ENGINE.sheet;
 const VDS=[0.05,0.1,0.15,0.3,0.45,0.75,1.5,3];const RDS=[['R270',270],['R470',470],['R1k',1000]];
 const t71=`<table class="tbl"><caption>Table 7.1 · I<sub>D</sub> (mA) = V<sub>RD</sub> (V) with R<sub>D</sub> = 1 kΩ</caption>
@@ -30,7 +36,18 @@ const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
   <div>${H.row('i. Why does i<sub>D</sub> stay almost constant?',H.sel('q5a',[['a','In saturation iD is set by vGS (current source); vDS has only a weak effect through λ'],['b','The supply is in constant-current (CC) mode'],['c','RD is too small to matter'],['d','The MOSFET is cut off']]))}
   ${H.row('ii. R<sub>D(max)</sub> = (V<sub>DD</sub> − V<sub>OV</sub>) / I<sub>D</sub> =',H.num('q5b','1'),'Ω')}
   ${H.row('iii. Region beyond R<sub>D(max)</sub>:',H.sel('q5c',[['tri','Triode'],['sat','Saturation'],['cut','Cutoff']]))}</div></li></ol>`;
-return {procs:[{id:'A',title:'Threshold voltage V<sub>GS(TH)</sub>: Fig. 7.1a'},{id:'B',title:'i<sub>D</sub>–v<sub>DS</sub> curves: Fig. 7.1b (Table 7.1)'},{id:'C',title:'The MOSFET as a current source: Fig. 7.1c (Table 7.2)'}],
+/* the figures' reference wiring (rectangle layout, 7-column panel): VDD + 8, − 22; top row 8–10; RD 10 → 17 (drain);
+   IRF620 G 16, D 17, S 18; S 18 → 25 and the bottom row 25–22; VGS unit + on the gate 16, − on 23 */
+const FET=[{ic:'IRF620',pins:{G:16,D:17,S:18}},{wire:[8,9]},{wire:[9,10]},{wire:[18,25]},{wire:[25,24]},{wire:[24,23]},{wire:[23,22]},
+  {lead:'Lp',alt:'Rp',at:8},{lead:'Lm',alt:'Rm',at:22},{lead:'mh',alt:'m2h',at:10},{lead:'ml',alt:'m2l',at:17}];
+const FB=rd=>[...FET,{part:[rd,10,17]},{lead:'Rp',alt:'Lp',at:16},{lead:'Rm',alt:'Lm',at:23},{lead:'m2h',alt:'mh',at:17},{lead:'m2l',alt:'ml',at:24}];
+const F71='labs/ee312/fig/fig7-1.png';
+const figs={'7.1a':{img:F71,cap:'Fig. 7.1a · gate tied to drain, R<sub>D</sub> = 1 kΩ',lines:[...FET,{part:['R1k',10,17]},{wire:[16,17]},{lead:'m2h',alt:'mh',at:16},{lead:'m2l',alt:'ml',at:23}]},
+  '7.1b':{img:F71,cap:'Fig. 7.1b · V<sub>GS</sub> unit between G and S, R<sub>D</sub> = 1 kΩ',lines:FB('R1k')},
+  '7.1c-270':{img:F71,cap:'Fig. 7.1c · R<sub>D</sub> = 270 Ω',lines:FB('R270')},
+  '7.1c-470':{img:F71,cap:'Fig. 7.1c · R<sub>D</sub> = 470 Ω',lines:FB('R470')},
+  '7.1c-1k':{img:F71,cap:'Fig. 7.1c · R<sub>D</sub> = 1 kΩ',lines:FB('R1k')}};
+return {figs,procs:[{id:'A',title:'Threshold voltage V<sub>GS(TH)</sub>: Fig. 7.1a'},{id:'B',title:'i<sub>D</sub>–v<sub>DS</sub> curves: Fig. 7.1b (Table 7.1)'},{id:'C',title:'The MOSFET as a current source: Fig. 7.1c (Table 7.2)'}],
 sheet:`<div class="paper" id="paper">
 <h2>Experiment 7 · Terminal Characteristics of Enhancement N-MOSFET</h2>
 <div class="figbox" style="padding:8px"><img class="figimg" src="labs/ee312/fig/fig7-1.png" alt="Fig. 7.1"></div>
@@ -75,7 +92,7 @@ setup(RT){
       const onRD=across(c.vdd.P,n.d),onDS=across(n.d,n.s),onGS=across(n.g,n.s);
       if(c.kind==='A'&&st.vddOn&&st.ilim&&A(st.vrd-0.25)<=0.005){if(onRD)ST.vrd=true;if(onGS&&ST.vrd)ST.vth=A(onGS.val)}
       if(c.kind==='B'&&ST.vth!=null&&st.vddOn&&st.vgsOn){
-        if(c.R===1000)[1,2,3].forEach(k=>{if(A(st.vgs-(ST.vth+0.15*k))>0.006)return;st.curve=k;const j=VDS.findIndex(v=>A(st.vds-v)<=0.006);if(j<0)return;ST.b[k]=ST.b[k]||{};if(onRD){const x=A(onRD.val),o=ST.b[k][j];ST.b[k][j]=o?{lo:Math.min(o.lo,x),hi:Math.max(o.hi,x)}:{lo:x,hi:x}}});
+        if(c.R===1000)[1,2,3].forEach(k=>{if(A(st.vgs-(ST.vth+0.15*k))>0.006)return;st.curve=k;const j=VDS.findIndex(v=>A(st.vds-v)<=0.006);if(j<0)return;st.live={k,j,vrd:onRD?A(onRD.val):null};ST.b[k]=ST.b[k]||{};if(onRD){const x=A(onRD.val),o=ST.b[k][j];ST.b[k][j]=o?{lo:Math.min(o.lo,x),hi:Math.max(o.hi,x)}:{lo:x,hi:x}}});
         if(A(st.vgs-(ST.vth+0.3))<=0.006&&A(S.psu.u[c.vdd.u].v-10)<0.006){st.cset=true;const i=RDS.findIndex(x=>x[0]===c.rd.type);ST.c[i]=ST.c[i]||{};if(onRD)ST.c[i].vrd=A(onRD.val);if(onDS)ST.c[i].vds=A(onDS.val)}}}
     const anyOn=P.pwr&&P.u.some(u=>u.on);
     if(ST.vth!=null&&!anyOn)ST.offA=true;
@@ -105,28 +122,34 @@ setup(RT){
     g.add(G.s('q5c')==='tri','PLQ 5 iii','triode');
     g.show($('result'))});
   const pts=k=>VDS.filter((_,j)=>ST.b[k]&&ST.b[k][j]!=null).length;
+  /* Capture (Manual): Table 7.1 row j of curve k = DMM 1's V_RD while V_DS sits on that row's value */
+  const rowRec=k=>VDS.map((vd,j)=>({to:`b${k}_${j}`,val:()=>st0.live&&st0.live.k===k&&st0.live.j===j?st0.live.vrd:null,unit:'V',dec:3,label:`V<sub>DS</sub> = ${vd.toFixed(2)} V`,
+    none:`اضبط V<sub>DD</sub> لين V<sub>DS</sub> = ${vd.toFixed(2)} V، والـ DMM على R<sub>D</sub> و D–S`}));
+  const cRec=i=>[{to:'c_vrd'+i,val:()=>ST.c[i]&&ST.c[i].vrd,unit:'V',dec:3,label:'V<sub>RD</sub>'},{to:'c_id'+i,val:()=>ST.c[i]&&ST.c[i].vrd!=null?ST.c[i].vrd/RDS[i][1]*1e3:null,unit:'mA',dec:3,label:'I<sub>D</sub>'},
+    {to:'c_vds'+i,val:()=>ST.c[i]&&ST.c[i].vds,unit:'V',dec:3,label:'V<sub>DS</sub>'}].map(t=>({...t,none:'خلّ DMM على R<sub>D</sub> و DMM على D–S، والمصدر مضبوط'}));
   return {status,
     steps:[
-      {dev:'board',fig:'labs/ee312/fig/fig7-1.png',figCap:'Fig. 7.1',t:'Procedure A: ركّب Fig. 7.1a (الـ gate موصول بالـ drain)، ووصّل الملتيميترين: DMM 1 على R<sub>D</sub> و DMM 2 على G–S.',
-        lines:[{t:'IRF620: G → node 15, D → node 16, S → node 17',note:'الوجه المكتوب عليه للأمام',ic:'IRF620',pins:{G:15,D:16,S:17}},{t:'bridging plug: node 15 ↔ node 16',note:'G مع D',wire:[15,16]},
-          {t:'R<sub>D</sub> = 1 kΩ: node 16 ↔ node 23',part:['R1k',16,23]},{t:'DC + (L +) → node 23',note:'V<sub>DD</sub>',lead:'Lp',at:23},{t:'DC − (L −) → node 17',note:'على S',lead:'Lm',at:17},
-          {t:'DMM 1 HI → node 23',note:'V<sub>RD</sub>',lead:'mh',at:23},{t:'DMM 1 COM → node 16',lead:'ml',at:16},{t:'DMM 2 HI → node 15',note:'V<sub>GS</sub>',lead:'m2h',at:15},{t:'DMM 2 COM → node 17',lead:'m2l',at:17}],ok:s=>s.kind==='A'},
-      {dev:'psu',t:'شغّل المصدر، واضبط CURRENT لين حد التيار 0.100 A (يبين على AMPS والـ dc OFF)، وبعدها حوّل مفتاح الـ dc على ON.',ok:s=>s.kind==='A'&&s.vddOn&&s.ilim},
-      {dev:'psu',t:'الملتيميترين على DCV. ارفع V<sub>DD</sub> (COARSE ثم FINE) لين DMM 1 يقرا V<sub>RD</sub> = 0.25 V (I<sub>D</sub> = 250 µA).',ok:s=>!!ST.vrd},
-      {dev:'dmm2',t:'سجّل V<sub>GS</sub> اللي يقراه DMM 2: هذي V<sub>GS(TH)</sub>.',ok:s=>ST.vth!=null},
-      {dev:'psu',t:'طفّ الـ dc.',ok:s=>!!ST.offA},
-      {dev:'board',fig:'labs/ee312/fig/fig7-1.png',figCap:'Fig. 7.1',t:'Procedure B: شيل الـ bridging plug بين G و D، ووصّل الوحدة الثانية بين الـ gate والـ source (Fig. 7.1b)، وانقل DMM 2 على D–S.',
-        lines:[{t:'DC + (R +) → node 15',note:'V<sub>GS</sub> على G',lead:'Rp',at:15},{t:'DC − (R −) → node 17',note:'على S',lead:'Rm',at:17},{t:'DMM 2 HI → node 16',note:'V<sub>DS</sub>',lead:'m2h',at:16},{t:'DMM 2 COM → node 17',lead:'m2l',at:17}],ok:s=>s.kind==='B'&&ST.offA},
-      {dev:'psu',t:`ثبّت V<sub>GS</sub> = V<sub>GS(TH)</sub> + 0.15 V بالوحدة الثانية وشغّلها.`,ok:s=>s.kind==='B'&&s.vgsOn&&s.curve===1},
-      {dev:'psu',t:'غيّر V<sub>DD</sub> لين V<sub>DS</sub> (DMM 2) = كل قيمة في Table 7.1، وسجّل V<sub>RD</sub> (DMM 1) لكل وحدة.',ok:s=>pts(1)===VDS.length},
-      {dev:'psu',t:'زِد V<sub>GS</sub> بـ 0.15 V (V<sub>GS(TH)</sub> + 0.30 V) وكرّر.',ok:s=>pts(2)===VDS.length},
-      {dev:'psu',t:'زِد V<sub>GS</sub> بـ 0.15 V ثانية (V<sub>GS(TH)</sub> + 0.45 V) وكرّر.',ok:s=>pts(3)===VDS.length},
-      {dev:'psu',t:'طفّ المصدر.',ok:s=>!!ST.offB},
-      {dev:'board',lines:[{t:'R<sub>D</sub> = 270 Ω: node 16 ↔ node 23',part:['R270',16,23]}],t:'Procedure C: بدّل R<sub>D</sub> بـ 270 Ω، وشغّل المصدر: V<sub>DD</sub> = 10.00 V و V<sub>GS</sub> = V<sub>GS(TH)</sub> + 0.3 V.',ok:s=>ST.offB&&s.kind==='B'&&s.cset&&s.c.rd.type==='R270'&&s.vddOn},
-      {dev:'dmm',t:'سجّل V<sub>DS</sub> (DMM 2) و V<sub>RD</sub> (DMM 1) في Table 7.2، واحسب I<sub>D</sub>.',ok:s=>s.cDone(0)},
-      {dev:'board',lines:[{t:'R<sub>D</sub> = 470 Ω: node 16 ↔ node 23',part:['R470',16,23]}],t:'بدّل R<sub>D</sub> بـ 470 Ω وكرّر.',ok:s=>s.cDone(1)},
-      {dev:'board',lines:[{t:'R<sub>D</sub> = 1 kΩ: node 16 ↔ node 23',part:['R1k',16,23]}],t:'بدّل R<sub>D</sub> بـ 1 kΩ وكرّر.',ok:s=>s.cDone(2)},
-      {dev:'psu',t:'طفّ المصدر، وفصّل القطع ورتّب طاولتك.',ok:s=>!!ST.offC}
+      /* Procedure A (manual p. 53) */
+      {dev:'board',build:'7.1a',t:'Procedure A · 1. وصّل الدائرة Fig. 7.1a واستخدم IRF620 كـ MOSFET.'},
+      {dev:'psu',t:'2. شغّل الـ dc supply. بـ CURRENT خلّ حد التيار 0.100 A، وبعدها اضغط مفتاح الـ dc على ON.',ok:s=>s.kind==='A'&&s.vddOn&&s.ilim},
+      {dev:'psu',t:'3. غيّر جهد المصدر لين V<sub>RD</sub> يصير 0.25 V، يعني تيار drain = 250 µA.',ok:s=>!!ST.vrd},
+      {dev:'dmm2',t:'4. بالـ DMM قيس V<sub>GS</sub> اللي تقابلها وسجّلها: هذي القيمة اسمها في الـ datasheets V<sub>GS(TH)</sub>.',ok:s=>ST.vth!=null,
+        rec:[{to:'a_vth',val:()=>ST.vth,unit:'V',dec:3,label:'V<sub>GS(TH)</sub>'}]},
+      {dev:'psu',t:'5. طفّ الـ dc power supply.',ok:s=>!!ST.offA},
+      /* Procedure B (manual p. 54) */
+      {dev:'board',build:'7.1b',t:'Procedure B · 1. شيل التوصيلة بين الـ drain والـ gate، ووصّل الوحدة الثانية من الـ dc power supply بين الـ gate والـ source (Fig. 7.1b).',ok:s=>!!ST.offA},
+      {dev:'psu',t:'2. بوحدة من المصدر، اضبط V<sub>GS</sub> على V<sub>GS(TH)</sub> + 0.15 V وثبّتها.',ok:s=>s.kind==='B'&&s.vgsOn&&s.curve===1},
+      {dev:'psu',t:'3. بالوحدة الثانية غيّر V<sub>DD</sub> لين توصل لقيم V<sub>DS</sub> اللي في Table 7.1. لكل V<sub>DS</sub> قيس V<sub>RD</sub> وسجّلها؛ I<sub>D</sub> تطلع من Ohm\'s law.',ok:s=>pts(1)===VDS.length,rec:rowRec(1)},
+      {dev:'psu',t:'4. زِد V<sub>GS</sub> بـ 0.15 V، وكرّر خطوة 3 و V<sub>GS</sub> ثابتة.',ok:s=>pts(2)===VDS.length,rec:rowRec(2)},
+      {dev:'psu',t:'5. زِد V<sub>GS</sub> بـ 0.15 V ثانية، وكرّر خطوة 3 و V<sub>GS</sub> ثابتة.',ok:s=>pts(3)===VDS.length,rec:rowRec(3)},
+      {dev:'psu',t:'6. طفّ الـ dc power supply.',ok:s=>!!ST.offB},
+      /* Procedure C (manual p. 54) */
+      {dev:'psu',t:'Procedure C · 1. شغّل الـ dc supply. اضبط V<sub>DD</sub> على 10.0 V و V<sub>GS</sub> على V<sub>GS(TH)</sub> + 0.3 V.',ok:s=>ST.offB&&s.kind==='B'&&s.cset&&s.vddOn},
+      {dev:'board',build:'7.1c-270',t:'2. ابدأ بـ R<sub>D</sub> = 270 Ω.',ok:s=>s.kind==='B'&&s.cset&&s.c.rd.type==='R270'&&s.vddOn},
+      {dev:'dmm',t:'3. بالـ digital multimeter قيس V<sub>DS</sub> و V<sub>RD</sub> وسجّلها في Table 7.2. احسب I<sub>D</sub> بـ Ohm\'s law.',ok:s=>s.cDone(0),rec:cRec(0)},
+      {dev:'board',build:'7.1c-470',t:'4. غيّر R<sub>D</sub> إلى 470 Ω، وكرّر الخطوة اللي قبل.',ok:s=>s.cDone(1),rec:cRec(1)},
+      {dev:'board',build:'7.1c-1k',t:'5. غيّر R<sub>D</sub> إلى 1 kΩ، وكرّر خطوة 3.',ok:s=>s.cDone(2),rec:cRec(2)},
+      {dev:'psu',t:'6. طفّ الـ dc supply، وفكّ كل القطع ورجّعها مكانها، ورتّب طاولتك.',ok:s=>!!ST.offC}
     ],
     onReset(){for(const k in ST)delete ST[k];ST.b={};ST.c={};$('result').innerHTML='';$('ivplot').innerHTML=''}};
 }};})();

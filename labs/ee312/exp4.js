@@ -2,9 +2,15 @@
    Procedure A: center-tapped full-wave rectifier (Fig. 4.2, D1/D2 = 1N4002, RL = 4.7 kΩ), D2 removed through its
    bridging plug, VTC, C = 10 µF then 470 µF, CH2 AC ripple, RL = 270 Ω.
    Procedure B: shunt regulator (Fig. 4.3: RS = 100 Ω, DZ, RL across DZ). Figs 4.4–4.8, Table 4.1, PLQs 1–5.
+   Steps follow the manual one by one (Procedure A: the "Assemble" paragraph + steps 1–19, Procedure B: steps 1–12); build
+   steps are checked by circuit equivalence (engine/match.js); the figures' reference wiring is in the lab's rectangle
+   layout: transformer A / B / C down the left column, D1 along the top row, D2 along the bottom row behind the bridging
+   plug from C, its cathode back to the top row by a wire over the ground row (the hop in Fig. 4.2), the center-tap ground
+   along the middle row, C and RL down the right side; the regulator (Fig. 4.3) adds RS in the top row, DZ and RL to its right.
    Assumptions: the lab transformer gives 6.4 V rms per half (VSM ≈ 9 V); the Zener (not named) is the 1N4733A
-   used in Exp 2/3; the instructor inspects the circuit once, before the first plug-in; PLQ 5 uses the table number
-   the student enters (TN) and f = 60 Hz as in Appendix H. */
+   used in Exp 2/3; the instructor inspects the circuit once, before the first plug-in (the manual's caution, in the
+   "Assemble" step); Fig. 4.2 without the scope cables is the "Assemble" step, the cables are step 1 (the manual's own
+   step); PLQ 5 uses the table number the student enters (TN) and f = 60 Hz as in Appendix H. */
 EXP_DEFS['ee312/exp4']=(()=>{const H=ENGINE.sheet;
 /* Appendix D rectifier diodes (part, VRRM, IF(avg)) */
 const APPD=[['1N4001',50,1],['1N4002',100,1],['1N4003',200,1],['1N4004',400,1],['1S310',50,0.5],['1S311',100,0.5],['ERA3804',400,0.5],['1N5391',50,1.5],['1N5392',100,1.5],['1N5393',200,1.5],['BY296',100,2],['BY297',200,2],['BYV27-50',50,2],['BYV27-100',100,2],['1N5400',50,3],['1N5401',100,3],['1N5402',200,3],['1N4719',50,3],['1N4720',100,3],['1N4721',200,3],['MUR405',50,4],['MUR410',100,4],['MUR420',200,4],['1N3879',50,6],['1N3880',100,6],['1N3881',200,6],['1N3882',300,6],['MUR805',50,8],['MUR810',100,8],['1N1200',100,12],['1N1202',200,12],['1N1204',400,12]];
@@ -28,7 +34,25 @@ const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
   <div>${H.row('Your table number TN =',H.num('q5tn','1',60))}${H.row('a. V<sub>SM</sub> =',H.num('q5a','0.01'),'V')}${H.row('b. C (V<sub>r(pp)</sub> = 0.075 V<sub>SM</sub>) =',H.num('q5b','0.1'),'µF')}
   ${H.row('c. V<sub>RRM</sub> ≅ 4 V<sub>S(rms)</sub> =',H.num('q5c','0.1'),'V')}${H.row('d. I<sub>F(avg)</sub> = 1.5 i<sub>Dav</sub> =',H.num('q5d','0.001'),'A')}
   ${H.row('e. Diode from Appendix D:',H.sel('q5e',APPD.map(([p,v,i])=>[p,`${p} · ${v} V ${i} A`])))}</div></li></ol>`;
-return {procs:[{id:'A',title:'Center-tapped full-wave rectifier: Fig. 4.2'},{id:'B',title:'Zener shunt regulator: Fig. 4.3'}],
+/* the figures' reference wiring (rectangle layout, 7-column panel): left column 8 / 15 / 22 = A / B / C, top row 8–12 (D1,
+   then the cathodes' row K), middle row 15–20 = center tap (ground), bottom row 22–24 (plug C → D2), wire 24 → 10 over
+   the ground row; C 11 → 18, RL 12 → 19; the regulator: RS 11 → 12, DZ 19 → 12, RL 13 → 20 */
+const XF=[{lead:'tA',at:8},{lead:'tB',at:15},{lead:'tC',at:22}];
+const RECT=[{part:['D',8,9],pol:true},{wire:[9,10]},{wire:[10,11]},{wire:[22,23]},{part:['D',23,24],pol:true},{wire:[24,10]},
+  {wire:[15,16]},{wire:[16,17]},{wire:[17,18]},{wire:[18,19]}];
+const CH1=[{lead:'c1r',at:8},{lead:'c1b',at:15}],CH2=[{lead:'c2r',at:12},{lead:'c2b',at:19}],CH2B=[{lead:'c2r',at:13},{lead:'c2b',at:20}];
+const FW=rl=>[...XF,...RECT,{wire:[11,12]},{part:[rl,12,19]}];
+const REG=rl=>[...XF,...RECT,{part:['C470',11,18],pol:true},{part:['R100',11,12]},{wire:[12,13]},{wire:[19,20]},{part:['Z',19,12],pol:true},{part:[rl,13,20]}];
+const F42='labs/ee312/fig/fig4-2.png',F43='labs/ee312/fig/fig4-3.png';
+const figs={'4.2':{img:F42,cap:'Fig. 4.2 · R<sub>L</sub> = 4.7 kΩ, no capacitor',lines:FW('R47')},
+  '4.2s':{img:F42,cap:'Fig. 4.2 · CH1 on v<sub>S</sub>, CH2 on v<sub>O</sub>',lines:[...FW('R47'),...CH1,...CH2]},
+  '4.2-C10':{img:F42,cap:'Fig. 4.2 · C = 10 µF across R<sub>L</sub>',lines:[...FW('R47'),{part:['C10',11,18],pol:true},...CH1,...CH2]},
+  '4.2-C470':{img:F42,cap:'Fig. 4.2 · C = 470 µF',lines:[...FW('R47'),{part:['C470',11,18],pol:true},...CH1,...CH2]},
+  '4.2-R270':{img:F42,cap:'Fig. 4.2 · C = 470 µF, R<sub>L</sub> = 270 Ω',lines:[...FW('R270'),{part:['C470',11,18],pol:true},...CH1,...CH2]},
+  '4.3':{img:F43,cap:'Fig. 4.3 · R<sub>L</sub> = 4.7 kΩ across D<sub>Z</sub>',lines:[...REG('R47'),...CH1]},
+  '4.3s':{img:F43,cap:'Fig. 4.3 · CH2 across R<sub>L</sub>',lines:[...REG('R47'),...CH1,...CH2B]},
+  '4.3-R270':{img:F43,cap:'Fig. 4.3 · R<sub>L</sub> = 270 Ω',lines:[...REG('R270'),...CH1,...CH2B]}};
+return {figs,procs:[{id:'A',title:'Center-tapped full-wave rectifier: Fig. 4.2'},{id:'B',title:'Zener shunt regulator: Fig. 4.3'}],
 sheet:`<div class="paper" id="paper">
 <h2>Experiment 4 · Rectifiers and Voltage Regulation</h2>
 <div class="figbox" style="padding:8px"><img class="figimg" src="labs/ee312/fig/fig4-2.png" alt="Fig. 4.2"></div>
@@ -71,15 +95,20 @@ setup(RT){
     const vds=[sc.ch[0].vd,sc.ch[1].vd];
     const st={cfg,ch1:ch1OK(cfg),gnd:S.leads.c1b.node!=null&&S.leads.c2b.node!=null,plug:S.xf.plugged,xfok:S.xf.ok||S.xf.once,pwr:sc.pwr,ch:sc.ch[0].on&&sc.ch[1].on,probe:sc.ch.every(c=>c.probe===1&&!c.inv),
       cpl1:sc.ch[0].cpl,cpl2:sc.ch[1].cpl,xy:sc.xy,fit,pos0:sc.ch[0].pos===0&&sc.ch[1].pos===0,v5:vds[0]===5&&vds[1]===5,cyc:cyc>=1&&cyc<=10,
+      meas1:sc.meas.some(m=>m.src===0&&['Pk-Pk','Max'].includes(m.type)),
       meas:sc.meas.some(m=>m.src===0&&['Pk-Pk','Max'].includes(m.type))&&sc.meas.some(m=>m.src===1&&['Pk-Pk','Max'].includes(m.type))};
-    if(ST.c44&&(cfg==='hw1'||cfg==='hw2'))ST.hw=true;
+    if(cfg==='fw')ST.fwSeen=true;if(ST.fwSeen&&(cfg==='hw1'||cfg==='hw2'))ST.hw=true;
     if(cfg==='fw'&&sc.xy&&st.pos0)ST.xy=true;if(ST.xy&&!sc.xy)ST.yt=true;
     if(cfg==='c470'&&st.cpl2==='AC'&&sc.msg==='Autoset')ST.acA=true;if(ST.acA&&cfg==='c470b'&&st.cpl2==='AC')ST.r270=true;
     if(ST.r270&&!S.xf.plugged)ST.unplugA=true;
     if(ST.unplugA&&cfg==='reg47'&&st.cpl2==='DC'&&sc.msg==='Autoset')ST.dcB=true;
-    if(ST.c48&&cfg==='reg47'&&st.cpl2==='AC'&&sc.msg==='Autoset')ST.acB=true;if(ST.acB&&cfg==='reg270'&&st.cpl2==='AC')ST.reg270=true;
+    if(ST.dcB&&cfg==='reg47'&&st.cpl2==='AC'&&sc.msg==='Autoset')ST.acB=true;if(ST.acB&&cfg==='reg270'&&st.cpl2==='AC')ST.reg270=true;
     if(ST.reg270&&!S.xf.plugged&&!sc.pwr)ST.end=true;
-    st.ST=ST;return st}
+    st.ST=ST;st0=st;return st}
+  let st0={};
+  /* Capture of a ripple (Manual): CH2 Pk-Pk of the live waveform, only in the configuration the step asks (CH2 on AC) */
+  const rip=cfg=>()=>st0.cfg===cfg&&st0.cpl2==='AC'&&RT.TB&&RT.TB.has2?ripple(RT.TB):null;
+  const diff=(a,b)=>()=>{const x=G.v(a),y=G.v(b);return isFinite(x)&&isFinite(y)?y-x:null};
   const CAPS={};
   document.querySelectorAll('[data-cap]').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.cap;G.capture(RT,id);CAPS[id]=status();ST['c'+id.slice(1)]=true;BENCH.onRender()}));
   const capOK=(id,cfgs,xy,v5,cpl2='DC')=>{const c=CAPS[id];if(!c)return [false,'ما سجّلت الشاشة'];const pr=[];if(!c.plug)pr.push('المحوّل مو موصول');
@@ -100,38 +129,44 @@ setup(RT){
     const okParts=APPD.filter(([p,vr,i])=>vr>=VRRM&&i>=IF);const minI=Math.min(...okParts.map(x=>x[2]));const best=okParts.filter(x=>x[2]===minI);const minV=Math.min(...best.map(x=>x[1]));
     g.add(best.filter(x=>x[1]===minV).some(x=>x[0]===G.s('q5e')),'PLQ 5e diode',`ratings just above ${VRRM} V / ${IF.toFixed(2)} A: ${best.filter(x=>x[1]===minV).map(x=>x[0]).join(' or ')}`);
     g.show($('result'))});
+  const RIP={unit:'mV',dec:1,none:'خلّ CH2 على AC وعلى v<sub>O</sub>، والدائرة مثل المطلوب، والمحوّل موصول'};
   return {status:()=>status(),
     steps:[
-      {dev:'board',fig:'labs/ee312/fig/fig4-2.png',figCap:'Fig. 4.2',
-        lines:[{t:'A → node 0',lead:'tA',at:0},{t:'B (center tap) → node 9',note:'الأرضي',lead:'tB',at:9},{t:'C → node 14',lead:'tC',at:14},
-          {t:'D1 (1N4002): anode → node 0, cathode → node 1',part:['D',0,1],pol:true},{t:'D2 (1N4002): anode → node 7, cathode → node 8',part:['D',7,8],pol:true},
-          {t:'bridging plug: node 7 ↔ node 14',note:'D2 مع الطرف C',wire:[7,14]},{t:'bridging plug: node 1 ↔ node 8',note:'الكاثودين مع بعض',wire:[1,8]},
-          {t:'R<sub>L</sub> = 4.7 kΩ: node 1 ↔ node 2',part:['R47',1,2]},{t:'bridging plug: node 2 ↔ node 9',note:'R<sub>L</sub> للأرضي',wire:[2,9]},
-          {t:'CH1 → node 0',note:'A',lead:'c1r',at:0},{t:'CH1 ⏚ → node 2',lead:'c1b',at:2},{t:'CH2 → node 1',note:'v<sub>O</sub>',lead:'c2r',at:1},{t:'CH2 ⏚ → node 9',lead:'c2b',at:9}],
-        t:'Procedure A: ركّب Fig. 4.2 بدون مكثف و R<sub>L</sub> = 4.7 kΩ: أطراف المحوّل A و B (center tap = الأرضي) و C على اللوحة، D1 و D2 (1N4002) — خلّ D2 يوصل للطرف C عن طريق bridging plug. وصّل CH1 على A و CH2 على v<sub>O</sub>، والأرضيات على B. بعدها اضغط Ask instructor to check في المحوّل.',ok:s=>s.xfok},
-      {dev:'scope',t:'شغّل الإسكوب، واضغط Default وبعدها Autoset.',ok:s=>s.pwr&&ST.auto},
-      {dev:'xf',t:'وصّل المحوّل بالكهرباء (Plug in).',ok:s=>s.plug&&s.cfg==='fw'&&s.ch1&&s.gnd},
-      {dev:'scope',t:'شغّل CH2 لو مو شغّال، واضغط POSITION للقناتين عشان الصفر على خط الوسط.',ok:s=>s.ch&&s.pos0&&s.plug},
-      {dev:'scope',t:'خلّ SCALE للقناتين 5 V/div، والـ time/div على عدد مناسب من الدورات.',ok:s=>s.v5&&s.cyc&&s.plug},
-      {dev:'scope',t:'Measure ← Add Measurement ← V/I: أضف Pk-Pk أو Max لـ CH1، وبعدها Source1 = CH2 وأضف Pk-Pk أو Max. وبعدها Menu Off مرتين.',ok:s=>s.meas},
-      {dev:'scope',t:'صوّر v<sub>S</sub>(t) و v<sub>O</sub>(t) في Fig. 4.4.',ok:s=>!!CAPS.f44},
-      {dev:'board',t:'شيل الـ bridging plug اللي بين D2 والمحوّل ولاحظ v<sub>O</sub>، وبعدها رجّعه.',ok:s=>ST.hw&&s.cfg==='fw'},
-      {dev:'scope',t:'Acquire ← XY ← Triggered XY، واضغط POSITION للقناتين، وصوّر الـ VTC في Fig. 4.5.',ok:s=>!!CAPS.f45},
-      {dev:'scope',t:'طفّ الـ XY: OFF (YT).',ok:s=>ST.yt},
-      {dev:'board',fig:'labs/ee312/fig/fig4-2.png',figCap:'Fig. 4.2',lines:[{t:'C = 10 µF: + → node 8, − → node 9',note:'السالب على الأرضي',part:['C10',8,9],pol:true}],t:'حط مكثف 10 µF بالتوازي مع R<sub>L</sub> (السالب على الأرضي)، وصوّر في Fig. 4.6.',ok:s=>!!CAPS.f46},
-      {dev:'board',fig:'labs/ee312/fig/fig4-2.png',figCap:'Fig. 4.2',lines:[{t:'C = 470 µF: + → node 8, − → node 9',part:['C470',8,9],pol:true}],t:'بدّله بمكثف 470 µF، وصوّر في Fig. 4.7.',ok:s=>!!CAPS.f47},
-      {dev:'scope',t:'اضغط CH2 وغيّر Coupling (أول زر تحت) إلى AC، واضغط Autoset. سجّل V<sub>r(pp)</sub> في Table 4.1.',ok:s=>ST.acA},
-      {dev:'board',fig:'labs/ee312/fig/fig4-2.png',figCap:'Fig. 4.2',lines:[{t:'R<sub>L</sub> = 270 Ω: node 1 ↔ node 2',part:['R270',1,2]}],t:'بدّل الـ 4.7 kΩ بـ 270 Ω وسجّل V<sub>r(pp)</sub>، وبعدها احسب ΔV<sub>r(pp)</sub>.',ok:s=>ST.r270},
-      {dev:'xf',t:'Procedure B: افصل المحوّل من الكهرباء.',ok:s=>ST.unplugA},
-      {dev:'board',fig:'labs/ee312/fig/fig4-3.png',figCap:'Fig. 4.3',
-        lines:[{t:'R<sub>S</sub> = 100 Ω: node 8 ↔ node 15',part:['R100',8,15]},{t:'D<sub>Z</sub> (1N4733A): anode → node 16, cathode → node 15',part:['Z',16,15],pol:true},
-          {t:'bridging plug: node 9 ↔ node 16',note:'الأرضي',wire:[9,16]},{t:'bridging plug: node 16 ↔ node 23',wire:[16,23]},{t:'bridging plug: node 22 ↔ node 23',wire:[22,23]},
-          {t:'R<sub>L</sub> = 4.7 kΩ: node 15 ↔ node 22',note:'انقله من node 1 – node 2',part:['R47',15,22]},{t:'CH2 → node 15',note:'v<sub>O</sub>',lead:'c2r',at:15}],
-        t:'أضف المنظّم (Fig. 4.3): R<sub>S</sub> = 100 Ω والزينر، وانقل R<sub>L</sub> (4.7 kΩ) بالتوازي مع D<sub>Z</sub>، وانقل CH2 على R<sub>L</sub>. وصّل المحوّل من جديد، وخلّ CH2 على DC واضغط Autoset.',ok:s=>ST.dcB},
-      {dev:'scope',t:'صوّر v<sub>S</sub>(t) و v<sub>O</sub>(t) في Fig. 4.8.',ok:s=>!!CAPS.f48},
-      {dev:'scope',t:'خلّ CH2 على AC واضغط Autoset، وسجّل V<sub>r(pp)</sub>.',ok:s=>ST.acB},
-      {dev:'board',fig:'labs/ee312/fig/fig4-3.png',figCap:'Fig. 4.3',lines:[{t:'R<sub>L</sub> = 270 Ω: node 15 ↔ node 22',part:['R270',15,22]}],t:'بدّل R<sub>L</sub> بـ 270 Ω وسجّل V<sub>r(pp)</sub>، واحسب ΔV<sub>r(pp)</sub> وقارنه بـ Procedure A.',ok:s=>ST.reg270},
-      {dev:'xf',t:'افصل المحوّل، وطفّ الإسكوب.',ok:s=>ST.end}
+      /* Procedure A (manual p. 31–32): the "Assemble" paragraph with its caution, then steps 1–19 */
+      {dev:'board',build:'4.2',t:'Procedure A · وصّل الدائرة Fig. 4.2 بـ R<sub>L</sub> = 4.7 kΩ، وفي البداية بدون مكثف. ⚠ لا توصّل المحوّل بالكهرباء قبل ما يشيك المعيد على دائرتك.',
+        acts:['وصّل الدائرة Fig. 4.2 (بدون مكثف).','اضغط Ask instructor to check في المحوّل.'],ok:s=>s.xfok},
+      {dev:'board',build:'4.2s',t:'1. وصّل مدخل الدائرة (v<sub>S</sub>) بـ CH1 بـ coaxial cable، ووصّل مخرج الدائرة (v<sub>O</sub>) بـ CH2 بكيبل ثاني، مثل ما في الرسمة.'},
+      {dev:'scope',t:'2. شغّل الإسكوب، انتظر شوي، واضغط Default وبعدها Autoset.',ok:s=>s.pwr&&ST.auto},
+      {dev:'xf',t:'3. وصّل المحوّل بفيش الكهرباء (Plug in).',ok:s=>s.plug&&s.cfg==='fw'&&s.ch1&&s.gnd},
+      {dev:'scope',t:'4. لو CH2 مو شغّال، اضغط زر CH2 عشان تشغّله.',ok:s=>s.ch&&s.plug},
+      {dev:'scope',t:'5. اضغط POSITION للقناتين عشان صفر الـ input والـ output يصير على خط الوسط.',ok:s=>s.ch&&s.pos0&&s.plug},
+      {dev:'scope',t:'6. بـ SCALE حق CH1 و CH2 خلّ كل وحدة 5 V/div.',ok:s=>s.v5&&s.plug},
+      {dev:'scope',t:'7. لو احتجت، غيّر SCALE حق الـ Horizontal (time/div) عشان يطلع لك عدد مناسب من الدورات.',ok:s=>s.cyc&&s.plug},
+      {dev:'scope',t:'8. اضغط Measure ← Add Measurement ← V/I، وبالـ VARIABLE اختر Pk-Pk أو Max واضغط Select.',ok:s=>s.meas1},
+      {dev:'scope',t:'9. فعّل Source 1 واختر CH2 بالـ VARIABLE واضغط Select، وبعدها V/I واختر Pk-Pk أو Max واضغط Select. اضغط Menu OFF مرتين.',ok:s=>s.meas},
+      {dev:'scope',t:'10. سجّل موجات v<sub>S</sub>(t) و v<sub>O</sub>(t) في Fig. 4.4.',ok:s=>!!CAPS.f44,rec:[{scope:'f44',label:'Fig. 4.4'}]},
+      {dev:'board',t:'11. لاحظ وش يصير لما تفصل الـ bridging plug اللي بين D2 والمحوّل. بعدها رجّع الـ bridging plug عشان يرجع D2 للدائرة.',ok:s=>ST.hw&&s.cfg==='fw'},
+      {dev:'scope',t:'12. عشان تطلع الـ voltage transfer characteristic، حط الإسكوب على XY: اضغط Acquire، واختر XY من القائمة اللي تحت، وبعدها Triggered XY من اليمين. اضغط POSITION للقناتين عشان الـ VTC يبدأ من (0, 0).',ok:s=>ST.xy},
+      {dev:'scope',t:'13. سجّل الـ VTC اللي على الشاشة في Fig. 4.5.',ok:s=>!!CAPS.f45,rec:[{scope:'f45',label:'Fig. 4.5'}]},
+      {dev:'scope',t:'14. طفّ الـ XY باختيار OFF (YT) من القائمة اليمين.',ok:s=>ST.yt},
+      {dev:'board',build:'4.2-C10',t:'15. وصّل مكثف electrolytic 10 µF بالتوازي مع R<sub>L</sub>: الطرف المكتوب عليه علامة السالب يروح للأرضي. سجّل v<sub>S</sub>(t) و v<sub>O</sub>(t) في Fig. 4.6.',ok:s=>!!CAPS.f46,rec:[{scope:'f46',label:'Fig. 4.6'}]},
+      {dev:'board',build:'4.2-C470',t:'16. بدّل مكثف الـ 10 µF بمكثف 470 µF. سجّل v<sub>S</sub>(t) و v<sub>O</sub>(t) في Fig. 4.7.',ok:s=>!!CAPS.f47,rec:[{scope:'f47',label:'Fig. 4.7'}]},
+      {dev:'scope',t:'17. اضغط CH2 وغيّر الـ Coupling (أول زر يسار تحت) إلى AC، واضغط Autoset. سجّل الـ ripple V<sub>r(pp)</sub> في Table 4.1.',ok:s=>ST.acA,rec:[{to:'r1',val:rip('c470'),...RIP,label:'V<sub>r(pp)</sub> · 4.7 kΩ'}]},
+      {dev:'board',build:'4.2-R270',t:'18. افصل مقاومة الـ 4.7 kΩ ووصّل مكانها 270 Ω. سجّل V<sub>r(pp)</sub> في Table 4.1.',ok:s=>ST.r270,rec:[{to:'r2',val:rip('c470b'),...RIP,label:'V<sub>r(pp)</sub> · 270 Ω'}]},
+      {dev:'scope',t:'19. احسب التغيّر في الـ ripple ΔV<sub>r(pp)</sub> وسجّله في Table 4.1.',ok:()=>true,rec:[{to:'r3',val:diff('r1','r2'),unit:'mV',dec:1,label:'ΔV<sub>r(pp)</sub>',none:'سجّل V<sub>r(pp)</sub> في خطوة 17 و 18 أول'}]},
+      /* Procedure B (manual p. 33): steps 1–12 */
+      {dev:'xf',t:'Procedure B · 1. افصل المحوّل من فيش الكهرباء.',ok:s=>ST.unplugA},
+      {dev:'board',build:'4.3',t:'2. أضف الـ voltage regulator للدائرة الأصلية، وانقل R<sub>L</sub> لمكانه الجديد بالتوازي مع D<sub>Z</sub> (Fig. 4.3). في البداية استخدم الـ 4.7 kΩ لـ R<sub>L</sub>.'},
+      {dev:'board',build:'4.3s',t:'3. انقل طرفي الـ coaxial cable حق CH2 على R<sub>L</sub> في مكانه الجديد.'},
+      {dev:'xf',t:'4. رجّع وصّل المحوّل بفيش الكهرباء.',ok:s=>s.plug&&s.cfg==='reg47'},
+      {dev:'scope',t:'5. رجّع الـ Coupling حق CH2 إلى DC. اضغط Autoset، وبعدها اضغط POSITION حق CH2.',ok:s=>ST.dcB},
+      {dev:'scope',t:'6. سجّل v<sub>S</sub>(t) و v<sub>O</sub>(t) في Fig. 4.8.',ok:s=>!!CAPS.f48,rec:[{scope:'f48',label:'Fig. 4.8'}]},
+      {dev:'scope',t:'7. غيّر الـ Coupling حق CH2 إلى AC، واضغط Autoset.',ok:s=>ST.acB},
+      {dev:'scope',t:'8. سجّل الـ ripple V<sub>r(pp)</sub> في Table 4.1.',ok:s=>ST.acB,rec:[{to:'r4',val:rip('reg47'),...RIP,label:'V<sub>r(pp)</sub> · 4.7 kΩ'}]},
+      {dev:'board',build:'4.3-R270',t:'9. افصل مقاومة الـ 4.7 kΩ ووصّل مكانها الـ 270 Ω. سجّل V<sub>r(pp)</sub> في Table 4.1.',ok:s=>ST.reg270,rec:[{to:'r5',val:rip('reg270'),...RIP,label:'V<sub>r(pp)</sub> · 270 Ω'}]},
+      {dev:'scope',t:'10. احسب التغيّر في الـ ripple ΔV<sub>r(pp)</sub> وسجّله في Table 4.1.',ok:()=>true,rec:[{to:'r6',val:diff('r4','r5'),unit:'mV',dec:1,label:'ΔV<sub>r(pp)</sub>',none:'سجّل V<sub>r(pp)</sub> في خطوة 8 و 9 أول'}]},
+      {dev:'scope',t:'11. قارن هذا التغيّر بالتغيّر اللي حسبته في آخر خطوة من Procedure A.',ok:()=>true},
+      {dev:'xf',t:'12. افصل المحوّل من الكهرباء، وطفّ الإسكوب، وبعدها فكّ كل القطع والكيابل ورجّعها مكانها.',ok:s=>ST.end}
     ],
     onReset(){ST={};['f44','f45','f46','f47','f48'].forEach(id=>{$(id).textContent=id.replace(/f4(\d)/,'Fig. 4.$1');delete CAPS[id]});$('result').innerHTML=''}};
 }};})();

@@ -5,7 +5,9 @@
    Assumptions: mosfet1u.lib is not in docs/: typical 1-µm Level-1 values are used (N_1u VTO 0.7 V, KP 127 µA/V²,
    P_1u VTO −0.7 V, KP 58.6 µA/V², λ 0.02 V⁻¹, Cox 1.73 fF/µm², 0.3 fF/µm overlap, 1.5 fF/µm drain junction) and
    W = L = 1 µm when the MOSFET has no L/W — see docs/ee312/QUESTIONS.md. The file is "already downloaded" on the
-   lab PC, so step A1 is only the .lib directive. PLQs 3–5 (Fig. 8.7) are report work. */
+   lab PC, so step A1 ticks by itself. PLQs 3–5 (Fig. 8.7) are report work.
+   Steps = the manual's numbered steps (A 1–15, B 1–14); steps that record a value or an answer carry rec (Manual «Capture»
+   reads it from the student's own last run); Exam keeps the ok checks and the graded sheet. */
 EXP_DEFS['ee312/exp8']=(()=>{const H=ENGINE.sheet;
 const RDV=[10,30,50,70,90,110];
 const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
@@ -76,27 +78,56 @@ M2 out in vdd vdd P_1u`;
     g.proc('B');g.add(G.s('b_gate')==='not'&&!!ST.seen.INVtran,'B12 gate','NOT');const t=tplh();g.add(G.near(v('b_tplh'),t,t*0.25),'B13 tPLH',`≈ ${t.toFixed(1)} ps`);
     g.proc('A');g.add(G.s('q1')==='a','PLQ 1');g.proc(null);g.add(G.s('q2')==='a','PLQ 2');
     g.show($('result'))});
+  /* Capture (Manual): read off the student's own last run */
+  const cur=k=>{const r=S().res;return r&&!r.err&&r.runs&&r.kind===k?r:null};
+  const cross=(xs,v,up,t0)=>{for(let k=1;k<xs.length;k++){if(xs[k]<t0)continue;if(up?(v[k-1]<2.5&&v[k]>=2.5):(v[k-1]>2.5&&v[k]<=2.5))return xs[k-1]+(2.5-v[k-1])/(v[k]-v[k-1])*(xs[k]-xs[k-1])}return NaN};
+  const delays=R=>{const vi=RT.evalOn(R,'V(in)'),vo=RT.evalOn(R,'V(out)');if(!vi||!vo)return null;return vo.map((o,i)=>{const xs=R.runs[i].xs,ti=cross(xs,vi[i],false,5e-9);return cross(xs,o,true,ti)-ti})};
+  const vtc=()=>{const R=cur('CSdc');if(!R)return null;const vo=RT.evalOn(R,'V(out)');if(!vo||vo.length<2)return null;
+    const sl=vo.map((o,i)=>{const xs=R.runs[i].xs;let m=0;for(let k=1;k<xs.length;k++)m=Math.max(m,Math.abs((o[k]-o[k-1])/(xs[k]-xs[k-1])));return m});
+    return {slope:sl[sl.length-1]>sl[0]?'inc':'dec',vol:vo[vo.length-1][vo[vo.length-1].length-1]<vo[0][vo[0].length-1]?'dec':'inc'}};
+  const TX={inc:'increases',dec:'decreases',same:'does not change'};
+  const gate=k=>()=>{const R=cur(k);if(!R||!tr('V(in)')||!tr('V(out)'))return null;const vi=RT.evalOn(R,'V(in)')[0],vo=RT.evalOn(R,'V(out)')[0],xs=R.runs[0].xs;
+    const at=t=>{let k=xs.findIndex(x=>x>=t);return k<0?xs.length-1:k};const a=at(5e-9),b=at(15e-9);return vi[a]>2.5&&vo[a]<2.5&&vi[b]<2.5&&vo[b]>2.5?'not':'buf'};
+  const NR='شغّل المحاكاة على دائرة الخطوة أول.';
   return {status,
     steps:[
-      {dev:'new',t:'Procedure A: ملف mosfet1u.lib محفوظ في Downloads. افتح File › New Schematic.',ok:s=>S().open},
-      {dev:'comp',t:'حط قطع Fig. 8.5: R1، و nmos4 (Component) وغيّر اسمه (كليك يمين) إلى <b>N_1u</b>، و V1 و V2 = 5، والأرضي. خلّ قيمة R1 = <b>{RD}</b>.',ok:s=>comps('NM').some(c=>c.model==='N_1u')&&comps('R').some(c=>/^\{rd\}$/i.test(c.val))&&comps('V').length>=2&&comps('GND').length>=1},
-      {dev:'label',t:'وصّل القطع وسمّ الـ nodes: <b>in</b> و <b>out</b>.',ok:s=>['in','out'].every(n=>labels().includes(n))},
-      {dev:'dir',t:'أضف SPICE directive (S): <b>.lib mosfet1u.lib</b> وبعدها Ctrl+M و <b>.step param RD 10k 110k 20k</b>.',ok:s=>RT.hasLib()&&stepOK()},
-      {dev:'comp',t:'كليك يمين على V1 ← PULSE: Vinitial = 0، Von = 5، Tdelay = 0، Trise = 0.1n، Tfall = 0.1n، Ton = 10n، Tperiod = 20n، Ncycles = 3.',ok:s=>pulseOK()},
-      {dev:'ana',t:'Edit Simulation Cmd ← DC sweep: V1، Linear، Start 0، Stop 5، Increment 5m.',ok:s=>dcOK()},
-      {dev:'run',t:'شغّل المحاكاة.',ok:s=>!!ST.seen.CSdc},
-      {dev:'run',t:'اضغط على out عشان تشوف الـ VTC لكل R<sub>D</sub>. جاوب: أثر R<sub>D</sub> على الميل و V<sub>OL</sub>.',ok:s=>ST.seen.CSdc&&tr('V(out)')},
-      {dev:'ana',t:'Edit Simulation Cmd ← Transient: Stop time = 60n، Time to start saving data = 0، Maximum Timestep = 0.01n.',ok:s=>tranOK()},
-      {dev:'run',t:'شغّل.',ok:s=>!!ST.seen.CStran},
-      {dev:'run',t:'اضغط على out ثم in. أي بوابة منطقية؟',ok:s=>s.kind==='CStran'&&tr('V(out)')&&tr('V(in)')},
-      {dev:'run',t:'كبّر (اسحب مستطيل) حول المنطقة اللي ينزل فيها الدخل ويطلع الخرج. أي R<sub>D</sub> يعطي أكبر تأخير؟',ok:s=>!!ST.zCStran},
-      {dev:'save',t:'احفظ (Ctrl+S).',ok:s=>!!ST.savedA},
-      {dev:'new',t:'Procedure B: File › New Schematic.',ok:s=>!!ST.newB},
-      {dev:'comp',t:'ركّب Fig. 8.6: nmos4 = <b>N_1u</b> و pmos4 = <b>P_1u</b>، و V2 = 5، و V1 (نفس الـ PULSE)، والأرضي، وسمّ <b>in</b> و <b>out</b>.',ok:s=>ST.newB&&comps('NM').some(c=>c.model==='N_1u')&&comps('PM').some(c=>c.model==='P_1u')&&['in','out'].every(n=>labels().includes(n))&&pulseOK()},
-      {dev:'dir',t:'أضف .lib mosfet1u.lib وأمر .dc V1 0 5 0.005، وشغّل واضغط على out (الـ VTC).',ok:s=>ST.seen.INVdc&&tr('V(out)')},
-      {dev:'ana',t:'Transient: Stop time = 60n، Maximum Timestep = 0.01n، وشغّل واضغط على out ثم in.',ok:s=>s.kind==='INVtran'&&tr('V(out)')&&tr('V(in)')},
-      {dev:'run',t:'كبّر حول نزول الدخل وطلوع الخرج، وقِس t<sub>PLH</sub> وسجّله.',ok:s=>!!ST.zINVtran},
-      {dev:'save',t:'احفظ (Ctrl+S).',ok:s=>!!ST.savedB}
+      /* Procedure A (manual pp. 61–62), steps 1–15 */
+      {dev:'new',t:'Procedure A · 1. نزّل الملف اللي فيه الـ SPICE models لـ one-µm process واحفظه: <b>mosfet1u.lib</b> (محفوظ في Downloads في هالكمبيوتر). بتحتاج مساره لمّا تضيف الـ .lib directive.',ok:()=>true},
+      {dev:'new',t:'2. افتح LTspice، وروح File › New Schematic.',ok:s=>S().open},
+      {dev:'comp',t:'3. حط كل القطع اللي تحتاجها دائرة Fig. 8.5. عشان تجيب الـ N_1u: أضف nmos4، وبعدها كليك يمين على اسمه الافتراضي (NMOS) وغيّره إلى <b>N_1u</b>.',acts:['R1 = <b>{RD}</b>، و M1 (nmos4 = N_1u)، و V1، و V2 = 5، والأرضي.'],
+        ok:s=>comps('NM').some(c=>c.model==='N_1u')&&comps('R').some(c=>/^\{rd\}$/i.test(c.val))&&comps('V').length>=2&&comps('GND').length>=1},
+      {dev:'label',t:'4. وصّل كل القطع، وسمّ الـ nodes: <b>in</b> و <b>out</b>.',ok:s=>['in','out'].every(n=>labels().includes(n))},
+      {dev:'dir',t:'5. عشان تضيف أوامر .lib و .step: Edit › SPICE directive (أو زر S)، واكتب <b>.lib mosfet1u.lib</b> مثل Fig. 8.5، وبعدها Ctrl+M واكتب <b>.step param RD 10k 110k 20k</b>.',ok:s=>RT.hasLib()&&stepOK()},
+      {dev:'comp',t:'6. كليك يمين على V1 ← Advanced ← PULSE، وعبّي: Vinitial = 0، Von = 5، Tdelay = 0، Trise = 0.1n، Tfall = 0.1n، Ton = 10n، Tperiod = 20n، Ncycles = 3.',ok:s=>pulseOK()},
+      {dev:'ana',t:'7. عشان تضيف DC sweep (.dc): Edit › SPICE analysis، وعبّي: Name of 1st source to sweep = V1، Type of sweep = Linear، Start value = 0، Stop value = 5، Increment = 5m، واضغط OK.',ok:s=>dcOK()},
+      {dev:'run',t:'8. شغّل المحاكاة: Simulate › Run (أو أيقونة الـ run).',ok:s=>!!ST.seen.CSdc},
+      {dev:'run',t:'9. حط الماوس على node الـ <b>out</b> واضغط عشان تشوف منحنيات الـ VTC.',acts:['كيف تأثّر R<sub>D</sub> في الـ transition region على مقدار الميل (يعني الـ voltage gain)؟','كيف تأثّر R<sub>D</sub> على الـ output low level V<sub>OL</sub>؟'],ok:s=>ST.seen.CSdc&&tr('V(out)'),
+        rec:[{to:'a_slope',val:()=>{const v=tr('V(out)')&&vtc();return v?v.slope:null},txt:v=>TX[v],label:'Slope (gain) vs R<sub>D</sub>',none:NR},{to:'a_vol',val:()=>{const v=tr('V(out)')&&vtc();return v?v.vol:null},txt:v=>TX[v],label:'V<sub>OL</sub> vs R<sub>D</sub>',none:NR}]},
+      {dev:'ana',t:'10. للـ transient analysis: Edit › SPICE analysis ← Transient، وعبّي: Stop time = 60n، Time to start saving data = 0، Maximum Timestep = 0.01n.',ok:s=>tranOK()},
+      {dev:'run',t:'11. اضغط أيقونة الـ run.',ok:s=>!!ST.seen.CStran},
+      {dev:'run',t:'12. حط الماوس على node الـ <b>out</b> واضغط عشان تشوف موجات جهد الخرج.',ok:s=>s.kind==='CStran'&&tr('V(out)')},
+      {dev:'run',t:'13. حط الماوس على node الـ <b>in</b> واضغط عشان تشوف موجة الدخل. أي logic gate تسوّيها الدائرة؟',ok:s=>s.kind==='CStran'&&tr('V(out)')&&tr('V(in)'),
+        rec:[{to:'a_gate',val:gate('CStran'),txt:v=>v==='not'?'NOT (inverter)':'Buffer',label:'Logic gate',none:NR}]},
+      {dev:'run',t:'14. بالماوس كبّر (اسحب مستطيل) حول منطقة الانتقال، اللي ينزل فيها الدخل ويطلع الخرج. أي قيمة لـ R<sub>D</sub> تعطي أكبر propagation delay؟',ok:s=>!!ST.zCStran,
+        rec:[{to:'a_rd',val:()=>{const R=cur('CStran');const d=R&&delays(R);if(!d||d.length!==RDV.length||d.some(x=>!isFinite(x)))return null;return String(RDV[d.indexOf(Math.max(...d))])},txt:v=>v+' kΩ',label:'R<sub>D</sub> with the largest delay',none:NR}]},
+      {dev:'save',t:'15. احفظ الدائرة بـ Ctrl+S.',ok:s=>!!ST.savedA},
+      /* Procedure B (manual pp. 63–64), steps 1–14 */
+      {dev:'new',t:'Procedure B · 1. روح File › New Schematic.',ok:s=>!!ST.newB},
+      {dev:'comp',t:'2. حط كل القطع اللي تحتاجها دائرة Fig. 8.6. للـ N_1u: أضف nmos4 وغيّر اسمه إلى <b>N_1u</b>؛ وللـ P_1u: أضف pmos4 وغيّر اسمه إلى <b>P_1u</b>.',ok:s=>!!ST.newB&&comps('NM').some(c=>c.model==='N_1u')&&comps('PM').some(c=>c.model==='P_1u')&&comps('V').length>=2},
+      {dev:'label',t:'3. وصّل كل القطع، وأضف ground (GND)، وسمّ الـ nodes: <b>in</b> و <b>out</b>.',ok:s=>comps('GND').length>=1&&['in','out'].every(n=>labels().includes(n))},
+      {dev:'comp',t:'4. اضبط V1 مثل ما سوّيت في Procedure A (نفس الـ PULSE)، و V2 = 5.',ok:s=>pulseOK()},
+      {dev:'dir',t:'5. أضف أمر <b>.lib mosfet1u.lib</b> مثل Procedure A.',ok:s=>RT.hasLib()},
+      {dev:'ana',t:'6. أضف أمر الـ .dc مثل Procedure A (V1، Linear، 0 → 5، Increment 5m).',ok:s=>dcOK()},
+      {dev:'run',t:'7. اضغط أيقونة الـ run.',ok:s=>!!ST.seen.INVdc},
+      {dev:'run',t:'8. حط الماوس على node الـ <b>out</b> واضغط عشان تشوف منحنى الـ VTC.',ok:s=>s.kind==='INVdc'&&tr('V(out)')},
+      {dev:'ana',t:'9. الحين transient analysis: Edit › SPICE analysis ← Transient، وعبّي: Stop time = 60n، Time to start saving data = 0، Maximum Timestep = 0.01n.',ok:s=>tranOK()},
+      {dev:'run',t:'10. اضغط أيقونة الـ run.',ok:s=>!!ST.seen.INVtran},
+      {dev:'run',t:'11. حط الماوس على node الـ <b>out</b> واضغط عشان تشوف موجات الخرج.',ok:s=>s.kind==='INVtran'&&tr('V(out)')},
+      {dev:'run',t:'12. حط الماوس على node الـ <b>in</b> واضغط عشان تشوف موجة الدخل. أي logic gate تسوّيها الدائرة؟',ok:s=>s.kind==='INVtran'&&tr('V(out)')&&tr('V(in)'),
+        rec:[{to:'b_gate',val:gate('INVtran'),txt:v=>v==='not'?'NOT (inverter)':'Buffer',label:'Logic gate',none:NR}]},
+      {dev:'run',t:'13. بالماوس كبّر (اسحب مستطيل) حول منطقة الانتقال، اللي ينزل فيها الدخل ويطلع الخرج. أوجد الـ propagation delay لمّا الخرج يتغيّر من low لـ high، يعني t<sub>PLH</sub>.',ok:s=>!!ST.zINVtran,
+        rec:[{to:'b_tplh',val:()=>{const R=cur('INVtran');const d=R&&delays(R);return d&&isFinite(d[0])?d[0]*1e12:null},unit:'ps',dec:1,label:'t<sub>PLH</sub>',none:NR}]},
+      {dev:'save',t:'14. احفظ الدائرة بـ Ctrl+S.',ok:s=>!!ST.savedB}
     ],
     onReset(){for(const k in ST)delete ST[k];ST.seen={};$('result').innerHTML=''}};
 }};})();

@@ -2,7 +2,11 @@
    Procedure A: antiparallel-diode double limiter (Fig. 3.4a: D1 from vO to ground, D3–D2 in series the other way).
    Procedure B: double-anode Zener limiter (Fig. 3.4b). PeakTech 4124 (amplitude raised with its knob) + GDS-1104B
    (Default, Autoset, SCALE, Measure CH2 Max/Min, Triggered XY). Figs 3.6a/b and 3.7a/b captured, PLQs 1–6.
-   Assumptions: Fig. 3.4a needs three 1N4001 (D1, D2, D3) although the materials list says two;
+   Steps follow the manual's procedure (A 1–20, B 1–12) one by one; the circuit is checked by circuit equivalence
+   (figures in the lab's rectangle layout: the generator on the left column, R along the top, the diode branches down
+   to the bottom row; Fig. 3.4a alone, then with the generator (step 2), then with the scope probes (step 5)).
+   Assumptions: Fig. 3.4a needs three 1N4001 (D1, D2, D3) although the materials list says two; step 3 also asks for
+   Offset 0 (the previous group left an offset); both probe grounds on the circuit's ground (step 5);
    PLQ "draw an equivalent circuit" answers are chosen from constant-drop models with their numbers. */
 EXP_DEFS['ee312/exp3']=(()=>{const H=ENGINE.sheet;
 const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
@@ -21,7 +25,20 @@ const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
   <div>${H.row('VZ used =',H.num('q5z','0.01'),'V')}${H.row('VD used =',H.num('q5d','0.01'),'V')}</div></li>
 <li class="plq">Procedure B: equivalent circuit for V<sub>O−</sub>.
   <div>${H.sel('q6',[['a','D1 forward (VD1) in series with D2 in breakdown (VZ2); VO− = −(VD1 + VZ2)'],['b','D1 in breakdown, D2 forward; VO− = −(VZ1 + VD2)'],['c','VO− = −VZ2 only'],['d','VO− = −(VD1 + VD2)']])}</div></li></ol>`;
-return {procs:[{id:'A',title:'Antiparallel-diode double limiter: Fig. 3.4a'},{id:'B',title:'Double-anode Zener limiter: Fig. 3.4b'}],
+/* the figures' reference wiring, in the lab's rectangle layout (bottom-left node 22, left column 22–8, top row 8–11,
+   right column 11–25, bottom row back to 22): GEN OUT on the left side (vI = 8, ground = 22), R along the top (8–9),
+   vO = top row 9–11; Fig. 3.4a: D1 down the inner column (10 → 17, plug 17–24), D3 (18 → 11) over D2 (25 → 18) down
+   the right column; Fig. 3.4b: D1 (18 → 11) over D2 (18 → 25), anodes together; CH1 on vI, CH2 on vO, grounds below */
+const TOP=[{part:['R1k',8,9]},{wire:[9,10]},{wire:[10,11]}],BOT=[{wire:[25,24]},{wire:[24,23]},{wire:[23,22]}];
+const A=[...TOP,{part:['D4001',10,17],pol:true},{wire:[17,24]},{part:['D4001',18,11],pol:true},{part:['D4001',25,18],pol:true},...BOT];
+const B=[...TOP,{part:['Z4733',18,11],pol:true},{part:['Z4733',18,25],pol:true},...BOT];
+const GEN=[{lead:'gr',at:8},{lead:'gb',at:22}],SC=[{lead:'c1r',at:8},{lead:'c1b',at:22},{lead:'c2r',at:11},{lead:'c2b',at:25}];
+const FIG='labs/ee312/fig/fig3-4.png';
+const figs={'3.4a':{img:FIG,cap:'Fig. 3.4a · antiparallel-diode double limiter',lines:A},
+  '3.4a-gen':{img:FIG,cap:'Fig. 3.4a · v<sub>I</sub> from CH1 of the generator',lines:[...A,...GEN]},
+  '3.4a-sc':{img:FIG,cap:'Fig. 3.4a · CH1 on v<sub>I</sub>, CH2 on v<sub>O</sub>',lines:[...A,...GEN,...SC]},
+  '3.4b':{img:FIG,cap:'Fig. 3.4b · double-anode Zener limiter',lines:[...B,...GEN,...SC]}};
+return {figs,procs:[{id:'A',title:'Antiparallel-diode double limiter: Fig. 3.4a'},{id:'B',title:'Double-anode Zener limiter: Fig. 3.4b'}],
 sheet:`<div class="paper" id="paper">
 <h2>Experiment 3 · Limiting Circuits</h2>
 <div class="figbox" style="padding:8px"><img class="figimg" src="labs/ee312/fig/fig3-4.png" alt="Fig. 3.4"></div>
@@ -54,20 +71,14 @@ setup(RT){
              B:{n:3,els:[{t:'VS',a:0,r:50},{t:'G',a:0,b:1,g:1e-3},{t:'D',a:2,b:1,f:Zn},{t:'D',a:2,b:-1,f:Zn},{t:'G',a:0,b:-1,g:1e-6},{t:'G',a:1,b:-1,g:1e-6}],p1:0,p2:1,dcs:[]}};
   const lim=(c,app)=>{const t=SOLVER.sweep(REF[c],-app/2,app/2,121);return {max:Math.max(...t.v2),min:Math.min(...t.v2)}};
   const L={A15:lim('A',1.5),A4:lim('A',4),A05:lim('A',0.5),B15:lim('B',15),B4:lim('B',4)};
-  const VCHK=[-7.5,-4,-2,-1,-0.6,-0.3,0,0.3,0.6,1,2,4,7.5];
-  const resp=ck=>{let x=null;return VCHK.map(v=>{const r=SOLVER.point(ck,v,x);x=r.x;return r.x})};
-  const RA=resp(REF.A).map(x=>x[1]),RB=resp(REF.B).map(x=>x[1]);
   let ST={};
-  /* which limiter is on the panel: generator forced on, vO = far end of the 1 kΩ from GEN OUT */
-  function circuit(){const S=RT.S;if(S.leads.gr.node==null||S.leads.gb.node==null)return null;const ck=RT.buildUser(true);const I=ck.idx(S.leads.gr.node);
-    const rs=S.parts.filter(p=>p.type==='R1k').map(p=>[ck.idx(p.a),ck.idx(p.b)]).find(([a,b])=>a===I||b===I);if(!rs)return null;const O=rs[0]===I?rs[1]:rs[0];if(O<0||O>=ck.n)return null;
-    const R=resp(ck).map(x=>x[O]);const near=ref=>R.every((v,i)=>Math.abs(v-ref[i])<0.06);
-    return {kind:near(RA)?'A':near(RB)?'B':null,O,I,ck}}
-  function status(){const S=RT.S,g=S.gen,sc=S.sc,Ld=S.leads;const st={};const c=circuit();st.kind=c&&c.kind;
+  /* which limiter is on the panel: circuit equivalence with the figures (any layout) */
+  function status(){const S=RT.S,g=S.gen,sc=S.sc;const st={};
+    const mA=RT.match('3.4a').ok,mAg=RT.match('3.4a-gen').ok,mAs=RT.match('3.4a-sc').ok,mB=RT.match('3.4b').ok;
+    st.kind=mAs||mAg||mA?'A':mB?'B':null;st.gen=mAg||mAs;
     if(sc.msg==='Default Setup')ST.def=true;if(sc.msg==='Autoset'&&ST.def)ST.auto=true;
     st.sine=g.wave==='Sine'&&Math.abs(g.freq-200)<0.01&&Math.abs(g.off)<0.0005;st.amp=g.amp;st.out=g.pwr&&g.out;
-    const pr=c&&c.kind?[Ld.c1r.node!=null&&c.ck.idx(Ld.c1r.node)===c.I,Ld.c2r.node!=null&&c.ck.idx(Ld.c2r.node)===c.O]:[false,false];
-    st.probes=pr[0]&&pr[1]&&Ld.c1b.node!=null&&Ld.c2b.node!=null;st.ch2=sc.pwr&&sc.ch[0].on&&sc.ch[1].on;
+    st.probes=mAs||mB;st.ch2=sc.pwr&&sc.ch[0].on&&sc.ch[1].on;
     const vds=[sc.ch[0].vd,sc.ch[1].vd];st.vd=v=>Math.abs(vds[0]-v)<1e-9&&Math.abs(vds[1]-v)<1e-9;st.pos0=sc.ch[0].pos===0&&sc.ch[1].pos===0;
     const cyc=10*sc.td*g.freq;st.cyc=cyc>=1&&cyc<=10;st.xy=sc.xy;st.pwr=sc.pwr;st.probe1=sc.ch.every(ch=>ch.probe===1&&!ch.inv)&&sc.ch[0].cpl==='DC'&&sc.ch[1].cpl==='DC';
     st.meas=['Max','Min'].every(t=>sc.meas.some(m=>m.src===1&&m.type===t));
@@ -78,7 +89,10 @@ setup(RT){
     if(ST.xyA&&!sc.xy)ST.ytA=true;if(st.kind==='A'&&sc.xy&&st.pos0&&a(4))ST.xyA=ST.xyA||sc.xy;
     if(ST.ytA&&!st.out)ST.genOffB=true;
     if(st.kind==='B'&&sc.xy&&a(15))ST.xyB=true;if(ST.xyB&&!sc.xy)ST.ytB=true;if(ST.ytB&&!g.pwr&&!sc.pwr)ST.endB=true;
+    /* the CH2 Max / Min the scope shows (Measure), for «Capture» */
+    st.mx=sc.pwr&&st.meas&&st.probes&&st.out?sg[1].max:null;st.mn=sc.pwr&&st.meas&&st.probes&&st.out?sg[1].min:null;
     st.ST=ST;return st}
+  const meas=(w,lab,cond)=>({val:()=>{const s=status();return cond(s)?s[w]:null},unit:'V',dec:2,label:lab,none:'لازم الإسكوب شغّال و Measure فيه Max و Min للـ CH2، والإشارة بالسعة المطلوبة'});
   const CAPS={};
   document.querySelectorAll('[data-cap]').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.cap;G.capture(RT,id);CAPS[id]=status();BENCH.onRender()}));
   const capOK=(id,kind,amp,vd,xy)=>{const c=CAPS[id];if(!c)return [false,'ما سجّلت الشاشة'];const pr=[];
@@ -96,35 +110,45 @@ setup(RT){
     g.show($('result'))});
   return {status,
     steps:[
-      {dev:'board',fig:'labs/ee312/fig/fig3-4.png',figCap:'Fig. 3.4',t:'Procedure A: ركّب Fig. 3.4a بالترتيب (الأرضي = nodes 8 و 9 و 15).',
-        lines:[{t:'R = 1 kΩ: node 0 ↔ node 1',part:['R1k',0,1]},{t:'bridging plug: node 8 ↔ node 15',note:'الأرضي',wire:[8,15]},{t:'bridging plug: node 8 ↔ node 9',wire:[8,9]},
-          {t:'D1 (1N4001): anode → node 1, cathode → node 8',part:['D4001',1,8],pol:true},{t:'D3 (1N4001): anode → node 2, cathode → node 1',part:['D4001',2,1],pol:true},{t:'D2 (1N4001): anode → node 9, cathode → node 2',part:['D4001',9,2],pol:true},
-          {t:'GEN OUT → node 0',note:'v<sub>I</sub>',lead:'gr',at:0},{t:'GEN ⏚ → node 15',lead:'gb',at:15}],ok:s=>s.kind==='A'},
-      {dev:'gen',t:'شغّل الجنريتر: Sine، و F1 ← 200 ← F3 (Hz)، و F2 ← 500 ← F1 (mVpp). وخلّ Offset = 0.',ok:s=>s.kind==='A'&&s.sine&&s.a(0.5)},
-      {dev:'gen',t:'اضغط مفتاح CH1 في الجنريتر عشان يطلع الإشارة.',ok:s=>s.kind==='A'&&s.out&&s.sine},
-      {dev:'board',fig:'labs/ee312/fig/fig3-4.png',figCap:'Fig. 3.4',t:'وصّل الإسكوب: CH1 على v<sub>I</sub> و CH2 على v<sub>O</sub>، والأسود على الأرضي.',
-        lines:[{t:'CH1 → node 0',note:'v<sub>I</sub>',lead:'c1r',at:0},{t:'CH1 ⏚ → node 15',lead:'c1b',at:15},{t:'CH2 → node 1',note:'v<sub>O</sub>',lead:'c2r',at:1},{t:'CH2 ⏚ → node 9',lead:'c2b',at:9}],ok:s=>s.probes},
-      {dev:'scope',t:'شغّل الإسكوب، واضغط Default وبعدها Autoset.',ok:s=>s.pwr&&ST.auto},
-      {dev:'scope',t:'شغّل CH2 لو مو شغّال.',ok:s=>s.ch2&&ST.auto},
-      {dev:'scope',t:'اضغط على مقبض POSITION للقناتين عشان الصفر يكون على خط الوسط.',ok:s=>s.ch2&&s.pos0},
-      {dev:'scope',t:'خلّ SCALE للقناتين على 200 mV/div.',ok:s=>s.vd(0.2)&&s.pos0},
-      {dev:'scope',t:'اضبط الـ SCALE الأفقي (time/div) لين يطلع عدد مناسب من الدورات.',ok:s=>s.vd(0.2)&&s.cyc},
-      {dev:'scope',t:'Measure ← Add Measurement ← Source1 = CH2 (VARIABLE ثم Select) ← V/I ← Max (Select) ← Min (Select). وبعدها Menu Off مرتين.',ok:s=>s.meas},
-      {dev:'gen',t:'اضغط F2 (Ampl) عشان المقبض يتحكم في السعة، وبعدها لفّ مقبض الجنريتر الدوّار وارفعها شوي شوي لين 1.5 V<sub>p-p</sub> (◄ ► تغيّر الخانة). سجّل Max (V<sub>O+</sub>).',ok:s=>s.meas&&s.a(1.5)&&s.out},
-      {dev:'gen',t:'كمّل بالمقبض لين 4 V<sub>p-p</sub>.',ok:s=>ST.a4},
-      {dev:'scope',t:'خلّ SCALE للقناتين 500 mV/div، وسجّل Min (V<sub>O−</sub>).',ok:s=>ST.v500},
-      {dev:'scope',t:'صوّر v<sub>I</sub>(t) و v<sub>O</sub>(t) في Fig. 3.6a.',ok:s=>!!CAPS.f36a},
-      {dev:'scope',t:'Acquire ← XY ← Triggered XY، واضغط POSITION للقناتين عشان الـ VTC يتمركز عند (0, 0).',ok:s=>ST.xyA},
-      {dev:'scope',t:'صوّر الـ VTC في Fig. 3.6b.',ok:s=>!!CAPS.f36b},
-      {dev:'scope',t:'طفّ الـ XY: اختر OFF (YT).',ok:s=>ST.ytA},
-      {dev:'gen',t:'Procedure B: طفّ مخرج الجنريتر (CH1).',ok:s=>ST.genOffB},
-      {dev:'board',fig:'labs/ee312/fig/fig3-4.png',figCap:'Fig. 3.4',t:'شيل D1 و D2 و D3، وركّب Fig. 3.4b: زينرين 1N4733A ظهر لظهر (الأنودين مع بعض).',
-        lines:[{t:'D1 (1N4733A): anode → node 2, cathode → node 1',part:['Z4733',2,1],pol:true},{t:'D2 (1N4733A): anode → node 2, cathode → node 9',part:['Z4733',2,9],pol:true}],ok:s=>ST.genOffB&&s.kind==='B'},
-      {dev:'scope',t:'خلّ SCALE للقناتين 2 V/div.',ok:s=>s.kind==='B'&&s.vd(2)},
-      {dev:'gen',t:'شغّل مخرج الجنريتر، وارفع السعة شوي شوي لين 15 V<sub>p-p</sub>.',ok:s=>s.kind==='B'&&s.out&&s.a(15)},
-      {dev:'scope',t:'صوّر v<sub>I</sub>(t) و v<sub>O</sub>(t) في Fig. 3.7a، وسجّل Max و Min (V<sub>O+</sub> و V<sub>O−</sub>).',ok:s=>!!CAPS.f37a},
-      {dev:'scope',t:'نفس خطوة 18: Triggered XY، وصوّر الـ VTC في Fig. 3.7b.',ok:s=>!!CAPS.f37b},
-      {dev:'scope',t:'طفّ الـ XY (OFF YT)، وبعدها طفّ الجنريتر والإسكوب.',ok:s=>ST.endB}
+      /* Procedure A (manual pp. 23–24), steps 1–20 */
+      {dev:'board',build:'3.4a',t:'Procedure A · 1. ركّب الدائرة Fig. 3.4a.'},
+      {dev:'board',build:'3.4a-gen',t:'2. استخدم coaxial cable عشان توصّل مدخل الدائرة بمخرج channel one (CH1) في الـ waveform generator.'},
+      {dev:'gen',t:'3. شغّل الجنريتر. خلّ نوع الإشارة sinusoidal، والتردد 200 Hz، والسعة 500 mV<sub>p-p</sub>.',
+        acts:['التردد: اضغط F1 ← اكتب 200 ← اضغط F3 عشان تختار Hz.','السعة: اضغط F2 ← اكتب 500 ← اضغط F1 عشان تختار mVpp.','تأكد إن الـ Offset = 0 mV.'],ok:s=>s.gen&&s.sine&&s.a(0.5)},
+      {dev:'gen',t:'4. اضغط مفتاح CH1 في الجنريتر عشان تشغّله.',ok:s=>s.gen&&s.out&&s.sine},
+      {dev:'board',build:'3.4a-sc',t:'5. بـ coaxial cable وصّل مدخل الدائرة بـ CH1 في الإسكوب، وبكيبل ثاني وصّل مخرج الدائرة بـ CH2. الأسود (ground) للكيبلين على الـ reference node (الأرضي).'},
+      {dev:'scope',t:'6. شغّل الإسكوب، اضغط Default وبعدها Autoset.',ok:s=>s.pwr&&ST.auto},
+      {dev:'scope',t:'7. لو CH2 مو شغّال، اضغط مفتاح CH2 عشان تشغّله.',ok:s=>s.ch2&&ST.auto},
+      {dev:'scope',t:'8. اضغط على مقابض POSITION للقناتين عشان صفر الـ input والـ output يكون على خط الوسط.',ok:s=>s.ch2&&s.pos0},
+      {dev:'scope',t:'9. بمقابض SCALE للـ CH1 و CH2 خلّ كل قناة 200 mV/div.',ok:s=>s.vd(0.2)&&s.pos0},
+      {dev:'scope',t:'10. عشان يطلع عدد مناسب من الدورات، اضبط الـ time/div بمقبض SCALE في الـ Horizontal Controls.',ok:s=>s.vd(0.2)&&s.cyc},
+      {dev:'scope',t:'11. Measure ← Add Measurement ← Source 1: بالـ VARIABLE اختر CH2 ← Select ← V/I: بالـ VARIABLE اختر Max ← Select ← Min ← Select. وبعدها Menu OFF مرتين.',ok:s=>s.meas},
+      {dev:'gen',t:'12. بمقبض الجنريتر ارفع سعة الإشارة شوي شوي لين توصل 1.5 V<sub>p-p</sub>.',acts:['اضغط F2 (Ampl) عشان المقبض يتحكم في السعة، و ◄ ► تغيّر الخانة.'],ok:s=>s.meas&&s.a(1.5)&&s.out},
+      {dev:'scope',t:'13. سجّل الـ Max للـ output، يعني الـ upper limiting level V<sub>O+</sub>.',ok:s=>s.kind==='A'&&s.meas&&s.a(1.5)&&s.out,
+        rec:[{to:'a_vop',...meas('mx','V<sub>O+</sub>',s=>s.kind==='A'&&s.a(1.5))}]},
+      {dev:'gen',t:'14. بمقبض الجنريتر ارفع السعة شوي شوي لين توصل 4 V<sub>p-p</sub>.',ok:s=>ST.a4},
+      {dev:'scope',t:'15. بمقابض SCALE خلّ القناتين CH1 و CH2 على 500 mV/div.',ok:s=>ST.v500},
+      {dev:'scope',t:'16. سجّل الـ Min للـ output، يعني الـ lower limiting level V<sub>O−</sub>.',ok:s=>ST.v500,
+        rec:[{to:'a_vom',...meas('mn','V<sub>O−</sub>',s=>s.kind==='A'&&s.a(4))}]},
+      {dev:'scope',t:'17. سجّل v<sub>I</sub>(t) و v<sub>O</sub>(t) على Fig. 3.6a.',ok:s=>!!CAPS.f36a,rec:[{scope:'f36a',label:'Fig. 3.6a'}]},
+      {dev:'scope',t:'18. عشان تطلع الـ voltage transfer characteristic حط الإسكوب على XY mode.',acts:['اضغط Acquire ← اختر XY من القائمة اللي تحت ← Triggered XY من القائمة اليمين.','اضغط على POSITION للـ CH1 و CH2 عشان الـ characteristic يتمركز عند (0, 0).'],ok:s=>ST.xyA},
+      {dev:'scope',t:'19. سجّل الـ VTC اللي على الشاشة على Fig. 3.6b.',ok:s=>!!CAPS.f36b,rec:[{scope:'f36b',label:'Fig. 3.6b'}]},
+      {dev:'scope',t:'20. طفّ الـ XY mode: اختر OFF (YT) من القائمة اليمين.',ok:s=>ST.ytA},
+      /* Procedure B (manual p. 25), steps 1–12 */
+      {dev:'gen',t:'Procedure B · 1. طفّ الـ waveform generator.',ok:s=>ST.genOffB},
+      {dev:'board',build:'3.4b',t:'2. ركّب الدائرة Fig. 3.4b.'},
+      {dev:'scope',t:'3. بمقابض SCALE خلّ CH1 و CH2 كل وحدة 2 V/div.',ok:s=>s.kind==='B'&&s.vd(2)},
+      {dev:'gen',t:'4. شغّل الـ waveform generator.',ok:s=>s.kind==='B'&&s.out},
+      {dev:'gen',t:'5. ارفع سعة الـ input شوي شوي لين توصل 15 V<sub>p-p</sub>.',ok:s=>s.kind==='B'&&s.out&&s.a(15)},
+      {dev:'scope',t:'6. سجّل v<sub>I</sub>(t) و v<sub>O</sub>(t) على Fig. 3.7a.',ok:s=>!!CAPS.f37a,rec:[{scope:'f37a',label:'Fig. 3.7a'}]},
+      {dev:'scope',t:'7. سجّل الـ Max للـ output، يعني الـ upper limiting level V<sub>O+</sub>.',ok:s=>s.kind==='B'&&s.meas&&s.a(15)&&s.out,
+        rec:[{to:'b_vop',...meas('mx','V<sub>O+</sub>',s=>s.kind==='B'&&s.a(15))}]},
+      {dev:'scope',t:'8. سجّل الـ Min للـ output، يعني الـ lower limiting level V<sub>O−</sub>.',ok:s=>s.kind==='B'&&s.meas&&s.a(15)&&s.out,
+        rec:[{to:'b_vom',...meas('mn','V<sub>O−</sub>',s=>s.kind==='B'&&s.a(15))}]},
+      {dev:'scope',t:'9. كرّر خطوة 18 من Procedure A عشان تطلع الـ voltage transfer characteristic لهذي الدائرة.',ok:s=>ST.xyB},
+      {dev:'scope',t:'10. سجّل الـ VTC اللي على الشاشة على Fig. 3.7b.',ok:s=>!!CAPS.f37b,rec:[{scope:'f37b',label:'Fig. 3.7b'}]},
+      {dev:'scope',t:'11. طفّ الـ XY mode: اختر OFF (YT) من القائمة اليمين.',ok:s=>ST.ytB},
+      {dev:'gen',t:'12. طفّ الـ waveform generator، وبعدها طفّ الإسكوب. فكّ الدائرة ورجّع كل القطع والكيبلات مكانها.',ok:s=>ST.endB}
     ],
     onReset(){ST={};['f36a','f36b','f37a','f37b'].forEach(id=>{$(id).textContent=id.replace(/f3(\d)(\w)/,'Fig. 3.$1$2');delete CAPS[id]});$('result').innerHTML=''}};
 }};})();

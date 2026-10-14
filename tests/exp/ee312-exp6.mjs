@@ -55,19 +55,24 @@ export async function run(page, vp, ok) {
   await P.place('R', 14, 1, 3); await P.act('R');
   await P.place('D', 18, 1); await P.place('D', 18, 5); await P.place('D', 22, 5, 2); await P.place('D', 22, 9, 2); await P.act('D');
   for (const [x, y] of [[10, 2], [6, 4], [12, -5], [12, 7], [18, 9], [22, 9]]) await P.place('GND', x, y); await P.act('GND');
+  ok(await done(21), 'C2 Fig. 6.4 parts and ground');
   await P.wire([6, 0], [10, 0], [18, 1], [22, 1]); await P.act('wire');
   await P.label('in', 6, 0); await P.label('IC_out', 14, 1); await P.label('out', 22, 1);
+  ok(await done(22), 'C3 wires and labels');
   await P.value('R1', '1000'); for (const d of ['D1', 'D2', 'D3', 'D4']) await P.diode(d, '1N4148');
   await P.source('V1', 'DC', '15'); await P.source('V2', 'DC', '15');
-  ok(await done(21), 'C2–3 Fig. 6.4 parts and labels');
-  await P.source('V3', 'SINE', [0, 1, 1000, 0, 0, 0, 3]); await P.tran('3m', '0', '3u'); await P.at(26, -4); ok(await done(22), 'C4–5 Vin and .tran');
+  await P.source('V3', 'SINE', [0, 1, 1000, 0, 0, 0, 3]); ok(await done(23), 'C4 Vin SINE(0 1 1000 0 0 0 3)');
+  await P.tran('3m', '0', '3u'); await P.at(26, -4); ok(await done(24), 'C5 .tran 0 3m 0 3u');
   await P.run(); await P.view(-2, -7, vp === 'phone' ? 0.3 : 0.8); await P.probe(6, 0); await P.probe(14, 1); await P.probe(22, 1);
-  const cmax = await P.peak('V(out)'), cmin = await P.peak('V(out)', 0, true); ok(await done(23), `C6 run + traces · out ${cmax.toFixed(2)} / ${cmin.toFixed(2)} V`);
-  await P.probeI('D2'); await P.act('rot'); await P.act('rot'); await P.diode('D2', '1N750'); await P.run();
-  const zmax = await P.peak('V(out)'), zmin = await P.peak('V(out)', 0, true); ok(await done(24), `C7–8 D2 flipped 1N750 · out ${zmax.toFixed(2)} / ${zmin.toFixed(2)} V`);
-  await P.view(-2, -7, vp === 'phone' ? 0.3 : 0.8); await P.probeI('R1'); const imax = await P.peak('I(R1)'); ok(await done(25), `C9 I(R1) max = ${(imax * 1e3).toFixed(2)} mA`);
+  const cmax = await P.peak('V(out)'), cmin = await P.peak('V(out)', 0, true); ok(await done(25), `C6 run + traces · out ${cmax.toFixed(2)} / ${cmin.toFixed(2)} V`);
+  await P.probeI('D2'); await P.act('rot'); await P.act('rot'); await P.diode('D2', '1N750'); ok(await done(26), 'C7 D2 flipped, 1N750');
+  await P.run(); const zmax = await P.peak('V(out)'), zmin = await P.peak('V(out)', 0, true); ok(await done(27), `C8 run again · out ${zmax.toFixed(2)} / ${zmin.toFixed(2)} V`);
+  await P.view(-2, -7, vp === 'phone' ? 0.3 : 0.8); await P.probeI('R1'); const imax = await P.peak('I(R1)'); ok(await done(28), `C9 I(R1) max = ${(imax * 1e3).toFixed(2)} mA`);
   await page.screenshot({ path: '/tmp/exp6-' + vp + '-C.png' });
-  await P.act('save'); ok(await done(26), 'C10 saved — all steps done');
+  ok(!!(await page.$('#stepCard #scHint')) && !!(await page.$('#stepCard #scSkip')) && !(await page.$('#stepCard #scBuild')), 'PC step card: «تلميح» and «تخطّي», no «وصّل لي»');
+  await page.evaluate(() => BENCH.hintFor(BENCH.cur())); ok((await page.$eval('#toast', e => e.textContent)).length > 3, '«تلميح» on the PC: ' + (await page.$eval('#toast', e => e.textContent)));
+  await page.evaluate(() => { BENCH.helpers.hint = 0; }); /* that check was the test's, not the student's: no helper cost */
+  await P.act('save'); ok(await done(29), 'C10 saved — all steps done');
   const F = { a_vsm: vsm.toFixed(2), a_piv: piv.toFixed(2), a_pivok: 'y', a_rip: 'a', a_surge: surge.toFixed(3), a_surgeok: 'y', a_iavg: (av.avg * 1e3).toFixed(2), a_iavgok: 'y', a_270: 'a',
     b_v47: v47.toFixed(3), b_v270: v270.toFixed(3), c_max: cmax.toFixed(2), c_min: cmin.toFixed(2), c_zmax: zmax.toFixed(2), c_zmin: zmin.toFixed(2), c_cmp: 'a', c_imax: (imax * 1e3).toFixed(2), c_iok: 'y', q1a: 'a', q1b: 'a' };
   await page.evaluate(F => { for (const [k, v] of Object.entries(F)) { const e = document.getElementById(k); e.value = v; e.dispatchEvent(new Event('change')); } document.getElementById('submit').click(); }, F);

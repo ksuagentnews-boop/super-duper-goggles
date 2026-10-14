@@ -7,7 +7,10 @@
    Assumptions: "R1 → 270 Ω" in A16 and "R1 back to 4.7 kΩ" in B1 mean the 4.7 kΩ load (R3 in Fig. 6.1); A16 keeps
    C1 = 470 µF (10 µF also accepted); the circuit is recognised by its simulated waveforms at the labelled nets
    (s1, s2, out / in, ic_out, out), so part names and drawing positions are free. PLQ Q1/Q2 are report work
-   (Q2 needs an .ac analysis, which this simulator does not offer). */
+   (Q2 needs an .ac analysis, which this simulator does not offer).
+   Steps = the manual's numbered steps (A 1–16, B 1–3, C 1–10), several actions of one step shown line by line; steps that
+   record a value carry rec (Manual «Capture» reads it from the student's own last run / waveform viewer); Exam keeps the
+   ok checks and the graded sheet. C6 includes the run (the manual's step 8 says "run again"). */
 EXP_DEFS['ee312/exp6']=(()=>{const H=ENGINE.sheet;
 const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
 <li class="plq">Q1a: a limiter with 1.4 V ≥ … −1.4 V ≤ v<sub>O</sub> ≤ 5.4 V from Si diodes (0.7 V) and one Zener (V<sub>Z</sub> = 4.7 V):
@@ -71,9 +74,9 @@ D4 0 n 1N4148
   const REF={};const ref=k=>REF[k]||(REF[k]=RT.sim(DEFS[k][0]));
   const same=(res,R,expr)=>{const a=RT.evalOn(res,expr),b=RT.evalOn(R,expr);if(!a||!b||a.length!==b.length)return false;
     return a.every((arr,i)=>{const q=b[i];if(arr.length!==q.length)return false;let mx=-1e9,mn=1e9,d=0;q.forEach((v,k)=>{mx=Math.max(mx,v);mn=Math.min(mn,v);d=Math.max(d,A(v-arr[k]))});return d<=0.01*(mx-mn)+0.02})};
-  const ST={seen:{},kinds:[]};
+  const ST={seen:{},kinds:[],rip:{}};
   window.EXP6={classify(RT,res){let kind=null;const order=res.a.kind==='tran'&&A(res.a.stop-0.2)<1e-9?['A0','A470','A10','A270','A270b','B47','B270']:res.a.kind==='tran'&&A(res.a.stop-3e-3)<1e-12?['C','CZ']:[];
-    for(const k of order){const R=ref(k);if(R.err)continue;if(DEFS[k][1].every(e=>same(res,R,e))){kind=k;break}}res.kind=kind;if(kind){ST.seen[kind]=true;ST.kinds.push(kind)}ST.last=kind}};
+    for(const k of order){const R=ref(k);if(R.err)continue;if(DEFS[k][1].every(e=>same(res,R,e))){kind=k;break}}res.kind=kind;if(kind){ST.seen[kind]=true;ST.kinds.push(kind);if(/^A/.test(kind))ST.rip[kind]=pk(res,'V(out)',0.1)-pk(res,'V(out)',0.1,true)}ST.last=kind}};
   const tr=e=>S().traces.some(t=>t.expr.toLowerCase()===e.toLowerCase());
   const labels=()=>S().labels.map(l=>l.name.toLowerCase());
   const comps=t=>S().comps.filter(c=>c.type===t);const val=(c,v)=>c&&A(SPICE.num(c.val)-v)<=v*1e-6;const byName=n=>S().comps.find(c=>c.name&&c.name.toLowerCase()===n.toLowerCase());
@@ -101,34 +104,67 @@ D4 0 n 1N4148
     g.add(G.s('c_cmp')==='a','C8 comparison');const im=pk(rz,'I(R1)')*1e3;g.add(G.near(v('c_imax'),im,im*0.05)&&G.s('c_iok')==='y','C9 I(R1) max',`≈ ${im.toFixed(2)} mA (< 20 mA)`);
     g.proc(null);g.add(G.s('q1a')==='a'&&G.s('q1b')==='a','PLQ Q1a');
     g.show($('result'))});
+  /* Capture (Manual): the values the student reads off the waveform viewer, from his own last run */
+  const cur=(...k)=>{const r=S().res;return r&&!r.err&&r.runs&&k.includes(r.kind)?r:null};
+  const fin=x=>isFinite(x)?x:null;
+  const vsm=()=>{const r=cur('A0','A470','A10','A270','A270b');return r?fin(pk(r,'V(s1,s2)')):null};
+  const piv=()=>{const r=cur('A0','A470','A10','A270','A270b');return r?fin(-pk(r,'V(s1,out)',0,true)):null};
+  const surge=()=>{const r=cur('A470');return r?fin(pk(r,'I(D1)')):null};
+  const iavg=()=>{const a=S().avgVal;return ST.avgD1&&a&&/^i\(d1\)$/i.test(a.expr)?a.avg*1e3:null};
+  const vdc=k=>{const r=cur(k);try{return r?fin(avg(r,'V(out)',0.1)):null}catch(e){return null}};
+  const lim=(k,neg)=>{const r=cur(k);return r?fin(pk(r,'V(out)',0,neg)):null};
+  const imax=()=>{const r=cur('CZ');return r&&ST.iR1?fin(pk(r,'I(R1)')*1e3):null};
+  const yn=(f,t)=>()=>{const x=f();return x==null?null:t(x)?'y':'n'},YN=v=>v==='y'?'Yes':'No';
+  const NR='شغّل المحاكاة على دائرة الخطوة أول (Simulate › Run).';
   return {status,
     steps:[
-      {dev:'new',t:'Procedure A: افتح File › New Schematic.',ok:s=>s.open},
-      {dev:'R',t:'حط كل قطع Fig. 6.1 ما عدا المكثف: V1، و R1 و R2 و R3، و L1 و L2، و D1–D4. وأضف SPICE directive (S): <b>K1 L1 L2 1</b>.',ok:s=>comps('V').length>=1&&comps('R').length>=3&&comps('L').length>=2&&comps('D').length>=4&&dirHas(/^k1\s+l1\s+l2\s+1$/i)},
-      {dev:'GND',t:'حط GND ووصّل كل القطع (F3)، وسمّ الـ nodes بـ Label Net (F4): <b>S1</b> و <b>S2</b> و <b>out</b>.',ok:s=>comps('GND').length>=1&&['s1','s2','out'].every(n=>labels().includes(n))},
-      {dev:'R',t:'كليك يمين (ضغطة طويلة) على كل قطعة واكتب قيمتها: R1 = 20، R2 = 2، R3 = 4.7k، L1 = 400m، L2 = 1m، و D1–D4 = 1N4148 (Pick New Diode).',ok:s=>val(byName('R1'),20)&&val(byName('R2'),2)&&val(byName('R3'),4700)&&val(byName('L1'),0.4)&&val(byName('L2'),1e-3)&&comps('D').every(d=>d.model==='1N4148')},
-      {dev:'comp',t:'كليك يمين على V1 ← SINE: DC offset = 0، Amplitude = 311، Freq = 60، Tdelay = 0، Theta = 0، Phi = 0، Ncycles = 12.',ok:s=>srcIs(byName('V1'),[0,311,60,0,0,0,12])},
-      {dev:'ana',t:'Simulate › Edit Simulation Cmd ← Transient: Stop time = 0.2، Time to start saving data = 0، Maximum Timestep = 0.2m.',ok:s=>ana(0.2,0.2e-3)},
-      {dev:'run',t:'شغّل المحاكاة: Simulate › Run (🏃).',ok:s=>!!ST.seen.A0},
-      {dev:'run',t:'اضغط على node الـ <b>out</b> عشان تعرض V(out).',ok:s=>ST.seen.A0&&tr('V(out)')},
-      {dev:'run',t:'اسحب من S1 إلى S2 عشان تعرض V(s1,s2)، وسجّل V<sub>SM</sub>.',ok:s=>tr('V(s1,s2)')},
-      {dev:'run',t:'اعرض V(s1,out) (اسحب من S1 إلى out) وسجّل الـ PIV لـ D1.',ok:s=>tr('V(s1,out)')},
-      {dev:'C',t:'أضف C1 = 470µ (C) بين out والأرضي وشغّل من جديد، وبعدها جرّب 10µ وشغّل.',ok:s=>ST.seen.A470&&ST.seen.A10},
-      {dev:'run',t:'رجّع C1 = 470µ وشغّل، واضغط على D1 (يطلع شكل الكلّاب) عشان تعرض I(D1)، وسجّل الـ surge.',ok:s=>s.kind==='A470'&&tr('I(D1)')},
-      {dev:'run',t:'كبّر على الدورات المستقرة (اسحب مستطيل في نافذة الموجات)، وبعدها Ctrl+click (أو ∑) على I(D1) عشان يطلع المتوسط وسجّله.',ok:s=>!!ST.avgD1},
-      {dev:'run',t:'ارجع للعرض الكامل: Ctrl+E (أو ⤢ Zoom Full).',ok:s=>!!ST.fitted},
-      {dev:'run',t:'احذف منحنيات I(D1) و V(s1,out) (✕ جنب اسمها).',ok:s=>ST.fitted&&!tr('I(D1)')&&!tr('V(s1,out)')},
-      {dev:'R',t:'خلّ حمل الـ 4.7k (R3) = 270 وشغّل، ولاحظ الـ ripple.',ok:s=>ST.seen.A270||ST.seen.A270b},
-      {dev:'R',t:'Procedure B: أضف المنظّم (Fig. 6.2): R4 = 100 Ω و D5 = 1N750 على الـ out، ورجّع الحمل 4.7k وشغّل. سجّل V<sub>out</sub>(dc).',ok:s=>!!ST.seen.B47},
-      {dev:'R',t:'خلّ الحمل 270 Ω وشغّل، وسجّل V<sub>out</sub>(dc).',ok:s=>!!ST.seen.B270},
-      {dev:'save',t:'احفظ الدائرة (File › Save).',ok:s=>!!ST.savedB},
-      {dev:'new',t:'Procedure C: File › New Schematic.',ok:s=>!!ST.newC},
-      {dev:'comp',t:'ركّب Fig. 6.4: OP747 (Component ← OpAmps)، و V1 = 15 و V2 = 15 للـ ±V، و Vin، و R1 = 1000، و D1–D4 = 1N4148، والأرضي. سمّ الـ nodes: <b>in</b> و <b>IC_out</b> و <b>out</b>.',ok:s=>comps('OA').length>=1&&comps('D').length>=4&&['in','ic_out','out'].every(n=>labels().includes(n))},
-      {dev:'comp',t:'Vin: SINE(0 1 1000 0 0 0 3)، وأمر المحاكاة: .tran 0 3m 0 3u.',ok:s=>S().comps.some(c=>srcIs(c,[0,1,1000,0,0,0,3]))&&ana(3e-3,3e-6)},
-      {dev:'run',t:'شغّل واضغط على in و IC_out و out.',ok:s=>ST.seen.C&&tr('V(in)')&&tr('V(ic_out)')&&tr('V(out)')},
-      {dev:'rot',t:'اقلب D2 (Ctrl+R مرتين) وغيّر موديله إلى 1N750، وشغّل من جديد. قارن مع Exp 5.',ok:s=>!!ST.seen.CZ},
-      {dev:'run',t:'اضغط على R1 عشان تعرض تيار خرج الـ op amp، وسجّل أعلى قيمة.',ok:s=>!!ST.iR1},
-      {dev:'save',t:'احفظ الدائرة.',ok:s=>!!ST.savedC}
+      /* Procedure A (manual pp. 45–46), steps 1–16 */
+      {dev:'new',t:'Procedure A · 1. افتح LTspice، وروح File › New Schematic.',ok:s=>s.open},
+      {dev:'R',t:'2. أول شي حط كل القطع اللي تحتاجها دائرة Fig. 6.1 على الـ schematic، ما عدا المكثف. عشان تضيف coupling coefficient بين الملفين: Edit › SPICE directive واكتب <b>K1 L1 L2 1</b>.',
+        acts:['V1، و R1 و R2 و R3، و L1 و L2، و D1–D4.','الـ directive (S): K1 L1 L2 1.'],ok:s=>comps('V').length>=1&&comps('R').length>=3&&comps('L').length>=2&&comps('D').length>=4&&dirHas(/^k1\s+l1\s+l2\s+1$/i)},
+      {dev:'GND',t:'3. أضف circuit ground (GND)، ووصّل كل القطع (F3)، وسمّ الـ nodes: <b>S1</b> و <b>S2</b> و <b>out</b> (Label Net، F4).',ok:s=>comps('GND').length>=1&&['s1','s2','out'].every(n=>labels().includes(n))},
+      {dev:'R',t:'4. عشان تغيّر قيمة قطعة: كليك يمين عليها واكتب القيمة (meg = 1e6، k = 1e3، m = 1e-3، u = 1e-6، n = 1e-9، p = 1e-12).',acts:['R1 = 20، R2 = 2، R3 = 4.7k، L1 = 400m، L2 = 1m.','D1–D4 = 1N4148 (Pick New Diode).'],
+        ok:s=>val(byName('R1'),20)&&val(byName('R2'),2)&&val(byName('R3'),4700)&&val(byName('L1'),0.4)&&val(byName('L2'),1e-3)&&comps('D').every(d=>d.model==='1N4148')},
+      {dev:'comp',t:'5. كليك يمين على مصدر الجهد وعبّي: DC offset = 0، Amplitude = 311، Freq = 60، Tdelay = 0، Theta = 0، Phi = 0، Ncycles = 12.',ok:s=>srcIs(byName('V1'),[0,311,60,0,0,0,12])},
+      {dev:'ana',t:'6. روح Edit › SPICE analysis وعبّي: Stop time = 0.2، Time to start saving data = 0، Maximum Timestep = 0.2m.',ok:s=>ana(0.2,0.2e-3)},
+      {dev:'run',t:'7. شغّل المحاكاة: Simulate › Run.',ok:s=>!!ST.seen.A0},
+      {dev:'run',t:'8. اضغط على node الـ <b>out</b> في الـ schematic عشان تعرض موجة جهد الخرج.',ok:s=>ST.seen.A0&&tr('V(out)')},
+      {dev:'run',t:'9. عشان تعرض جهد الـ secondary winding: حط الماوس على S1، واضغط وأنت ساحب لين S2 وفك. كم الـ peak amplitude لهالموجة (V<sub>SM</sub>)؟',ok:s=>tr('V(s1,s2)'),
+        rec:[{to:'a_vsm',val:vsm,unit:'V',dec:2,label:'V<sub>SM</sub>',none:'اعرض V(s1,s2) من آخر run لدائرة Fig. 6.1'}]},
+      {dev:'run',t:'10. بنفس الطريقة اعرض الفرق على D1: V(S1, out). كم الـ peak inverse voltage PIV لـ D1؟ لازم يكون أقل من الـ V<sub>RRM</sub> بـ 25 % على الأقل (Fig. 6.3).',ok:s=>tr('V(s1,out)'),
+        rec:[{to:'a_piv',val:piv,unit:'V',dec:2,label:'PIV',none:NR},{to:'a_pivok',val:yn(piv,x=>x<=0.75*100),txt:YN,label:'PIV ≤ 0.75 V<sub>RRM</sub>',none:NR}]},
+      {dev:'C',t:'11. وصّل المكثف مثل Fig. 6.1 (C1 = 470µ)، وأعد المحاكاة وشوف أثره على الـ ripple. وجرّب سعة أقل (10µ مثلاً).',ok:s=>ST.seen.A470&&ST.seen.A10,
+        rec:[{to:'a_rip',val:()=>ST.rip.A470!=null&&ST.rip.A10!=null?(ST.rip.A470<ST.rip.A10?'a':'b'):null,txt:v=>v==='a'?'470 µF → smaller ripple':'10 µF → smaller ripple',label:'Ripple',none:'شغّل بـ 470µ وبـ 10µ'}]},
+      {dev:'run',t:'12. حط الماوس على D1 (يتحوّل لشكل clamp meter) واضغط: يطلع تيار الدايود. لاحظ الـ surge في بداية المحاكاة؛ الدايود لازم يكون I<sub>FSM</sub> حقه 1.5 مرة الـ surge.',acts:['رجّع C1 = 470µ وشغّل قبلها.'],ok:s=>s.kind==='A470'&&tr('I(D1)'),
+        rec:[{to:'a_surge',val:surge,unit:'A',dec:3,label:'Surge I(D1)',none:'شغّل بـ C1 = 470µ واعرض I(D1)'},{to:'a_surgeok',val:yn(surge,x=>2>=1.5*x),txt:YN,label:'I<sub>FSM</sub> ≥ 1.5 × surge'}]},
+      {dev:'run',t:'13. في نافذة الموجات اسحب الماوس بشكل قطري عشان تعرض الدورات المستقرة بس (بدون الـ surge). اضغط Ctrl مع كليك على I(D1) (أو ∑): يطلع المتوسط. لازم ما يزيد عن 0.7 I<sub>F(AV)</sub>.',ok:s=>!!ST.avgD1,
+        rec:[{to:'a_iavg',val:iavg,unit:'mA',dec:2,label:'Average I(D1)',none:'كبّر على الدورات المستقرة واطلب متوسط I(D1)'},{to:'a_iavgok',val:yn(iavg,x=>x<=105),txt:YN,label:'≤ 0.7 I<sub>F(AV)</sub>'}]},
+      {dev:'run',t:'14. اضغط Ctrl+E (أو ⤢ Zoom Full) عشان ترجع للعرض الأصلي.',ok:s=>!!ST.fitted},
+      {dev:'run',t:'15. احذف منحنيات I(D1) و V(S1,out).',ok:s=>ST.fitted&&!tr('I(D1)')&&!tr('V(s1,out)')},
+      {dev:'R',t:'16. نزّل قيمة الحمل (R3 = 4.7k) إلى 270 Ω وأعد المحاكاة، وشوف أثرها على الـ ripple في الخرج.',ok:s=>ST.seen.A270||ST.seen.A270b,
+        rec:[{to:'a_270',val:()=>{const r=ST.rip.A270??ST.rip.A270b,b=ST.rip.A470??ST.rip.A10;return r!=null&&b!=null?(r>b?'a':'b'):null},txt:v=>v==='a'?'increases':'decreases',label:'Ripple with 270 Ω',none:'شغّل بالحمل 270 Ω'}]},
+      /* Procedure B (manual p. 47), steps 1–3 */
+      {dev:'R',t:'Procedure B · 1. أضف voltage regulator لدائرة الـ dc supply مثل Fig. 6.2 (R4 = 100 Ω و D5 = 1N750). رجّع الحمل لـ 4.7 kΩ وأعد المحاكاة. اقرا وسجّل قيمة الـ dc لـ v<sub>out</sub>(t).',ok:s=>!!ST.seen.B47,
+        rec:[{to:'b_v47',val:()=>vdc('B47'),unit:'V',dec:3,label:'V<sub>out</sub>(dc), 4.7 kΩ',none:NR}]},
+      {dev:'R',t:'2. نزّل الحمل لـ 270 Ω وأعد المحاكاة، وشوف أثره على الـ ripple. اقرا وسجّل قيمة الـ dc لـ v<sub>out</sub>(t).',ok:s=>!!ST.seen.B270,
+        rec:[{to:'b_v270',val:()=>vdc('B270'),unit:'V',dec:3,label:'V<sub>out</sub>(dc), 270 Ω',none:NR}]},
+      {dev:'save',t:'3. احفظ الـ schematic قبل ما تسكّر البرنامج (File › Save).',ok:s=>!!ST.savedB},
+      /* Procedure C (manual p. 48), steps 1–10 */
+      {dev:'new',t:'Procedure C · 1. روح File › New Schematic.',ok:s=>!!ST.newC},
+      {dev:'comp',t:'2. حط كل القطع اللي تحتاجها دائرة Fig. 6.4 على الـ schematic، ومعها circuit ground.',acts:['OP747 (Component ← OpAmps)، و V1 = 15 و V2 = 15 للـ ±15 V، و Vin.','R1 = 1000، و D1–D4 = 1N4148، و GND.'],
+        ok:s=>!!ST.newC&&comps('OA').length>=1&&comps('V').length>=3&&comps('R').length>=1&&comps('D').length>=4&&comps('GND').length>=1},
+      {dev:'label',t:'3. وصّل كل القطع، وسمّ الـ nodes: <b>in</b> و <b>IC_out</b> و <b>out</b>.',ok:s=>['in','ic_out','out'].every(n=>labels().includes(n))},
+      {dev:'comp',t:'4. كليك يمين على مصدر الدخل وعبّي: DC offset = 0، Amplitude = 1، Freq = 1000، Tdelay = 0، Theta = 0، Phi = 0، Ncycles = 3.',ok:s=>S().comps.some(c=>srcIs(c,[0,1,1000,0,0,0,3]))},
+      {dev:'ana',t:'5. روح Edit › SPICE analysis وعبّي: Stop time = 3m، Time to start saving data = 0، Maximum Timestep = 3u.',ok:s=>ana(3e-3,3e-6)},
+      {dev:'run',t:'6. شغّل، واضغط على nodes الـ in و IC_out و out بالترتيب عشان تعرض موجاتها.',ok:s=>ST.seen.C&&tr('V(in)')&&tr('V(ic_out)')&&tr('V(out)'),
+        rec:[{to:'c_max',val:()=>lim('C'),unit:'V',dec:2,label:'v<sub>out</sub> max',none:NR},{to:'c_min',val:()=>lim('C',true),unit:'V',dec:2,label:'v<sub>out</sub> min',none:NR}]},
+      {dev:'rot',t:'7. اقلب D2 (Ctrl+R مرتين)، وبعدها غيّر موديله إلى 1N750 (Zener diode).',ok:s=>{const d=byName('D2');return !!d&&d.model==='1N750'}},
+      {dev:'run',t:'8. أعد المحاكاة. قارن موجة الخرج باللي طلعت لك في Procedure B من تجربة الـ op amp (Exp 5).',ok:s=>!!ST.seen.CZ,
+        rec:[{to:'c_zmax',val:()=>lim('CZ'),unit:'V',dec:2,label:'v<sub>out</sub> max',none:NR},{to:'c_zmin',val:()=>lim('CZ',true),unit:'V',dec:2,label:'v<sub>out</sub> min',none:NR},
+          {to:'c_cmp',val:()=>cur('CZ')?'a':null,txt:()=>'Same shape: VD + VZ / −2VD',label:'vs Exp 5',none:NR}]},
+      {dev:'run',t:'9. حط الماوس على R1 (يتحوّل لشكل clamp meter) واضغط: تطلع موجة تيار خرج الـ op amp. كم أعلى قيمة؟ تأكد إنها أقل من 20 mA.',ok:s=>!!ST.iR1,
+        rec:[{to:'c_imax',val:imax,unit:'mA',dec:2,label:'I(R1) max',none:'اعرض I(R1) بعد الـ run'},{to:'c_iok',val:yn(imax,x=>x<20),txt:YN,label:'< 20 mA'}]},
+      {dev:'save',t:'10. احفظ الـ schematic قبل ما تسكّر البرنامج.',ok:s=>!!ST.savedC}
     ],
-    onReset(){for(const k in ST)delete ST[k];ST.seen={};ST.kinds=[];$('result').innerHTML=''}};
+    onReset(){for(const k in ST)delete ST[k];ST.seen={};ST.kinds=[];ST.rip={};$('result').innerHTML=''}};
 }};})();
