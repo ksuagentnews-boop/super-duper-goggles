@@ -78,3 +78,12 @@ frequency response or a semiconductor is involved.
 | VT (Proc III) = V1 + V2 | 2.91 V | 2.91 V | 0 | 7.5 V = 5 + 2.5 (dot at B) | ✓ |
 | I aiding | 2 / |22.8 + j1397| = 1.431 mA | 1.43 mA | 0 | – | ✓ |
 | I opposing | 2 / |22.8 + j219.4| = 9.07 mA | 9.06 mA | −0.1 % | – | ✓ |
+
+## Exp 4 · Power factor improvement (127 V 60 Hz, lamp R 263 Ω + L 0.931 H)
+| Quantity | Theory | Simulated | Diff | Video | Pass |
+|---|---|---|---|---|---|
+| I without C | 127 / 438.6 = 0.2896 A | 0.2888 A (Fluke 1.8 Ω + wattmeter in the line) | −0.3 % | – | ✓ |
+| P without C | 22.05 W | 22.08 W | +0.1 % | – | ✓ |
+| PF without C | 0.600 lag | 0.602 | +0.3 % | – | ✓ |
+| I at 1 µF | 0.2526 A | 0.2522 A | −0.2 % | – | ✓ |
+| C for PF = 1 | 4.84 µF | minimum current at 4.8 µF | – | – | ✓ |

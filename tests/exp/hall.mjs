@@ -24,7 +24,7 @@ export async function run(page, vp, ok) {
   const el = cor.D.filter(d => d.court);
   const wall = d => Math.abs(d.ry - Math.PI / 2) < 1e-6 ? 'L' : Math.abs(d.ry + Math.PI / 2) < 1e-6 ? 'R' : 'F';
   ok(el.length === 7 && ['L', 'F', 'R'].map(w => el.filter(d => wall(d) === w).length).join('/') === '2/3/2' && el.every(d => d.z < -signs.dG), 'the 7 electives open off the courtyard: 2 left / 3 front / 2 right');
-  ok(cor.D.filter(d => d.lab !== 'ee312').every(d => d.closed) && !cor.D.find(d => d.lab === 'ee312').closed, 'every lab but EE312 has a closed door');
+  ok(cor.D.filter(d => !['ee312', 'ee205'].includes(d.lab)).every(d => d.closed) && !cor.D.find(d => d.lab === 'ee312').closed && !cor.D.find(d => d.lab === 'ee205').closed, 'every lab but EE312 and EE205 has a closed door');
   // a closed door only shows a toast
   const closed = await page.evaluate(async () => { const D = HALL.debug.doors().find(d => d.lab === 'ee210'); HALL.debug.goDoor(D); await new Promise(r => setTimeout(r, 450)); return { kind: HALL.debug.cur().kind, msg: document.getElementById('prompt').textContent }; });
   ok(closed.kind === 'corridor' && /قريباً/.test(closed.msg) && /EE210/.test(closed.msg), 'a closed door stays shut and says قريباً');
@@ -55,7 +55,7 @@ export async function run(page, vp, ok) {
   await page.click('#quickBtn');
   ok(await page.$eval('#quick', e => !e.hidden && [...e.querySelectorAll('[data-level]')].map(b => b.dataset.level).join() === '5,6,7,8,elective'), 'quick access lists the levels 5 → 8 and the electives');
   await page.click('#quick [data-level="6"]');
-  ok(await page.$$eval('#quick [data-lab]', a => a.map(b => b.dataset.lab + (b.classList.contains('off') ? '-off' : '')).join()) === 'ee205-off,ee312', 'Level 6 shows EE205 (قريباً) and EE312');
+  ok(await page.$$eval('#quick [data-lab]', a => a.map(b => b.dataset.lab + (b.classList.contains('off') ? '-off' : '')).join()) === 'ee205,ee312', 'Level 6 shows EE205 and EE312 (both built)');
   await page.click('#quick .qback'); await page.click('#quick [data-level="elective"]');
   ok((await page.$$eval('#quick [data-lab]', a => a.length)) === 7, 'Electives shows the seven elective labs');
   await page.click('#quick [data-lab="ee433"]'); await page.waitForTimeout(500);
@@ -64,10 +64,16 @@ export async function run(page, vp, ok) {
   await page.click('#quick [data-lab="ee312"]');
   const items = await page.$$eval('#quick [data-exp]', a => a.map(b => ({ id: b.dataset.exp, off: b.classList.contains('off'), soon: !!b.querySelector('.soon') })));
   ok(items.length === 10, 'level 2 lists the 10 experiments');
-  const built = await page.evaluate(() => REGISTRY.all().filter(e => e.built).map(e => e.id).join());
+  const built = await page.evaluate(() => REGISTRY.all().filter(e => e.built && e.lab.id === 'ee312').map(e => e.id).join());
   ok(items.filter(i => i.off).every(i => i.soon) && items.filter(i => !i.off).map(i => i.id).join() === built, `built ones active (${built}), unbuilt greyed with قريباً`);
   const off = items.find(i => i.off);
   if (off) { await page.$eval(`#quick [data-exp="${off.id}"]`, b => b.click()); ok(await page.$eval('#seatModal', e => e.hidden), 'greyed experiment does nothing'); }
   await page.keyboard.press('Escape');
+  // EE205: its door opens into a room of 8 tables, 2 rows × 4, in manual order, built ones active
+  await page.evaluate(() => HALL.debug.doors().find(d => d.lab === 'ee205').go());
+  const r5 = await page.evaluate(() => ({ lab: HALL.debug.cur().lab, b: HALL.debug.benches().map(b => ({ num: b.num, x: b.x, z: b.z, built: b.built })), reg: REGISTRY.lab('ee205').exps.map(e => e.built) }));
+  ok(r5.lab === 'ee205' && r5.b.length === 8 && r5.b.every((b, i) => b.num === i + 1), 'EE205: 8 tables in manual order');
+  ok(r5.b.slice(0, 4).every(b => b.z === r5.b[0].z) && r5.b.slice(4).every(b => b.z === r5.b[4].z) && r5.b[4].z > r5.b[0].z, 'EE205: two rows of four');
+  ok(r5.b.every((b, i) => b.built === r5.reg[i]), 'EE205: built tables match the registry');
 }
 

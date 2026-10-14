@@ -44,3 +44,7 @@ Small gaps resolved while building (the manual always wins; videos only for look
 - "R = 1.15 Rdc" is the manual's allowance; the simulated coils have their dc resistance only (R ≪ X, so L changes by < 0.1 %).
 - Four Fluke 77s (M1–M3 voltmeters, M4 ammeter) instead of the list's two ammeters + three voltmeters: no step needs a second ammeter, and the desk stays readable (the table photo shows three meters).
 - 2 Vrms (manual), not the video's 5 V. The variable ac supply is locked until «المشرف يتأكد» checks the wiring (no ammeter across the source, no short); any wiring change re-locks it.
+
+## Exp 4
+- The lamp + ballast is modelled as a linear R + L load (R = 263 Ω, L = 0.931 H: 22 W, PF 0.60 lagging, 0.29 A at 127 V), so the minimum current (PF = 1 at 4.84 µF) falls inside the table's 1–6 µF, as the manual's table implies. A real tube's harmonics are not modelled.
+- Source: the bench outlet at 127 V 60 Hz (PLAN). Switch S = the bridging plug joining the capacitor box to the load; dials at 0 = "C not connected".

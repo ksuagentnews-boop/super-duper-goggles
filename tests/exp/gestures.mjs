@@ -31,7 +31,7 @@ export async function run(page, vp, ok) {
   const e2 = await empty();
   if (e2) { if (touch) { await page.touchscreen.tap(e2.x, e2.y); await page.waitForTimeout(60); await page.touchscreen.tap(e2.x, e2.y); } else await page.mouse.dblclick(e2.x, e2.y);
     await page.waitForTimeout(700); const s4 = await st(); ok(!s4.user && Math.abs(s4.w - s4.fw) < 1 && !s4.btn, `double-tap on empty desk refits the whole desk`); }
-  await zoomIn(10); for (let i = 0; i < 20; i++) { if (touch) await pinch(mid, 120, 30); else { await page.mouse.move(mid.x, mid.y); await page.mouse.wheel(0, 500); } }
+  await zoomIn(10); const eo = (await empty()) || mid; for (let i = 0; i < 20; i++) { if (touch) await pinch(mid, 120, 30); else { await page.mouse.move(eo.x, eo.y); await page.mouse.wheel(0, 500); } }
   const s5 = await st(); ok(Math.abs(s5.w - s5.fw) < 1, 'zooming out stops at the fitted desk');
   await zoomIn(2); await page.click('#bFit'); await page.waitForTimeout(700); const s6 = await st(); ok(!s6.user && Math.abs(s6.w - s6.fw) < 1, '«عرض كامل» refits');
   // knobs: on touch a drag turns them, a tap shows big − / + buttons with the value; on desktop the wheel turns them

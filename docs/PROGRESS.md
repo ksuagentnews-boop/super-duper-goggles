@@ -166,6 +166,8 @@ Updated after every finished item (commit + push each time).
 - Exp 8 built (Procedures I–IV, 19 steps); test `tests/exp/ee205-exp8.mjs` desktop + phone. Batch 1 (Exp 1, 2, 3, 6, 8) done.
 - Batch 2 engine: ac sources with the instructor check (bench socket, variable ac supply, 3-phase transformer), fluorescent lamp, PX 120 wattmeter, BC05 capacitor box, rheostats, coupled coils (MC) in the solver, U-core part.
 - Exp 7 built (Procedures I–IV, 12 steps); test `tests/exp/ee205-exp7.mjs` desktop + phone.
+- Exp 4 built (6 steps, instructor check, 19 rows of Table 1); test `tests/exp/ee205-exp4.mjs` desktop + phone.
+- Tests: hall knows EE205 is built (8 tables, 2 × 4); the pan & zoom test wheels over empty desk (EE312 Exp 9 layout moved when the crowded rack fix spread its plugs).
 
 ## In progress
 - Batch 4: 10, 6, 1, 7, 8, 2 (4 in a parallel worktree).
