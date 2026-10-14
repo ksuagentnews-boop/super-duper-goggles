@@ -171,10 +171,13 @@ Updated after every finished item (commit + push each time).
 - Exp 5 built (Procedures I–III, 10 steps); test `tests/exp/ee205-exp5.mjs`. Engine: phasor dc part ignores the mains sources (3-phase phases leaked a dc offset), the transformer's star point is internal, the layout search caps the top-row orders beyond 5 instruments (Exp 5 froze), meters bring one red + one black lead to the tray (their current jacks are spare sockets).
 - Tests: hall knows EE205 is built (8 tables, 2 × 4); the pan & zoom test wheels over empty desk (EE312 Exp 9 layout moved when the crowded rack fix spread its plugs).
 
+- Full suite after both batches: desktop + phone, 1127 checks, ALL PASSED, 0 console errors. All eight EE205 experiments built.
+
 ## In progress
 - Batch 4: 10, 6, 1, 7, 8, 2 (4 in a parallel worktree).
 
 ## Next
+- EE205: owner to try the eight tables (especially the generator key legends of the MTX 3240 and the YEW tolerances read from photos; see docs/ee205/QUESTIONS.md). Per-procedure instrument lists are not built (each EE205 table holds the union; Exp 5 is crowded on a phone).
 - Owner: open the site with `?debug=1` on the iPhone (Claude app + Safari) and send one screenshot of the Exp 9 overview and one of a device zoom, so the real numbers can be compared.
 - Ask the owner whether the request continued after item 8 (the message was cut off after "everywhere in the UI and").
 - Portrait layout for tables with many instruments (stack them; the lead tray now allows it).
