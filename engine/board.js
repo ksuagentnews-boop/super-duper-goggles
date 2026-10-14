@@ -684,7 +684,7 @@ RT.lead={grpOf,trayName,jackName,PL,PNAME,jackAt:g=>jackAt(g),headPos:id=>headPo
 const X=def.setup(RT);
 BENCH.register({
   regions,names,boardRect:[BX,BY,BW,BH],
-  touchMenu:k=>{const i=byKey[k];if(!i||!i.touchMenu)return null;const m=i.touchMenu();if(!m)return null;const P=POS[k];m.rect=[m.rect[0]+P.x,m.rect[1]+P.y,m.rect[2],m.rect[3]];
+  touchMenu:k=>{const i=byKey[k];if(!i||!i.touchMenu)return null;const m=i.touchMenu();if(!m)return null;const P=POS[k],sc=i.sc||1;m.rect=[m.rect[0]*sc+P.x,m.rect[1]*sc+P.y,m.rect[2]*sc,m.rect[3]*sc];
     m.press=it=>{if(it.act)it.act();else i.keyFn(it.key);render()};return m},
   bodyRect:k=>{const i=byKey[k],P=POS[k];return i?[P.x,P.y,i.size[0],i.size[1]]:null},
   tray:def.tray.map(([t,l])=>({t,l})),
