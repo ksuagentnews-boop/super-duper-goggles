@@ -59,7 +59,7 @@ const KORD={coax:0,banana:1};
    with one red and one black lead, moved between its VΩ / mA / 10 A sockets */
 const PL=GROUPS.filter(g=>!LEADDEF[g].spare).map(g=>({kind:JKIND(g),col:JKIND(g)==='banana'?(LEADDEF[g].pol==='-'?'black':'red'):null,n:GMEM[g].length}))
   .sort((a,b)=>KORD[a.kind]-KORD[b.kind]||(a.col==='black')-(b.col==='black')).map((q,i)=>({...q,id:i}));
-const PNAME=q=>q.kind==='coax'?'coax':q.col+' lead';
+const PNAME=q=>q.kind==='coax'?(def.board==='breadboard'?'coax · mini-grabber':'coax'):q.col+' lead';
 const KNAME=g=>JKIND(g)==='coax'?'coax':(LEADDEF[g].pol==='-'?'black':'red')+' lead';
 const isCoax=g=>!!LEADDEF[g].coax;
 const FV={left:{x:-1,y:0},right:{x:1,y:0},up:{x:0,y:-1},down:{x:0,y:1}};
@@ -131,8 +131,11 @@ const nodeC=BBG?(i=>{const c=BBG.nodeC(i);return {x:BX+c.x,y:BY+c.y}}):(i=>({x:B
 const holeOff=h=>({x:((h%3)-1)*19,y:(Math.floor(h/3)-1)*19});
 /* a hole; on the breadboard h = 'j<id>' is the bare top end of the standing jumper id, where a mini-grabber hook clips */
 const holeP=(i,h)=>{if(typeof h==='string'&&h[0]==='j'){const w=RT.S.wires.find(q=>q.id===+h.slice(1));return w?stubTip(w):nodeC(i)}
+  if(typeof h==='string'&&h[0]==='L'){const [id,k]=h.slice(1).split(':').map(Number),p=RT.S.parts.find(q=>q.id===id);return p?legTip(p,k):nodeC(i)}
   if(BBG){const q=BBG.holeP(i,h)||BBG.nodeC(i);return {x:BX+q.x,y:BY+q.y}}const c=nodeC(i),o=holeOff(h);return {x:c.x+o.x,y:c.y+o.y}};
 const stubTip=w=>{const a=holeP(w.a,w.ha);return {x:a.x+11,y:a.y-15}};
+/* breadboard: a part's leg, where a mini-grabber hook can clip (a third of the way from its hole to the body) */
+const legTip=(p,k)=>{const a=holeP(p.a,legHole(p,0)),b=holeP(p.b,legHole(p,1));const s=k?b:a,o=k?a:b;return {x:s.x+(o.x-s.x)*0.22,y:s.y+(o.y-s.y)*0.22-2.5}};
 /* the outline of a node (guide, drag targets) */
 const nodeRect=i=>{if(BBG){const r=BBG.rect(i);return [BX+r[0],BY+r[1],r[2],r[3]]}const c=nodeC(i);return [c.x-32,c.y-32,64,64]};
 const nodeLabel=i=>BBG?BBG.nodeName(i):'node '+i;
@@ -432,7 +435,7 @@ const DRAW={leadPos,
 /* one lead: coax = BNC head, dark trunk, a split, red + black clips; banana = plug, cable, plug. In the tray it lies coiled. */
 function clipSVG(id,j,p,c,k){const P=RT.S.pl[id],on=P.clips[j].bn!=null;if(k&&(on||P.jack!=null))plugs.push({k,p});
   /* breadboard: a mini-grabber hook hanging on the jumper's bare end; a banana plug on its post */
-  if(BBG&&on&&PL[id].kind!=='banana')return `<g transform="translate(${p.x} ${p.y}) rotate(28)"><path d="M0 0 q-4 -6 1 -8" fill="none" stroke="#d0d4d6" stroke-width="1.6"/><rect x="-3.6" y="1" width="7.2" height="22" rx="3.4" fill="${c.c}" stroke="${c.d}" stroke-width="1.2"/><rect x="-2.4" y="18" width="4.8" height="9" rx="2" fill="${c.d}"/></g>`+`<circle cx="${p.x}" cy="${p.y+10}" r="14" fill="transparent" data-k="clip:${id}:${j}" style="cursor:grab"/>`;
+  if(BBG&&PL[id].kind!=='banana')return `<g transform="translate(${p.x} ${p.y}) rotate(${on?28:-62})"><path d="M0 0 q-4 -6 1 -8" fill="none" stroke="#d0d4d6" stroke-width="1.6"/><rect x="-3.6" y="1" width="7.2" height="22" rx="3.4" fill="${c.c}" stroke="${c.d}" stroke-width="1.2"/><rect x="-2.4" y="18" width="4.8" height="9" rx="2" fill="${c.d}"/></g>`+`<circle cx="${p.x}" cy="${p.y+10}" r="14" fill="transparent" data-k="clip:${id}:${j}" style="cursor:grab"/>`;
   return `<circle cx="${p.x}" cy="${p.y}" r="${on?7:9}" fill="${c.c}" stroke="${c.d}" stroke-width="2"/>`+(on?'':`<circle cx="${p.x}" cy="${p.y}" r="3" fill="#c8a24a"/>`)+`<circle cx="${p.x}" cy="${p.y}" r="16" fill="transparent" data-k="clip:${id}:${j}" style="cursor:grab"/>`}
 function headSVG(id,a,j){const q=PL[id],h=`<circle cx="${a.x}" cy="${a.y}" r="18" fill="transparent" data-k="head:${id}" style="cursor:grab"/>`,c=plCol(id,0);
   if(q.kind!=='banana')return (j?`<circle cx="${a.x}" cy="${a.y}" r="11" fill="#59646a" stroke="#1e2326" stroke-width="2"/><circle cx="${a.x}" cy="${a.y}" r="5" fill="#2b3236"/>`
@@ -497,7 +500,12 @@ function bbSpan(d){let vx=SPAN(d.type)*BBG.Q,vy=0;if(d.kind==='move'){const pr=R
 /* where a dragged lead clip lands on the breadboard: a coax hook on the bare end of a standing jumper, a banana plug on a post */
 function bbClipTarget(d){const own=RT.S.pl[d.id].clips[d.j];const skip=own&&own.bn!=null?own.bn+':'+own.bh:null;
   if(PL[d.id].kind==='banana'){const n=nearPost(d.x,d.y);if(n==null)return null;const h=freeHole(n);return h==null?null:{n,h}}
-  const w=nearStub(d.x,d.y,skip);return w?{stub:w,n:w.a,h:'j'+w.id}:null}
+  const w=nearStub(d.x,d.y,skip),lg=nearLeg(d.x,d.y,skip);
+  if(lg&&(!w||lg.d<Math.hypot(stubTip(w).x-d.x,stubTip(w).y-d.y)))return {leg:lg,n:lg.n,h:lg.h,pt:legTip(lg.p,lg.k)};
+  return w?{stub:w,n:w.a,h:'j'+w.id}:null}
+/* a free leg of a two-leg part near a point (Batch 6 item 7: a hook may clip straight onto a part's leg) */
+function nearLeg(x,y,skip){const occ=occupied();let best=null,bd=22;RT.S.parts.forEach(p=>{if(MULTI(p.type)||PARTS[p.type].t==='BR')return;[0,1].forEach(k=>{const h='L'+p.id+':'+k,n=k?p.b:p.a,key=n+':'+h;if(occ.has(key)&&key!==skip)return;
+    const t=legTip(p,k),d=Math.hypot(t.x-x,t.y-y);if(d<bd){bd=d;best={p,k,n,h,d}}})});return best}
 function dragSVG(){if(!drag||!drag.active)return '';let s='';
   if(drag.kind==='head')GROUPS.filter(g=>fitsJ(drag.id,g)&&(jackFree(g)||plIn(g)===drag.id)).forEach(g=>{const a=jackAt(g),on=drag.snap===g;s+=`<circle cx="${a.x}" cy="${a.y}" r="24" fill="${on?'rgba(44,122,107,.25)':'none'}" stroke="${CH2}" stroke-width="3" stroke-dasharray="${on?'':'7 5'}" pointer-events="none"/>`});
   if((drag.kind==='new'||drag.kind==='move')&&MULTI(drag.type)){const n=nearestAnchor(drag.type,drag.x,drag.y,drag.id);
@@ -509,7 +517,7 @@ function dragSVG(){if(!drag||!drag.active)return '';let s='';
     return s+`<g transform="translate(${drag.x} ${drag.y})" opacity=".9">${partBody(drag.type,46,false)}</g>`}
   if(drag.kind==='new'||drag.kind==='move'){const e=nearestEdge(drag.x,drag.y);if(e){const a=nodeC(e[0]),b=nodeC(e[1]);s+=`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${CH2}" stroke-width="6" opacity=".5" stroke-linecap="round"/>`}
     s+=`<g transform="translate(${drag.x} ${drag.y}) rotate(${e&&e[1]-e[0]===COLS?90:0})" opacity=".9">${partBody(drag.type,52,false)}</g>`}
-  if(drag.kind==='clip'&&BBG){const t=bbClipTarget(drag);if(t){const q=t.stub?stubTip(t.stub):nodeC(t.n);s+=`<circle cx="${q.x}" cy="${q.y}" r="${t.stub?9:20}" fill="none" stroke="${CH2}" stroke-width="3"/>`}}
+  if(drag.kind==='clip'&&BBG){const t=bbClipTarget(drag);if(t){const q=t.pt||(t.stub?stubTip(t.stub):nodeC(t.n));s+=`<circle cx="${q.x}" cy="${q.y}" r="${t.stub?9:20}" fill="none" stroke="${CH2}" stroke-width="3"/>`}}
   else if(drag.kind==='clip'){const n=nearestNode(drag.x,drag.y);if(n!=null){const c=nodeC(n);s+=`<rect x="${c.x-32}" y="${c.y-32}" width="64" height="64" rx="9" fill="none" stroke="${CH2}" stroke-width="3"/>`}}
   return s}
 
@@ -662,7 +670,7 @@ svg.addEventListener('pointerdown',e=>{const S=RT.S;if(e.button===2)return;close
   if(k.startsWith('head:')){LASTL=+k.slice(5);LASTP=null;drag={kind:'head',id:+k.slice(5),x:p.x,y:p.y,sx:p.x,sy:p.y,active:false,snap:null};svg.setPointerCapture(e.pointerId);return}
   if(k.startsWith('clip:')){const [,id,j]=k.split(':');LASTL=+id;LASTP=null;drag={kind:'clip',id:+id,j:+j,x:p.x,y:p.y,sx:p.x,sy:p.y,active:false};svg.setPointerCapture(e.pointerId);return}
   if(k==='tb:flip'){const pr=S.parts.find(q=>q.id===S.sel);if(pr){const t=pr.a;pr.a=pr.b;pr.b=t;if(pr.ha!=null){const u=pr.ha;pr.ha=pr.hb;pr.hb=u}circuitChanged();render()}return}
-  if(k==='tb:del'){/* a hook on a standing jumper that goes comes off with it */S.pl.forEach(P=>P.clips.forEach(c=>{if(c.bh==='j'+S.sel){c.bn=c.bh=null}}));syncLeads();
+  if(k==='tb:del'){/* a hook on a standing jumper or on a part's leg that goes comes off with it */S.pl.forEach(P=>P.clips.forEach(c=>{if(c.bh==='j'+S.sel||(typeof c.bh==='string'&&c.bh.startsWith('L'+S.sel+':'))){c.bn=c.bh=null}}));syncLeads();
     S.parts=S.parts.filter(q=>q.id!==S.sel);S.wires=S.wires.filter(w=>w.id!==S.sel);S.sel=null;circuitChanged();render();return}
   if(k.startsWith('node:')&&BBG&&S.wireMode){const q=nearFreeHole(p.x,p.y);if(!q){BENCH.say('الفتحة مشغولة، اختر فتحة فاضية');return}
     if(S.wireStart==null){S.wireStart=q.n;S.wireHole=q.h}else if(S.wireStart!==q.n){S.wires.push({id:RT.uid,a:S.wireStart,ha:S.wireHole,b:q.n,hb:q.h});if(BENCH.paint)S.wcol[RT.uid]=BENCH.paint;RT.uid++;circuitChanged();S.wireStart=null;S.wireHole=null}
@@ -701,7 +709,7 @@ function endDrag(){stopRep();if(press){clearTimeout(press.t);press=null}const S=
     if(jackDrop(d.type,d)){if(d.kind==='move'){S.parts=S.parts.filter(q=>q.id!==d.id);circuitChanged();render()}return}
     if(BBG){if(d.type==='JP'){const q=nearFreeHole(d.x,d.y,n=>BBG.kind(n)!=='post');if(q){S.wires.push({id:RT.uid++,a:q.n,ha:q.h,b:null,hb:null});circuitChanged()}render();return}
       const pl=bbSpan(d);const pr=d.kind==='move'?S.parts.find(q=>q.id===d.id):null;
-      if(pr){if(pl)Object.assign(pr,{a:pl[0].n,ha:pl[0].h,b:pl[1].n,hb:pl[1].h});else if(d.x<BX-20||d.x>BX+BW+20||d.y<BY-20||d.y>BY+BH+20)S.parts=S.parts.filter(q=>q.id!==d.id)}
+      if(pr){if(pl){Object.assign(pr,{a:pl[0].n,ha:pl[0].h,b:pl[1].n,hb:pl[1].h});RT.S.pl.forEach(P=>P.clips.forEach(c=>{if(typeof c.bh==='string'&&c.bh.startsWith('L'+pr.id+':'))c.bn=c.bh.endsWith(':1')?pr.b:pr.a}));syncLeads()}else if(d.x<BX-20||d.x>BX+BW+20||d.y<BY-20||d.y>BY+BH+20)S.parts=S.parts.filter(q=>q.id!==d.id)}
       else if(pl)S.parts.push({id:RT.uid++,type:d.type,a:pl[0].n,ha:pl[0].h,b:pl[1].n,hb:pl[1].h});circuitChanged();render();return}
     const e=nearestEdge(d.x,d.y);const taken=e&&(S.parts.some(q=>q.id!==d.id&&((q.a===e[0]&&q.b===e[1])||(q.a===e[1]&&q.b===e[0])))||!edgeFree(e,d.id));
     if(d.kind==='move'){const pr=S.parts.find(q=>q.id===d.id);if(e&&!taken){pr.a=e[0];pr.b=e[1]}else if(!e){S.parts=S.parts.filter(q=>q.id!==d.id)}}
