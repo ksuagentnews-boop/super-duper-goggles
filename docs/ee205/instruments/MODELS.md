@@ -6,7 +6,7 @@ Sizes are the real outside dimensions where a datasheet gives them (W × H × D)
 
 | Instrument | Model (how identified) | Real size, approx. | Crop |
 |---|---|---|---|
-| Three-phase transformer (Exp 5) | **Leybold "Three-phase extra-low voltage transformer", cat. 521 291** (older Leybold-Heraeus red housing). The panel prints "I max 4 A / 2.3 A Δ", which is the datasheet's "4 A / 2.3 A each". Outputs 6 V / 10 V and 23 V / 40 V star / delta, 400 V 3-phase input. | 20 × 23 × 14 cm (W × H × D), 7.6 kg | `threephase-transformer-a.jpg`, `-b.jpg` |
+| Three-phase transformer (Exp 5) | **Leybold three-phase extra-low voltage transformer, 521 29x family**, in the old Leybold-Heraeus red housing. The electrical match is certain: the panel prints "I max 4 A / 2.3 A Δ", the datasheet's "4 A / 2.3 A each", with eight sockets for two star / delta sets (6 V / 10 V and 23 V / 40 V). The look is NOT the one in today's catalogue photo. | 20 × 23 × 14 cm (W × H × D), 7.6 kg | `threephase-transformer-a.jpg`, `-b.jpg` |
 | Rheostats (Exp 5) | **Leybold rheostat, 537 3x series** (e.g. 537 331, 34 Ω, 3 A / 15 min). Beige housing, 4 mm safety sockets. | 330 × 95 × 160 mm (L × W × H) | `rheostat-front.jpg`, `rheostats-row.jpg`, `rheostat-slider-hand.jpg` |
 | Variable AC supply (Exp 7) | **Leybold "Variable extra-low voltage transformer S", cat. 521 35** (L-in-a-circle Leybold logo; the bottom-right label reads "…VARIABLE EXTRA LOW VOLTAGE TRANSFORMER S"). | ≈ 30 × 20 × 23 cm | `variable-ac-supply.jpg` |
 | Analog scope (Exp 2, 6, 8) | **Hameg HM 203-7** (label under the CRT). 20 MHz, 2 channels. | ≈ 285 × 145 × 380 mm (the HM 203 / 303 family is 285 mm wide) | `hameg-hm203-7.jpg` |
@@ -21,15 +21,24 @@ Relative size order on the bench, from biggest to smallest: Hameg scope > variab
 
 ## What each crop shows
 
-### Three-phase transformer (Leybold 521 291)
-- Upright box, orange-red housing with a dark carrying-handle slot on top.
-- Cream / light-grey front panel inside a red frame.
-- Top-left: a black-framed white rocker mains switch.
-- Top-right: the printed ratings ("≈ / ~ V") and a transformer symbol (two circles with windings on both sides).
-- Centre: "I max 4 A / 2.3 A Δ".
-- Bottom half: two printed triangles side by side, the left one for one output set and the right one for the other. Each has black 4 mm sockets at its three corners and one at its centre (the star point), joined by printed lines labelled with the voltages (star and delta values). A line joins the two star points.
-- Between the triangles: a ⚠ triangle and a small red pilot lamp.
-- Bottom strip: black band with the Leybold logo bottom-left and the product name / catalogue number bottom-right.
+### Three-phase transformer (old Leybold-Heraeus version of the 521 29x)
+**Draw it from the lab crops only** (`threephase-transformer-a.jpg`, `-b.jpg`, and the 4× sharpened close-ups `threephase-panel-top-4x.png`, `threephase-panel-sockets-4x.png`, `threephase-panel-label-5x.png`). Leybold's current shop photo of the 521 291 is a later redesign with the same ratings but a different look, so it is NOT a drawing reference.
+
+Read from the lab photo, enlarged and sharpened:
+- Upright box, about as tall as it is wide. Orange-red housing with rounded edges, and a dark grey carrying-handle recess in the middle of the top.
+- Cream front panel set inside a red frame, slightly recessed.
+- Top-left: a white rocker mains switch in a black square frame.
+- Top-right: a printed AC / three-phase symbol with "≈ V", and under it the transformer symbol: two overlapping circles with a winding mark on each side.
+- Middle: "I max 4 A / 2.3 A Δ" in two lines.
+- Lower half: two printed triangle diagrams side by side, each with **four** black 4 mm sockets, **eight in all**:
+  - each diagram has a socket at the top corner, one at the bottom-left, one at the bottom-right (the three phases L1, L2, L3), and one inside the triangle a little below its middle (N, the star point);
+  - the two upper edges of each triangle are solid lines; the bottom edge and the three lines from N to the corners are dashed;
+  - every line carries its voltage: the line-to-line (delta) value on the edges and the line-to-N (star) value on the dashed lines from N. The datasheet gives 23 V / 40 V for one set and 6 V / 10 V for the other. Read which set is which from the crop;
+  - a solid printed line joins the two N sockets across the panel;
+  - the right diagram sits a little lower than the left one, and its bottom-left socket is right next to the left diagram's bottom-right socket.
+- Between the two triangles, above the N–N line: a ⚠ triangle with a small red pilot lamp under it.
+- Bottom strip: a black band across the panel, with the old Leybold-Heraeus logo (white square mark) and a name at the left, and two lines of white text at the right: the product name in German and English, with the catalogue number.
+- The handwritten pen marks on the real panel are dirt; do not draw them.
 
 ### Rheostat (Leybold 537 3x)
 - Long beige box lying flat, ventilation slots along both long sides; the top is split in two halves along its length.
