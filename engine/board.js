@@ -20,6 +20,15 @@ const COLS=def.cols||7,ROWS=def.rows||5,P=88,NN=COLS*ROWS,BW=COLS*P,BH=ROWS*P;
 /* an instrument drawn as a pair (the two decade boxes) becomes two instruments, each moved and zoomed on its own */
 const specs=[].concat(...def.instruments.map(s=>s.type==='dbox'&&!s.box?[{...s,box:'a'},{...s,box:'b'}]:[s])).map(s=>Object.assign({},s,{at:{x:0,y:0}}));
 const ALL=specs.map(spec=>ENGINE[spec.type](RT,spec));
+/* one common bench scale: each instrument drawn at its real front size (ENGINE.REAL, mm × ENGINE.UPM), wrapped here so the
+   instrument's own code keeps its drawing coordinates: size, lead points, the diode jack slot and the slider are scaled */
+ALL.forEach((i,ix)=>{const sp=specs[ix],real=ENGINE.REAL&&(ENGINE.REAL[sp.type+':'+sp.model]||ENGINE.REAL[sp.type]);if(!real||sp.realScale===false)return;
+  const [w,h]=i.size,sc=ENGINE.UPM*Math.sqrt(real[0]*real[1]/(w*h));if(Math.abs(sc-1)<0.005)return;i.sc=sc;i.size=[w*sc,h*sc];
+  const svg0=i.svg;i.svg=(...a)=>`<g transform="scale(${sc.toFixed(4)})">${svg0.apply(i,a)}</g>`;
+  const sP=q=>q&&{...q,x:q.x*sc,y:q.y*sc};
+  (i.leads||[]).forEach(l=>{const f=l.from;l.from=typeof f==='function'?()=>sP(f()):sP(f);if(l.jat)l.jat=sP(l.jat)});
+  if(i.jackSlot){const r=i.jackSlot;i.jackSlot={x:r.x*sc,y:r.y*sc,w:r.w*sc,h:r.h*sc}}
+  if(i.slideTo){const f=i.slideTo;i.slideTo=(b,p)=>f(b,{x:p.x/sc,y:p.y/sc})}});
 /* per-procedure instruments: a spec with procs:['I','III'] stands on the table only while one of those procedures runs
    (Manual); the bench swaps them when the procedure changes (setProc). Free mode and specs without procs: always there. */
 let ACTP=null;const PROCS=new Map(specs.map((s,i)=>[ALL[i],s.procs||null]));

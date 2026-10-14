@@ -22,3 +22,12 @@ ENGINE.knob=function(cx,cy,r,col,key,label,val,o={}){const ang=o.ang||0;let s=`<
   s+=`<path d="M${cx-r-14} ${cy} l9 -7 v14 z" fill="#55646a"/><rect x="${cx-r-18}" y="${cy-11}" width="16" height="22" fill="transparent" data-k="${key}-" style="cursor:pointer"/>`;
   s+=`<path d="M${cx+r+14} ${cy} l-9 -7 v14 z" fill="#55646a"/><rect x="${cx+r+2}" y="${cy-11}" width="16" height="22" fill="transparent" data-k="${key}+" style="cursor:pointer"/>`;
   if(label)s+=T(cx,cy+r+12,label,{size:8,fill:o.lc||'#3b4a50',a:'middle'});if(val!=null)s+=T(cx,cy+r+23,val,{size:9,fill:'#1d2a2e',a:'middle',w:600});return s};
+/* Real front-panel sizes (W × H, mm) for ONE common bench scale (batch 5, item 1): every instrument is drawn at
+   ENGINE.UPM units per mm, the plug-in panel included (7 nodes of 88 units ≈ its 300 mm). The drawing keeps its own aspect;
+   the scale keeps its area equal to the real front's (so a drawing a little off in aspect is neither too big nor too small).
+   Sources and estimates: docs/INSTRUMENT-SIZES.md. Key: type or type:model. */
+ENGINE.UPM=2.05;
+ENGINE.REAL={
+  scope:[310,142], gen:[235,110], psu:[260,160], dmm:[225,100], xf:[160,148], dbox:[200,124],      // EE312
+  hameg:[285,145], metrix:[250,130], thandar:[260,160], 'hdmm:fluke77':[90,185], 'hdmm:goldstar':[90,180], 'hdmm:bk2704':[91,185],
+  px120:[90,190], capbox:[420,80], yew:[330,90], xf3:[200,230], rheo:[422,515], mains:[190,190], variac:[300,175], lamp:[600,92]};

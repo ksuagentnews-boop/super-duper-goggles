@@ -11,7 +11,7 @@ export async function run(page, vp, ok) {
   ok(await done(1), 'I star load');
   /* set a rheostat to 100 Ω like a student: drag its slider along the rail, then the last ohms with the wheel (mouse) or the ◀ ▶ pad (touch) */
   const setR = async i => { await H.focus('rh');
-    const sl = () => page.evaluate(i => { const e = document.querySelector(`#bench [data-k="slide:r:S${i}"]`); const r = e.getBoundingClientRect(); const m = document.getElementById('bench').getScreenCTM(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, k: m.d }; }, i);
+    const sl = () => page.evaluate(i => { const e = document.querySelector(`#bench [data-k="slide:r:S${i}"]`); const r = e.getBoundingClientRect(); const m = document.getElementById('bench').getScreenCTM(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, k: m.d * (BENCH.sim.RT.inst.rh.sc || 1) }; }, i);
     for (let k = 0; k < 4; k++) { const r = (await status()).r[i - 1]; if (r === 100) break; const a = await sl(); const dy = (r - 100) * (310 / 330) * a.k;
       if (H.touch) { const cdp = await page.context().newCDPSession(page); const T = (type, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: a.x, y }] }); await T('touchStart', a.y); for (let j = 1; j <= 6; j++) await T('touchMove', a.y + dy * j / 6); await T('touchEnd'); await cdp.detach(); }
       else { await page.mouse.move(a.x, a.y); await page.mouse.down(); await page.mouse.move(a.x, a.y + dy, { steps: 6 }); await page.mouse.up(); }
