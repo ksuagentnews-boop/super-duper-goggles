@@ -243,13 +243,17 @@ const BENCH={
     if(key!==this._tmk){this._tmk=key;el.innerHTML=`<div class="tm-t">${m.title}</div>`+m.items.map((it,i)=>`<button data-i="${i}" class="${it.on?'on':''}${it.side?' sd':''}">${it.label}</button>`).join('');
       el.querySelectorAll('button').forEach(b=>b.onclick=()=>{const it=this._tm.items[+b.dataset.i];if(it)this._tm.press(it)})}
     el.hidden=false},
-  onRender(){if(!this.sim)return;this.drawerSync();this.syncTouchMenu();if(this.mode!=='manual')return;
+  onRender(){if(!this.sim)return;
+    /* per-procedure instruments: the current step's procedure decides what stands on the table (Free mode: everything) */
+    {const R=this.sim.RT;if(R&&R.setProc){const S=this.sim.steps||[];const s=this.mode==='manual'&&S.length?S[Math.min(this.cur(),S.length-1)]:null;const p=s&&s.proc||null;
+      if(R.procOf()!==p&&R.setProc(p)!==false&&R.procOf()===p)return}}
+    this.drawerSync();this.syncTouchMenu();if(this.mode!=='manual')return;
     const st=this.sim.status(),S=this.sim.steps;let just=-1;
     for(let i=0;i<S.length;i++){if(this.done[i])continue;if(S[i].ok(st)){this.done[i]=true;just=i;
         /* a build step that ticks with one of its lines not matching the board means the lines are wrong (tests read this) */
         if(S[i].lines){const miss=S[i].lines.filter(l=>!this.sim.lineDone(l)).map(l=>l.t);if(miss.length)this.lineLog.push({step:i+1,miss})}}else break}
     this.drawSteps();this.drawStepCard();
-    if(just>=0){const nx=S[this.cur()];if(nx&&S[just].proc&&nx.proc&&nx.proc!==S[just].proc)this.procNext(S[just].proc,nx.proc);const all=this.done.filter(Boolean).length===S.length;if(all)STATS.done(this.exp);this.say(all?'🎉 خلصت كل خطوات التجربة':'✓ تمت الخطوة '+(just+1));const c=this.el.card;c.classList.remove('flash');void c.offsetWidth;c.classList.add('flash')}},
+    if(just>=0){const nx=S[this.cur()];{const R=this.sim.RT,p=nx&&nx.proc||null;if(R&&R.setProc&&R.procOf()!==p)setTimeout(()=>{if(this.sim&&this.sim.RT===R)this.onRender()})}if(nx&&S[just].proc&&nx.proc&&nx.proc!==S[just].proc)this.procNext(S[just].proc,nx.proc);const all=this.done.filter(Boolean).length===S.length;if(all)STATS.done(this.exp);this.say(all?'🎉 خلصت كل خطوات التجربة':'✓ تمت الخطوة '+(just+1));const c=this.el.card;c.classList.remove('flash');void c.offsetWidth;c.classList.add('flash')}},
   cur(){const S=this.sim.steps;for(let i=0;i<S.length;i++)if(!this.done[i])return i;return S.length},
   drawSteps(){const el=document.getElementById('live');if(!el)return;const S=this.sim.steps,c=this.cur(),n=this.done.filter(Boolean).length;
     el.innerHTML=`<div class="sh"><b>خطوات التجربة</b><span dir="ltr">${n} / ${S.length}</span></div><div class="prog"><i style="width:${n/S.length*100}%"></i></div>`+

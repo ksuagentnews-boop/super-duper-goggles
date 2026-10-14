@@ -17,7 +17,8 @@ export async function run(page, vp, ok) {
   await power(); for (const n of [1, 2, 3]) { await H.focus('hm' + n); await H.key(`h${n}:SW+`, 7); } await H.focus('hm5'); await H.key('h5:SW-', 3); await H.focus('hm4'); await H.key('h4:SW-');
   ok(await done(4), 'I powered by the instructor');
   await H.lead('h5v', 4); await H.lead('h5c', 20); ok(await done(5), `I readings ${JSON.stringify((await status()).ST)}`);
-  await off(); for (const [k, n] of [['w1i', 0], ['w1ic', 2], ['h1ma', 2], ['w1v', 2], ['w1vc', 20], ['x3n', 20]]) await H.lead(k, n);
+  await off(); ok(await page.evaluate(() => !BENCH.sim.RT.layout.regions.hm2 && !!BENCH.sim.RT.layout.regions.pw1 && !BENCH.sim.RT.S.jack.h2ma), 'Procedure II: M2–M5 left the table (their leads back in the tray), the PX 120 came');
+  for (const [k, n] of [['x3b', 18], ['x3c', 32], ['w1i', 0], ['w1ic', 2], ['h1ma', 2], ['w1v', 2], ['w1vc', 20], ['x3n', 20]]) await H.lead(k, n);
   ok(await done(6), `II Fig. 8 built ${JSON.stringify(await status())}`);
   await power(); await H.focus('pw1'); await H.key('w1:PWR'); ok(await done(7), `II PA ${JSON.stringify((await status()).ST)}`);
   await off(); await H.lead('x3n', null); await H.lead('w1vc', 14); ok(await done(8), 'III Fig. 9 built');

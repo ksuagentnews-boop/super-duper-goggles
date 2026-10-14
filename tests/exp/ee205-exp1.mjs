@@ -21,8 +21,8 @@ export async function run(page, vp, ok) {
   const BOX = [[0, 4], [1, 5], [2, 7], [3, 5], [4, 3]];
   for (const [j, n] of BOX) { const t = [0, 0, 0, 0, 0, 0]; t[j] = n; await dials(t); }
   ok(await done(10), `I Table 3 five readings: ${JSON.stringify(await st())}`);
-  await dials([0, 0, 0, 0, 0, 0]);
-  // ---- Procedure II ----
+  // ---- Procedure II (the decade box leaves the table, its leads back in the tray; the supply comes) ----
+  ok(await page.evaluate(() => !BENCH.sim.RT.layout.regions.yew1 && !!BENCH.sim.RT.layout.regions.psu && !BENCH.sim.RT.S.jack.y1H), 'II: decade box left, supply came ' + JSON.stringify(await page.evaluate(() => [BENCH.sim.RT.procOf(), Object.keys(BENCH.sim.RT.layout.regions), BENCH.sim.RT.S.jack.y1H, BENCH.sim.status && 0])));
   await H.lead('y1H', null); await H.lead('y1L', null);
   ok(await done(11), 'II board clear');
   await H.focus('board'); await H.place('R4k7', 7, 8); await H.place('R1k', 8, 9); await H.place('R2k2', 9, 10); await H.lead('Lp', 7); await H.lead('Lm', 10);
@@ -37,6 +37,7 @@ export async function run(page, vp, ok) {
   await H.focus('board'); for (const [a, b] of [[7, 8], [8, 9], [9, 10]]) await H.del(a, b);
   await H.lead('h1v', null); await H.lead('h1c', null); await H.lead('Lp', null); await H.lead('Lm', null);
   ok(await done(17), 'III output off, board clear');
+  ok(await page.evaluate(() => !BENCH.sim.RT.layout.regions.hm1 && !!BENCH.sim.RT.layout.regions.hm2), 'III: Fluke left, GoldStar came');
   await H.place('R1k', 23, 30); await H.place('R4k7', 24, 31); await H.place('R2k2', 25, 32);
   for (const [a, b] of [[30, 31], [31, 32], [16, 17], [17, 18], [16, 23], [17, 24], [18, 25], [15, 16]]) await H.place('BR', a, b);
   await H.lead('Lp', 15); await H.lead('Lm', 32); ok(await done(18), 'III Fig. 6 built');

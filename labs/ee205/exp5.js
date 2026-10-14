@@ -5,7 +5,7 @@
    the load's n) → PA, PT = 3 PA vs 3 IA² RA.
    Procedure III: Fig. 9, the wattmeter's voltage coil across lines A and B, its three-phase key → the total power.
    Instruments: the red three-phase transformer (Y, 24 V phase), the rheostats, five Fluke 77 (M1–M3 ammeters in lines
-   A, B, C; M4 = VL, M5 = VP and the ohmmeter), one Metrix PX 120. The instructor checks before power.
+   A, B, C; M4 = VL, M5 = VP and the ohmmeter) in Procedure I; the PX 120 and M1 (IA) in Procedures II and III. The instructor checks before power.
    Decisions: one PX 120 (the list says two wattmeters; the second belongs to the two-wattmeter method of the background,
    which no procedure uses). Procedure III's title says "single wattmeter": the PX 120's 3Φ (balanced three-wire) key. */
 EXP_DEFS['ee205/exp5']=(()=>{const H=ENGINE.sheet;
@@ -29,8 +29,8 @@ return {procs:[{id:'I',title:'Three phase loading (Fig. 7)'},{id:'II',title:'Sin
 sheet,params:()=>({}),
 instruments:[
   {type:'xf3'},{type:'rheo',prev:d=>{d.r=[150,85,120]}},
-  {type:'hdmm',model:'fluke77',n:1},{type:'hdmm',model:'fluke77',n:2},{type:'hdmm',model:'fluke77',n:3},{type:'hdmm',model:'fluke77',n:4,prev:d=>{d.pos=2}},{type:'hdmm',model:'fluke77',n:5,prev:d=>{d.pos=4}},
-  {type:'px120',n:1}],
+  {type:'hdmm',model:'fluke77',n:1},{type:'hdmm',model:'fluke77',n:2,procs:['I']},{type:'hdmm',model:'fluke77',n:3,procs:['I']},{type:'hdmm',model:'fluke77',n:4,procs:['I'],prev:d=>{d.pos=2}},{type:'hdmm',model:'fluke77',n:5,procs:['I'],prev:d=>{d.pos=4}},
+  {type:'px120',n:1,procs:['II','III']}],
 parts:{BR:{t:'BR',lab:''}},
 tray:[['BR','Bridging plug'],['W','Wire']],
 setup(RT){
@@ -49,6 +49,8 @@ setup(RT){
     st.star=star();st.set100=r.every(v=>Math.abs(v-100)<=0.5);
     if(st.star&&!RT.S.x3.pwr){[['ra',4],['rb',18],['rc',32]].forEach(([k,x],i)=>{const v=K.across('OHM',N(x),N(20),true);if(v!=null&&Math.abs(r[i]-100)<=0.5)ST[k]=v})}
     const lines=X('a')===N(0)&&X('b')===N(14)&&X('c')===N(28);st.lines=lines;
+    /* Figs. 8 and 9: lines B and C straight to the load (their ammeters have left the table) */
+    const lines2=X('a')===N(0)&&(X('b')===N(18)||(X('b')===N(14)&&RT.leadNet('h2ma')===N(14)&&RT.leadNet('h2c')===N(18)))&&(X('c')===N(32)||(X('c')===N(28)&&RT.leadNet('h3ma')===N(28)&&RT.leadNet('h3c')===N(32)));st.lines2=lines2;
     /* an ammeter in a line, from its leads (its rotary may still be off) */
     const ser=(m,a,b)=>RT.leadNet(`h${m}ma`)===N(a)&&RT.leadNet(`h${m}c`)===N(b)&&N(a)!==N(b);
     const sA=ser(1,0,4)||(RT.leadNet('w1i')===N(0)&&RT.leadNet('w1ic')===N(2)&&ser(1,2,4));
@@ -58,10 +60,10 @@ setup(RT){
     /* Fig. 8: A → wattmeter current (0 → 2) → M1 (2 → 4); voltage coil 2 → n; transformer n on the load n */
     const pw=RT.inst.pw1.reading();st.pw=pw;
     const wI=RT.leadNet('w1i')===N(0)&&RT.leadNet('w1ic')===N(2);
-    st.fig8=st.star&&lines&&wI&&ser(1,2,4)&&X('n')===N(20)&&RT.leadNet('w1v')===N(2)&&RT.leadNet('w1vc')===N(20);
+    st.fig8=st.star&&lines2&&wI&&ser(1,2,4)&&X('n')===N(20)&&RT.leadNet('w1v')===N(2)&&RT.leadNet('w1vc')===N(20);
     if(st.fig8&&on&&st.set100&&pw.pwr&&!pw.tri){const ia=amm(N(2),N(4));if(ia!=null){ST.pa=pw.P;ST.ia2=ia}}
     /* Fig. 9: no neutral wire, voltage coil across A and B, the 3Φ key */
-    st.fig9=st.star&&lines&&wI&&X('n')==null&&RT.leadNet('w1v')===N(2)&&RT.leadNet('w1vc')===N(14);
+    st.fig9=st.star&&lines2&&wI&&X('n')==null&&RT.leadNet('w1v')===N(2)&&RT.leadNet('w1vc')===N(14);
     if(st.fig9&&on&&st.set100&&pw.pwr&&pw.tri)ST.p3=pw.P;
     st.off=!RT.S.x3.pwr;st.ST=ST;return st}
   $('submit').addEventListener('click',()=>{const g=G.grader(),v=G.v;const near=(k,sc,tol,t,u)=>g.add(ST[k]!=null&&G.near(v(k),ST[k]*sc,tol),t,ST[k]!=null?`${(ST[k]*sc).toFixed(2)} ${u}`:'measure it');
@@ -83,8 +85,8 @@ setup(RT){
           {t:'M4 VΩ → node 0',lead:'h4v',at:0},{t:'M4 COM → node 14',lead:'h4c',at:14}],ok:s=>s.fig7},
       {dev:'x3',t:'3. ⚠ اضغط «المشرف يتأكد» على المحوّل، وبعدين شغّل الـ supply. M1–M3 على A~، و M4 و M5 على V~.',ok:s=>s.fig7&&s.on},
       {dev:'board',t:'4–5. سجّل قراءات الأميترات الثلاثة و V<sub>L</sub> و V<sub>P</sub> (M5: VΩ → node 4، COM → node 20).',ok:s=>ST.ia!=null},
-      {dev:'x3',fig:F8,figCap:'Fig. 8',t:'Procedure II: طفّ المحوّل. حط ملف التيار للـ PX 120 في الخط A (10A → node 0، COM → node 2) و M1 بعده (300mA → node 2، COM → node 4)، وملف الجهد من node 2 للـ n (node 20)، ووصّل n المحوّل بـ node 20.',
-        lines:[{t:'W 10A → node 0',lead:'w1i',at:0},{t:'W COM (A) → node 2',lead:'w1ic',at:2},{t:'M1 300mA → node 2',lead:'h1ma',at:2},{t:'W 600V → node 2',lead:'w1v',at:2},{t:'W COM (V) → node 20 (n)',lead:'w1vc',at:20},{t:'3φ n → node 20',lead:'x3n',at:20}],ok:s=>s.fig8},
+      {dev:'x3',fig:F8,figCap:'Fig. 8',t:'Procedure II: طفّ المحوّل. الأميترات M2 و M3 والفولتميترات راحت من الطاولة: وصّل خط B مباشرة لـ b (node 18) وخط C لـ c (node 32). حط ملف التيار للـ PX 120 في الخط A (10A → node 0، COM → node 2) و M1 بعده (300mA → node 2، COM → node 4)، وملف الجهد من node 2 للـ n (node 20)، ووصّل n المحوّل بـ node 20.',
+        lines:[{t:'3φ b (L2) → node 18 (b)',lead:'x3b',at:18},{t:'3φ c (L3) → node 32 (c)',lead:'x3c',at:32},{t:'W 10A → node 0',lead:'w1i',at:0},{t:'W COM (A) → node 2',lead:'w1ic',at:2},{t:'M1 300mA → node 2',lead:'h1ma',at:2},{t:'W 600V → node 2',lead:'w1v',at:2},{t:'W COM (V) → node 20 (n)',lead:'w1vc',at:20},{t:'3φ n → node 20',lead:'x3n',at:20}],ok:s=>s.fig8},
       {dev:'pw1',t:'2–3. المشرف يتأكد، شغّل المحوّل والـ PX 120، وسجّل P<sub>A</sub> و I<sub>A</sub>. احسب P<sub>T</sub> = 3P<sub>A</sub> و 3I<sub>A</sub>²R<sub>A</sub>.',ok:s=>ST.pa!=null},
       {dev:'x3',fig:F9,figCap:'Fig. 9',t:'Procedure III: طفّ المحوّل، شيل سلك الـ n (3φ n)، وانقل COM ملف الجهد للخط B (node 14).',lines:[{t:'W COM (V) → node 14 (B)',lead:'w1vc',at:14}],ok:s=>s.fig9},
       {dev:'pw1',t:'2–3. المشرف يتأكد وشغّل، واضغط زر 3Φ على الـ PX 120: هذي القدرة الكلية. قارنها بـ Procedure II.',ok:s=>ST.p3!=null},

@@ -25,7 +25,9 @@ export async function run(page, vp, ok) {
   await H.key('s:DUAL'); await H.key('s:ADD'); ok(await done(13), 'I ADD');
   // ---- Procedure II ----
   await H.key('s:ADD');
-  await H.focus('psu'); await H.key('p:LON'); await H.lead('Lp', null); await H.lead('Lm', null); await H.lead('c1r', null); await H.lead('c1b', null);
+  /* the supply leaves the table with Procedure I (its leads go back to the tray) */
+  ok(await page.evaluate(() => !BENCH.sim.RT.layout.regions.psu && !BENCH.sim.RT.S.jack.Lp), 'II: supply left the table');
+  await H.lead('c1r', null); await H.lead('c1b', null);
   await H.focus('sc'); await H.key('s:V2-', 3);
   await H.focus('gen'); await H.mtx('a', 10); await H.mtx('f', 100); ok(await done(14), `II 10 Vpp on the scope ${JSON.stringify((await sc()).ch[1])}`);
   for (const [i, f] of [100, 1000, 2000, 3000, 4000, 5000].entries()) { await H.mtx('f', f); ok(await done(15 + i), `II DMM at ${f} Hz`); }

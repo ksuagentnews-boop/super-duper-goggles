@@ -49,7 +49,7 @@ ${FQ.map(f=>`<tr><td>10 V</td><td>${f} Hz</td><td>${H.num('r'+f,'0.001',70)}</td
 return {procs:[{id:'I',title:'Familiarization with the oscilloscope (Figs. 1, 2)'},{id:'II',title:'Oscilloscope vs DMM for RMS'},{id:'III',title:'Series RL circuit measurements (Fig. 3)'}],
 sheet,params:()=>({}),
 instruments:[
-  {type:'thandar',prev:d=>{d.u[0].v=3;d.u[0].ilim=0.2}},
+  {type:'thandar',procs:['I'],prev:d=>{d.u[0].v=3;d.u[0].ilim=0.2}},
   {type:'metrix',prev:{freq:500,amp:2,wave:'Triangle'}},
   {type:'hameg',prev:sc=>{sc.ch[0].vd=0.5;sc.ch[0].cpl='AC';sc.ch[1].vd=5;sc.td=5e-3;sc.focus=0.6}},
   {type:'hdmm',model:'fluke77',n:1,prev:d=>{d.pos=4}},

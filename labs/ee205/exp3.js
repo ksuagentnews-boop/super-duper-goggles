@@ -46,7 +46,7 @@ sheet,params:()=>({}),
 instruments:[
   {type:'metrix',prev:{freq:2000,amp:5,wave:'Sine'}},
   {type:'hdmm',model:'fluke77',color:'yellow',n:1,prev:d=>{d.pos=2}},
-  {type:'hdmm',model:'fluke77',color:'yellow',n:2},
+  {type:'hdmm',model:'fluke77',color:'yellow',n:2,procs:['I']},
   {type:'yew',n:1,prev:d=>{d.d=[0,0,1,0,0,0]}}],
 parts:PARTS,
 tray:[['R100','100 Ω'],['R1k','1 kΩ'],['R3k3','3.3 kΩ'],['R10k','10 kΩ'],['L175','17.5 mH coil'],['L96','coil + iron core (96 mH)'],['C01','0.1 µF'],['C047','0.47 µF'],['C1','1 µF'],['C47','4.7 µF'],['C22','22 µF'],['BR','Bridging plug'],['W','Wire']],

@@ -19,9 +19,14 @@ const RT={S:null,dirty:true,TB:null,PX,MODE,uid:1};
 const COLS=def.cols||7,ROWS=def.rows||5,P=88,NN=COLS*ROWS,BW=COLS*P,BH=ROWS*P;
 /* an instrument drawn as a pair (the two decade boxes) becomes two instruments, each moved and zoomed on its own */
 const specs=[].concat(...def.instruments.map(s=>s.type==='dbox'&&!s.box?[{...s,box:'a'},{...s,box:'b'}]:[s])).map(s=>Object.assign({},s,{at:{x:0,y:0}}));
-const INST=specs.map(spec=>ENGINE[spec.type](RT,spec));
-const byKey={},byPrefix={};INST.forEach(i=>{byKey[i.key]=i;byPrefix[i.prefix]=i});
-const LEADDEF={};INST.forEach(i=>(i.leads||[]).forEach(l=>LEADDEF[l.k]=Object.assign({inst:i},l)));
+const ALL=specs.map(spec=>ENGINE[spec.type](RT,spec));
+/* per-procedure instruments: a spec with procs:['I','III'] stands on the table only while one of those procedures runs
+   (Manual); the bench swaps them when the procedure changes (setProc). Free mode and specs without procs: always there. */
+let ACTP=null;const PROCS=new Map(specs.map((s,i)=>[ALL[i],s.procs||null]));
+const act=i=>{const p=PROCS.get(i);return !p||ACTP==null||p.includes(ACTP)};
+let INST=ALL.filter(act);
+const byKey={},byPrefix={};ALL.forEach(i=>{byKey[i.key]=i;byPrefix[i.prefix]=i});
+const LEADDEF={};ALL.forEach(i=>(i.leads||[]).forEach(l=>LEADDEF[l.k]=Object.assign({inst:i},l)));
 const LEADS=Object.keys(LEADDEF);
 const fromOf=k=>{const f=LEADDEF[k].from;return typeof f==='function'?f():f};
 const labelOf=k=>{const l=LEADDEF[k].label;return typeof l==='function'?l():l};
@@ -46,7 +51,7 @@ const PNAME=q=>q.kind==='coax'?'coax':q.col+' lead';
 const KNAME=g=>JKIND(g)==='coax'?'coax':(LEADDEF[g].pol==='-'?'black':'red')+' lead';
 const isCoax=g=>!!LEADDEF[g].coax;
 const FV={left:{x:-1,y:0},right:{x:1,y:0},up:{x:0,y:-1},down:{x:0,y:1}};
-const FACE={};INST.forEach(i=>{const fs=(i.leads||[]).map(l=>fromOf(l.k));if(!fs.length){FACE[i.key]='down';return}
+const FACE={};ALL.forEach(i=>{const fs=(i.leads||[]).map(l=>fromOf(l.k));if(!fs.length){FACE[i.key]='down';return}
   const cx=fs.reduce((t,f)=>t+f.x,0)/fs.length,cy=fs.reduce((t,f)=>t+f.y,0)/fs.length,[w,h]=i.size;
   const d={left:cx,right:w-cx,up:cy,down:h-cy};FACE[i.key]=Object.keys(d).reduce((a,b)=>d[b]<d[a]?b:a)});
 const RACK=64,RG=50,CG=70;          // rack row above the panel · gap between instruments · gap between a side column and the panel
@@ -65,7 +70,8 @@ function setTray(mode){const n=PL.length;if(!n)return;let cols;
   if(mode==='below'){TRAY.w=BW+132;cols=Math.max(1,Math.floor((TRAY.w-16)/SW));TRAY.x=BX-66;TRAY.y=BY+BH+34}
   else{cols=n>5?2:1;TRAY.w=cols*SW+16;TRAY.x=mode==='right'?BX+BW+CG:BX-CG-TRAY.w;TRAY.y=BY}
   TRAY.cols=cols;TRAY.h=34+Math.ceil(n/cols)*SH+6;TRAY.mode=mode}
-const DEF={};{
+const DEF={};const ALEADS=()=>LEADS.filter(k=>act(LEADDEF[k].inst));
+function doLayout(first){
   /* candidates: down-facing instruments in the top row (every order); a right-facing one (DMM, transformer) either in the
      left column or at the left end of the top row (a wider gap after it lets its cables turn down to the rack); a
      left-facing one in the right column or at the right end. Crossing-free candidates only; the winner gives the largest
@@ -88,37 +94,38 @@ const DEF={};{
   for(const [colL,rowL] of splits(L))for(const [colR,rowR] of splits(R))for(const ord of perms(T))for(const tm of TRAY.on?['below','right','left']:['below']){
     if((tm==='right'&&colR.length)||(tm==='left'&&colL.length))continue;
     place(colL,colR,rowL,ord,rowR);setTray(tm);const term=k=>{const f=fromOf(k),p=DEF[LEADDEF[k].inst.key];return {x:f.x+p.x,y:f.y+p.y}};
-    const pk=parkFor(LEADS.map(k=>({k,x:term(k).x})));const x=crossCount(parkedCables(DEF,pk),DEF);if(x.cc.length||x.ci.length)continue;
-    const len=LEADS.reduce((t,k)=>{const a=term(k);return t+Math.hypot(a.x-pk[k].x,a.y-pk[k].y)},0);
+    const AL=ALEADS();const pk=parkFor(AL.map(k=>({k,x:term(k).x})));const x=crossCount(parkedCables(DEF,pk),DEF);if(x.cc.length||x.ci.length)continue;
+    const len=AL.reduce((t,k)=>{const a=term(k);return t+Math.hypot(a.x-pk[k].x,a.y-pk[k].y)},0);
     const [x0,y0,x1,y1]=bbox();const sc=Math.min(av.W/(x1-x0),av.H/(y1-y0));
     if(!best||sc>best.sc*1.002||(sc>best.sc*0.998&&len<best.len-1))best={sc,len,args:[colL,colR,rowL,ord,rowR],tm}}
   if(best){place(...best.args);setTray(best.tm)}else{place(L,R,[],T,[]);setTray('below')}
-  /* shift so the whole desk starts at (20,20) */
-  const [x0,y0]=bbox();const dx=20-x0,dy=20-y0;BX+=dx;BY+=dy;parkY+=dy;TRAY.x+=dx;TRAY.y+=dy;INST.forEach(i=>{DEF[i.key].x+=dx;DEF[i.key].y+=dy})}
+  /* the first time: shift so the whole desk starts at (20,20); later sets keep the panel where it is */
+  if(first){const [x0,y0]=bbox();const dx=20-x0,dy=20-y0;BX+=dx;BY+=dy;parkY+=dy;TRAY.x+=dx;TRAY.y+=dy;INST.forEach(i=>{DEF[i.key].x+=dx;DEF[i.key].y+=dy})}}
+doLayout(true);
 /* tray slots: the instrument end (BNC / banana plug) on the left, the board end(s) on the right */
-const SLOT=PL.map((q,i)=>{const sx=TRAY.x+8+(i%TRAY.cols)*SW,sy=TRAY.y+30+Math.floor(i/TRAY.cols)*SH;return {x:sx,y:sy,c:{x:sx+26,y:sy+44},clip:j=>q.n===1?{x:sx+SW-30,y:sy+44}:{x:sx+SW-30,y:sy+32+j*24}}});
+const SLOT=[];const setSlots=()=>{SLOT.length=0;PL.forEach((q,i)=>{const sx=TRAY.x+8+(i%TRAY.cols)*SW,sy=TRAY.y+30+Math.floor(i/TRAY.cols)*SH;SLOT.push({x:sx,y:sy,c:{x:sx+26,y:sy+44},clip:j=>q.n===1?{x:sx+SW-30,y:sy+44}:{x:sx+SW-30,y:sy+32+j*24}})})};setSlots();
 const inTray=p=>TRAY.on&&p.x>=TRAY.x&&p.x<=TRAY.x+TRAY.w&&p.y>=TRAY.y&&p.y<=TRAY.y+TRAY.h;
 /* the student's arrangement, remembered per experiment (relative to the panel) */
-const LSK='eelab:layout:'+(BENCH.exp||'');const POS={};
+const LSK0='eelab:layout:'+(BENCH.exp||'');let LSK=LSK0;const POS={};
 function loadPos(){INST.forEach(i=>POS[i.key]={...DEF[i.key]});try{const s=JSON.parse(localStorage.getItem(LSK)||'null');if(s)INST.forEach(i=>{const q=s[i.key];if(q&&isFinite(q.x)&&isFinite(q.y))POS[i.key]={x:BX+q.x,y:BY+q.y}})}catch(_){}}
 function savePos(){try{const o={};INST.forEach(i=>o[i.key]={x:Math.round(POS[i.key].x-BX),y:Math.round(POS[i.key].y-BY)});localStorage.setItem(LSK,JSON.stringify(o))}catch(_){}}
 loadPos();
 const termOf=k=>{const f=fromOf(k),p=POS[LEADDEF[k].inst.key];return {x:f.x+p.x,y:f.y+p.y}};
 /* parked plugs belong to their lead: they rest on the rack in the default arrangement and travel with the instrument
    when it is moved, so a lead never keeps an old route across the desk */
-const DPARK=parkFor(LEADS.map(k=>{const f=fromOf(k),p=DEF[LEADDEF[k].inst.key];return {k,x:f.x+p.x}}));
-const PARK={};const updPark=()=>LEADS.forEach(k=>{const ik=LEADDEF[k].inst.key,d=DPARK[k];PARK[k]={x:d.x+POS[ik].x-DEF[ik].x,y:d.y+POS[ik].y-DEF[ik].y}});updPark();
+const DPARK={};const setDpark=()=>{for(const k in DPARK)delete DPARK[k];Object.assign(DPARK,parkFor(ALEADS().map(k=>{const f=fromOf(k),p=DEF[LEADDEF[k].inst.key];return {k,x:f.x+p.x}})))};setDpark();
+const PARK={};const updPark=()=>ALEADS().forEach(k=>{const ik=LEADDEF[k].inst.key,d=DPARK[k];PARK[k]={x:d.x+POS[ik].x-DEF[ik].x,y:d.y+POS[ik].y-DEF[ik].y}});updPark();
 const nodeC=i=>({x:BX+44+(i%COLS)*P,y:BY+44+Math.floor(i/COLS)*P});
 const holeOff=h=>({x:((h%3)-1)*19,y:(Math.floor(h/3)-1)*19});
 const holeP=(i,h)=>{const c=nodeC(i),o=holeOff(h);return {x:c.x+o.x,y:c.y+o.y}};
 const EDGES=[];for(let i=0;i<NN;i++){if(i%COLS<COLS-1)EDGES.push([i,i+1]);if(i+COLS<NN)EDGES.push([i,i+COLS])}
 function dirHole(a,b){if(b===a+1)return 5;if(b===a-1)return 3;if(b===a+COLS)return 7;return 1}
 const regions={},names={};
-const updRegions=()=>INST.forEach(i=>{const p=POS[i.key];regions[i.key]=[p.x-6,p.y-44,i.size[0]+12,i.size[1]+50]});
-updRegions();INST.forEach(i=>names[i.key]=i.name||ENGINE.NAMES[i.key]);
+const updRegions=()=>{ALL.forEach(i=>{if(!act(i))delete regions[i.key]});INST.forEach(i=>{const p=POS[i.key];regions[i.key]=[p.x-6,p.y-44,i.size[0]+12,i.size[1]+50]})};
+updRegions();ALL.forEach(i=>names[i.key]=i.name||ENGINE.NAMES[i.key]);
 /* the board's own frame (a thin border round the panel) is what zooms; the rack row and the lead tray are part of the
    overview fit only ('rack', never focused), so a touch beside the panel reaches what is there */
-regions.board=[BX-14,BY-14,BW+28,BH+28];regions.rack=[BX-66,parkY-34,BW+132,BY+BH+16-(parkY-34)];if(TRAY.on){const r=regions.rack,x0=Math.min(r[0],TRAY.x-6),x1=Math.max(r[0]+r[2],TRAY.x+TRAY.w+6),y1=Math.max(r[1]+r[3],TRAY.y+TRAY.h+6);regions.rack=[x0,r[1],x1-x0,y1-r[1]]}names.board=ENGINE.NAMES.board;
+regions.board=[BX-14,BY-14,BW+28,BH+28];const updRack=()=>{regions.rack=[BX-66,parkY-34,BW+132,BY+BH+16-(parkY-34)];if(TRAY.on){const r=regions.rack,x0=Math.min(r[0],TRAY.x-6),x1=Math.max(r[0]+r[2],TRAY.x+TRAY.w+6),y1=Math.max(r[1]+r[3],TRAY.y+TRAY.h+6);regions.rack=[x0,r[1],x1-x0,y1-r[1]]}};updRack();names.board=ENGINE.NAMES.board;
 RT.inst=byKey;RT.layout={BX,BY,P,COLS,ROWS,parkY,PARK,regions,POS,DEF,FACE,TRAY,SLOT,GROUPS,PL};
 
 /* ---------- parts ---------- */
@@ -136,7 +143,7 @@ function fpC(t,n){const ps=PARTS[t].pins;let x=0,y=0;ps.forEach(q=>{const c=node
 /* ---------- state ---------- */
 function fresh(){
   const S={parts:[],wires:[],leads:{},wcol:{}};
-  INST.forEach(i=>S[i.key]=i.fresh());
+  ALL.forEach(i=>S[i.key]=i.fresh());
   Object.assign(S,{sel:null,wireMode:false,wireStart:null,armed:null});
   LEADS.forEach(k=>S.leads[k]={node:null,hole:null,bn:null,bh:null});S.jack={};GROUPS.forEach(g=>S.jack[g]=false);
   S.pl=PL.map(q=>({jack:null,clips:Array.from({length:q.n},()=>({bn:null,bh:null}))}));S.pick=null;
@@ -147,10 +154,10 @@ function fresh(){
 function syncLeads(){const S=RT.S;GROUPS.forEach(g=>S.jack[g]=false);LEADS.forEach(k=>{const l=S.leads[k];l.node=l.hole=l.bn=l.bh=null});
   S.pl.forEach(P=>{if(P.jack==null)return;S.jack[P.jack]=true;GMEM[P.jack].forEach((k,j)=>{const c=P.clips[j],l=S.leads[k];if(!c)return;l.bn=l.node=c.bn;l.bh=l.hole=c.bh})})}
 const plIn=g=>RT.S.pl.findIndex(P=>P.jack===g);
-const jackFree=g=>plIn(g)<0&&!(LEADDEF[g].busy&&LEADDEF[g].busy());
+const jackFree=g=>plIn(g)<0&&act(LEADDEF[g].inst)&&!(LEADDEF[g].busy&&LEADDEF[g].busy());
 const fitsJ=(id,g)=>PL[id].kind===JKIND(g);
 function toTray(id){const P=RT.S.pl[id];P.jack=null;P.clips.forEach(c=>{c.bn=c.bh=null})}
-function plug(id,g){const S=RT.S;if(!fitsJ(id,g))return false;const o=plIn(g);if(o>=0&&o!==id)return false;if(LEADDEF[g].busy&&LEADDEF[g].busy()){BENCH.say('الـ jacks فيها دايود، طلّعه أول');return false}
+function plug(id,g){const S=RT.S;if(!fitsJ(id,g)||!act(LEADDEF[g].inst))return false;const o=plIn(g);if(o>=0&&o!==id)return false;if(LEADDEF[g].busy&&LEADDEF[g].busy()){BENCH.say('الـ jacks فيها دايود، طلّعه أول');return false}
   S.pl[id].jack=g;(RT.plugged=RT.plugged||new Set()).add(g);return true}
 function leadsChanged(){const before=JSON.stringify(LEADS.map(k=>RT.S.leads[k].node));syncLeads();const circ=LEADS.some(k=>LEADDEF[k].circuit);
   if(circ&&JSON.stringify(LEADS.map(k=>RT.S.leads[k].node))!==before)circuitChanged();else RT.dirty=true;render()}
@@ -464,7 +471,7 @@ const isDefault=()=>INST.every(i=>Math.abs(POS[i.key].x-DEF[i.key].x)<1&&Math.ab
 
 /* parked cables of an arrangement (pos: key → {x,y}, park: lead → plug point), drawn like DRAW does */
 function parkedCables(pos,park){const out=[];const seen=new Set();
-  LEADS.forEach(k=>{const L=LEADDEF[k],ik=L.inst.key,inst=L.inst,f=FV[FACE[ik]],f0=fromOf(k),P0=pos[ik];
+  ALEADS().forEach(k=>{const L=LEADDEF[k],ik=L.inst.key,inst=L.inst,f=FV[FACE[ik]],f0=fromOf(k),P0=pos[ik];
     const clr=q=>{const [w,h]=inst.size,F=FACE[ik];return 18+(F==='down'?h-q.y:F==='up'?q.y:F==='right'?w-q.x:q.x)};
     if(!L.coax){out.push({k,grp:k,inst:ik,c:curve({x:f0.x+P0.x,y:f0.y+P0.y},f,park[k],clr(f0))});return}
     if(L.earth||seen.has(k))return;const kb=LEADS.find(q=>LEADDEF[q].coax&&LEADDEF[q].earth&&LEADDEF[q].inst===inst&&!seen.has(q)&&Math.abs(fromOf(q).x-f0.x)<40);if(!kb)return;seen.add(k);seen.add(kb);
@@ -622,7 +629,7 @@ RT.cancelDrag=()=>{stopRep();if(press){clearTimeout(press.t);press=null}if(drag&
 svg.addEventListener('pointercancel',()=>{stopRep();if(drag&&drag.kind==='inst'&&drag.active)savePos();drag=null;svg.classList.remove('grabbing');render(true)});
 svg.addEventListener('pointerleave',()=>{stopRep();if(!drag)showHL(null)});
 svg.addEventListener('contextmenu',e=>{e.preventDefault();const w=e.target.closest&&e.target.closest('[data-k^="wire:"]');if(w)openMenu(+w.dataset.k.slice(5),e.clientX,e.clientY)});
-const WHEEL=INST.filter(i=>i.wheel&&i.wheel.length).map(i=>`${i.prefix}:(${i.wheel.join('|')})`);
+const WHEEL=ALL.filter(i=>i.wheel&&i.wheel.length).map(i=>`${i.prefix}:(${i.wheel.join('|')})`);
 const wheelRe=new RegExp(`^(${WHEEL.join('|')})[c+-]?$`);
 svg.addEventListener('wheel',e=>{const el=targetOf(e);if(!el)return;const k=el.dataset.k.startsWith('knob:')?el.dataset.k.slice(5):el.dataset.k;const m=k.match(wheelRe);if(!m)return;e.preventDefault();const base=m[1];const dir=e.deltaY<0?'+':'-';
   const inst=byPrefix[base.split(':')[0]];inst.keyFn(base.slice(base.indexOf(':')+1)+dir);render()},{passive:false});
@@ -675,6 +682,14 @@ BENCH.register({
   render:()=>render(),RT,resetLayout,isDefault,crossings,lineDone,lineSpots,setGuide
 });
 RT.crossings=crossings;RT.resetLayout=resetLayout;
+/* the procedure changed (Manual): its own instruments stand on the table, laid out afresh; a lead in the jack of an
+   instrument that leaves goes back to the tray (null = every instrument, Free mode) */
+function setProc(p){if(![...PROCS.values()].some(Boolean))return;if(p===ACTP)return;ACTP=p;INST=ALL.filter(act);TOP=null;
+  RT.S.pl.forEach((P,id)=>{if(P.jack!=null&&!act(LEADDEF[P.jack].inst))toTray(id)});syncLeads();
+  doLayout(false);setSlots();LSK=LSK0+(ACTP!=null?':'+ACTP:'');loadPos();setDpark();updPark();updRegions();updRack();
+  if(BENCH.view!=='ov'&&BENCH.view!=='board'&&!act(byKey[BENCH.view]||{}))BENCH.back();
+  circuitChanged();render();BENCH.calcOv();BENCH.layoutChanged(true)}
+RT.setProc=setProc;RT.procOf=()=>ACTP;
 fresh();render();
 };
 ENGINE.NAMES={dmm2:['MCP MT3805 · DMM 2','الملتيميتر الثاني'],gen:['PeakTech 4124','مولّد الإشارات'],psu:['TTi EL302RD','مصدر الجهد المستمر (وحدتين)'],sc:['GW Instek GDS-1104B','راسم الإشارة'],dmm:['MCP MT3805','الملتيميتر'],xf:['Center-tapped Transformer','المحوّل'],dbox:['Decade resistance box A','صندوق المقاومات A'],dbox2:['Decade resistance box B','صندوق المقاومات B'],board:['Plug-in panel','لوحة التوصيل']};

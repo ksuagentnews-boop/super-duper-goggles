@@ -46,8 +46,8 @@ return {procs:[{id:'I',title:'Series RLC circuit (Fig. 6)'},{id:'II',title:'Para
 sheet,params:()=>({}),
 instruments:[
   {type:'metrix',prev:{freq:5000,amp:3,wave:'Sine'}},
-  {type:'hameg',prev:sc=>{sc.ch[0].vd=0.2;sc.td=1e-3}},
-  {type:'hdmm',model:'fluke77',n:1,prev:d=>{d.pos=2}},
+  {type:'hameg',procs:['II','III','IV'],prev:sc=>{sc.ch[0].vd=0.2;sc.td=1e-3}},
+  {type:'hdmm',model:'fluke77',n:1,procs:['I','II'],prev:d=>{d.pos=2}},
   {type:'hdmm',model:'bk2704',n:2}],
 parts:PARTS,
 tray:[['R10','10 Ω'],['R100','100 Ω'],['R5k','5 kΩ'],['L175','17.5 mH coil'],['L438','4.38 mH coil'],['C47','4.7 µF'],['C1','1 µF'],['C01','0.1 µF'],['C10n','10 nF'],['BR','Bridging plug'],['W','Wire']],

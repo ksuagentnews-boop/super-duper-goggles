@@ -43,7 +43,7 @@ Updated after every finished item (commit + push each time).
   - Grading uses `grader.proc(p)`: rows of unpicked procedures are left out of the score.
   - Each experiment file now has `procs` (titles), and sections and rows tagged by hand where they mix procedures.
   - Test `tests/exp/procs.mjs`.
-  - Not needed for EE312, and not built yet: a different instrument list per procedure (EE205).
+  - Per-procedure instruments: an instrument spec may carry `procs:[…]`; in Manual the current step's procedure decides what stands on the table (leads of a leaving instrument go back to the tray, layout refits); Free mode shows everything. Not used by EE312.
 
 - **6 · Kept out of search engines**
   - `<meta name="robots" content="noindex,nofollow">` in `index.html` (checked by the hall test).
@@ -168,6 +168,7 @@ Updated after every finished item (commit + push each time).
 - Exp 7 built (Procedures I–IV, 12 steps); test `tests/exp/ee205-exp7.mjs` desktop + phone.
 - Exp 4 built (6 steps, instructor check, 19 rows of Table 1); test `tests/exp/ee205-exp4.mjs` desktop + phone.
 - Robustness sweep (tests/robust.mjs) covers the EE205 benches: 120 random actions each, no error / NaN; a Fluke mA jack across the supply blows its fuse; the mains sources refuse power before the instructor check and refuse an ammeter across the source.
+- Per-procedure instruments built (`procs` on an instrument spec, `RT.setProc`): EE205 Exp 1 (I Fluke + YEW, II Thandar + Fluke, III Thandar + GoldStar, IV Thandar + GoldStar + 3 YEW), Exp 2 (Thandar only in I), Exp 3 (second Fluke only in I), Exp 5 (M2–M5 in I, PX 120 in II–III), Exp 8 (Fluke I–II, Hameg II–IV). Tests check the swaps.
 - Exp 5 built (Procedures I–III, 10 steps); test `tests/exp/ee205-exp5.mjs`. Engine: phasor dc part ignores the mains sources (3-phase phases leaked a dc offset), the transformer's star point is internal, the layout search caps the top-row orders beyond 5 instruments (Exp 5 froze), meters bring one red + one black lead to the tray (their current jacks are spare sockets).
 - Tests: hall knows EE205 is built (8 tables, 2 × 4); the pan & zoom test wheels over empty desk (EE312 Exp 9 layout moved when the crowded rack fix spread its plugs).
 
@@ -177,7 +178,7 @@ Updated after every finished item (commit + push each time).
 - Batch 4: 10, 6, 1, 7, 8, 2 (4 in a parallel worktree).
 
 ## Next
-- EE205: owner to try the eight tables (especially the generator key legends of the MTX 3240 and the YEW tolerances read from photos; see docs/ee205/QUESTIONS.md). Per-procedure instrument lists are not built (each EE205 table holds the union; Exp 5 is crowded on a phone).
+- EE205: owner to try the eight tables (especially the generator key legends of the MTX 3240 and the YEW tolerances read from photos; see docs/ee205/QUESTIONS.md).
 - Owner: open the site with `?debug=1` on the iPhone (Claude app + Safari) and send one screenshot of the Exp 9 overview and one of a device zoom, so the real numbers can be compared.
 - Ask the owner whether the request continued after item 8 (the message was cut off after "everywhere in the UI and").
 - Portrait layout for tables with many instruments (stack them; the lead tray now allows it).

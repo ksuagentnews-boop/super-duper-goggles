@@ -43,7 +43,7 @@ export async function run(page, vp, ok) {
   await H.place('R5k', 2, 9); await H.place('L438', 3, 10); await H.place('C01', 4, 11); for (const [a, b] of [[2, 3], [3, 4], [9, 10], [10, 11]]) await H.place('BR', a, b);
   await H.lead('gb', 9); await H.lead('c1b', 9); await H.focus('hm2'); await H.key('h2:SW-'); ok(await done(16), 'IV Fig. 9 built');
   await H.focus('gen'); await H.key('g:OUT');
-  const fit = async () => { for (let k = 0; k < 3; k++) { const r = await page.evaluate(() => { const m = BENCH.sim.RT.meters()[1]; return { ol: m.r.ol, v: m.r.val, pos: BENCH.sim.RT.S.hm2.pos }; });
+  const fit = async () => { for (let k = 0; k < 3; k++) { const r = await page.evaluate(() => { const m = BENCH.sim.RT.meters().find(q => q.key === 'hm2'); return { ol: m.r.ol, v: m.r.val, pos: BENCH.sim.RT.S.hm2.pos }; });
       if (r.ol) { await H.focus('hm2'); await H.key('h2:SW+'); } else if (r.pos === 15 && Math.abs(r.v) < 0.0019) { await H.focus('hm2'); await H.key('h2:SW-'); } else break; } await H.focus('gen'); };
   for (let f = 6000; f <= 9000; f += 200) { await H.mtx('f', f); await hold2(); await fit(); }
   ok(await done(18), 'IV sweep'); await H.key('g:OUT'); ok(await done(19), 'all steps done');

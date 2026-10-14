@@ -6,7 +6,7 @@
    Procedure III: Fig. 6, E = 10 V, 1 kΩ ∥ 4.7 kΩ ∥ 2.2 kΩ → I1, I2, I3, IT with the GoldStar in series (Table 5).
    Procedure IV: Fig. 7 bridge (a-c 220, a-b 470, c-b 10 k, c-d 220, b-d 1 k), E = 15 V → ID; Δ abc → Y (Ra, Rb, Rc on
    the three decade boxes), Fig. 8 → IY.
-   Instruments (union of the procedures): Thandar TS3022S, Fluke 77 (M1: ohmmeter / voltmeter), GoldStar DM-33x (M2:
+   Instruments (each procedure brings its own, see `procs` below): Thandar TS3022S, Fluke 77 (M1: ohmmeter / voltmeter), GoldStar DM-33x (M2:
    ammeter, as in the lab video), three YEW 2786 boxes.
    Assumptions: the three "colour code resistors" of Procedure I are 330 Ω, 6.8 kΩ and 56 kΩ (5 %, gold band); the parts
    are real (each a little off its nominal value, inside 5 %); "simulated" values of Procedure IV are the calculated
@@ -56,10 +56,10 @@ sheet:`<div class="paper" id="paper">
 </div></div>`,
 params:()=>({}),
 instruments:[
-  {type:'thandar',prev:d=>{d.u[0].v=12;d.u[0].ilim=0.5;d.u[1].v=5;d.u[1].ilim=0.2}},
-  {type:'hdmm',model:'fluke77',n:1,prev:d=>{d.pos=2}},
-  {type:'hdmm',model:'goldstar',n:2},
-  {type:'yew',n:1,prev:d=>{d.d=[3,2,0,1,0,0]}},{type:'yew',n:2},{type:'yew',n:3,prev:d=>{d.d=[0,0,5,0,0,0]}}],
+  {type:'thandar',procs:['II','III','IV'],prev:d=>{d.u[0].v=12;d.u[0].ilim=0.5;d.u[1].v=5;d.u[1].ilim=0.2}},
+  {type:'hdmm',model:'fluke77',n:1,procs:['I','II'],prev:d=>{d.pos=2}},
+  {type:'hdmm',model:'goldstar',n:2,procs:['III','IV']},
+  {type:'yew',n:1,procs:['I','IV'],prev:d=>{d.d=[3,2,0,1,0,0]}},{type:'yew',n:2,procs:['IV']},{type:'yew',n:3,procs:['IV'],prev:d=>{d.d=[0,0,5,0,0,0]}}],
 parts:PARTS,
 tray:[['RC1','Resistor 1'],['RC2','Resistor 2'],['RC3','Resistor 3'],['R220','220 Ω'],['R470','470 Ω'],['R1k','1 kΩ'],['R2k2','2.2 kΩ'],['R4k7','4.7 kΩ'],['R10k','10 kΩ'],['BR','Bridging plug'],['W','Wire']],
 setup(RT){
