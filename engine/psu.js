@@ -11,17 +11,19 @@ const SIDE=['L','R'];
 /* knob resolution per press: the real COARSE / FINE pots are continuous; opt.res lets an experiment use finer steps */
 const RES=Object.assign({c:1,f:0.01},opt.res);
 const abs=p=>({x:P0.x+p.x,y:P0.y+p.y});
-function fresh(){const d={pwr:false,u:[{v:12,ilim:0.5,on:false},{v:5,ilim:1,on:false}]};if(opt.prev)opt.prev(d);return d}
+function fresh(){const d={pwr:false,u:[{v:12,ilim:0.5,on:false,fk:0},{v:5,ilim:1,on:false,fk:0}]};if(opt.prev)opt.prev(d);return d}
+/* the 4-digit VOLTS display: x.xxx below 10 V, xx.xx above, so one FINE step always shows (owner: "FINE does nothing") */
+const fmtV=v=>v<9.9995?v.toFixed(3):v.toFixed(2);
 const disp=(x,y,txt,on)=>`<rect x="${x}" y="${y}" width="104" height="40" rx="3" fill="#1a0707"/>`+(on?T(x+98,y+31,txt,{size:25,fill:'#ff3b2a',a:'end',w:600}):T(x+98,y+31,'88.88',{size:25,fill:'#2a1010',a:'end',w:600}));
 function unitSVG(u){const d=RT.S.psu,U=d.u[u],x=UX[u],on=d.pwr;const st=RT.psuStat?RT.psuStat(u):null;
   const live=on&&U.on&&st;const V=live?st.v:U.v,I=live?st.i:U.ilim;
   let s=`<rect x="${x}" y="30" width="242" height="140" rx="10" fill="#efece4" stroke="#c9c3b5"/>`;
-  s+=`<rect x="${x+8}" y="36" width="226" height="52" rx="5" fill="#120404"/>`+disp(x+12,40,V.toFixed(2),on).replace('#1a0707','#120404')+disp(x+122,40,I.toFixed(3),on).replace('#1a0707','#120404');
+  s+=`<rect x="${x+8}" y="36" width="226" height="52" rx="5" fill="#120404"/>`+disp(x+12,40,fmtV(V),on).replace('#1a0707','#120404')+disp(x+122,40,I.toFixed(3),on).replace('#1a0707','#120404');
   s+=T(x+70,98,'VOLTS',{size:7.5,fill:'#5c564b',a:'middle'})+T(x+180,98,'AMPS',{size:7.5,fill:'#5c564b',a:'middle'});
   s+=T(x+72,112,'COARSE — VOLTAGE — FINE',{size:7,fill:'#5c564b',a:'middle'})+T(x+190,112,'CURRENT',{size:7,fill:'#5c564b',a:'middle'});
   const cc=live&&st.cc;s+=`<circle cx="${x+156}" cy="109" r="4" fill="${cc?'#ff2a1a':'#5a2020'}" stroke="#2a0d0d"/>`+(cc?`<circle cx="${x+156}" cy="109" r="8" fill="#ff2a1a" opacity=".25"/>`:'')+T(x+146,112,'CC',{size:7,fill:'#5c564b',a:'end'});
   const k=SIDE[u];
-  s+=knob(x+40,140,13,'#b7b0a0',`p:${k}VC`,'',null,{fill:'#f4f1ea',ang:U.v/30*5-2.5})+knob(x+104,140,13,'#b7b0a0',`p:${k}VF`,'',null,{fill:'#f4f1ea',ang:((U.v*100)%100)/100*5-2.5})+knob(x+190,140,13,'#b7b0a0',`p:${k}I`,'',null,{fill:'#f4f1ea',ang:U.ilim/2*5-2.5});
+  s+=knob(x+40,140,13,'#b7b0a0',`p:${k}VC`,'',null,{fill:'#f4f1ea',ang:U.v/30*5-2.5})+knob(x+104,140,13,'#b7b0a0',`p:${k}VF`,'',null,{fill:'#f4f1ea',ang:(U.fk||0)*0.21})+knob(x+190,140,13,'#b7b0a0',`p:${k}I`,'',null,{fill:'#f4f1ea',ang:U.ilim/2*5-2.5});
   return s}
 function svg(){const d=RT.S.psu;let s=`<g transform="translate(${P0.x} ${P0.y})">`;
   s+=`<rect width="${W}" height="${H}" rx="14" fill="#e4e0d6" stroke="#b4ae9f" stroke-width="2"/>`;
@@ -46,13 +48,13 @@ function key(k){const d=RT.S.psu;
   const m=k.match(/^([LR])(VC|VF|I|ON)([+-]?)$/);if(!m)return;const U=d.u[m[1]==='L'?0:1];const dir=m[3]==='+'?1:-1;
   if(m[2]==='ON'){U.on=!U.on;RT.dirty=true;return}
   if(m[2]==='VC')U.v=clamp(Math.round((U.v+dir*RES.c)*1000)/1000,0,30);
-  if(m[2]==='VF')U.v=clamp(Math.round((U.v+dir*RES.f)*1000)/1000,0,30);
+  if(m[2]==='VF'){const f=U.v>=9.9995||U.v+dir*RES.f>=9.9995?Math.max(RES.f,0.01):RES.f;const v=clamp(Math.round((U.v+dir*f)*1000)/1000,0,30);if(v!==U.v)U.fk=(U.fk||0)+dir;U.v=v}   // the FINE pointer turns ≈12° per step
   if(m[2]==='I')U.ilim=clamp(Math.round((U.ilim+dir*0.01)*100)/100,0,2);
   RT.dirty=true}
 const LEADS=[{k:'Lm',label:'L −',t:TERM[0].m},{k:'Lp',label:'L +',t:TERM[0].p},{k:'Rm',label:'R −',t:TERM[1].m},{k:'Rp',label:'R +',t:TERM[1].p}];
 return {key:'psu',prefix:'p',size:[W,H],fresh,svg,keyFn:key,
   wheel:['LVC','LVF','LI','RVC','RVF','RI'],
-  knobInfo:b=>{const U=RT.S.psu.u[b[0]==='L'?0:1];return (b[0]==='L'?'L ':'R ')+(b.endsWith('I')?U.ilim.toFixed(3)+' A':U.v.toFixed(2)+' V')},
+  knobInfo:b=>{const U=RT.S.psu.u[b[0]==='L'?0:1];return (b[0]==='L'?'L ':'R ')+(b.endsWith('I')?U.ilim.toFixed(3)+' A':fmtV(U.v)+' V')},
   leads:LEADS.map(l=>({k:l.k,label:l.label,from:abs(l.t),banana:true,pol:l.k.endsWith('m')?'-':'+',tray:`DC ${l.k.endsWith('m')?'−':'+'} (${l.k[0]})`,jn:l.label})),
   cables:D=>LEADS.map(l=>D.banana(abs(l.t),l.k)).join(''),
   /* each unit is a floating source between its + and − terminals (output resistance 20 mΩ) */

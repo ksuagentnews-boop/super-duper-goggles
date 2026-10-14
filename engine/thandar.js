@@ -16,7 +16,7 @@ function unitSVG(u){const d=RT.S.psu,U=d.u[u],x=UX[u],on=d.pwr;const st=RT.psuSt
   const cc=live&&st.cc;s+=`<circle cx="${x+252}" cy="54" r="4.5" fill="${cc?'#ff3322':'#7a3a3a'}"/>`+(cc?`<circle cx="${x+252}" cy="54" r="9" fill="#ff3322" opacity=".25"/>`:'')+T(x+252,72,'CC',{size:7,fill:'#4a463d',a:'middle'});
   s+=T(x+70,94,'VOLTAGE',{size:8,fill:'#4a463d',a:'middle',w:600})+T(x+40,106,'COARSE',{size:6.5,fill:'#4a463d',a:'middle'})+T(x+102,106,'FINE',{size:6.5,fill:'#4a463d',a:'middle'})+T(x+196,104,'CURRENT LIMIT',{size:7,fill:'#4a463d',a:'middle',w:600});
   const k=SIDE[u];
-  s+=knob(x+40,140,15,'#c9c3b4',`p:${k}VC`,'',null,{fill:'#f6f3ec',ang:U.v/30*5-2.5})+knob(x+102,140,13,'#c9c3b4',`p:${k}VF`,'',null,{fill:'#f6f3ec',ang:((U.v*100)%100)/100*5-2.5})+knob(x+196,140,15,'#c9c3b4',`p:${k}I`,'',null,{fill:'#f6f3ec',ang:U.ilim/2*5-2.5});
+  s+=knob(x+40,140,15,'#c9c3b4',`p:${k}VC`,'',null,{fill:'#f6f3ec',ang:U.v/30*5-2.5})+knob(x+102,140,13,'#c9c3b4',`p:${k}VF`,'',null,{fill:'#f6f3ec',ang:(U.fk||0)*0.21})+knob(x+196,140,15,'#c9c3b4',`p:${k}I`,'',null,{fill:'#f6f3ec',ang:U.ilim/2*5-2.5});
   return s}
 function svg(){const d=RT.S.psu;let s=`<rect width="${W}" height="${H}" rx="10" fill="#dcd8cc" stroke="#9f998a" stroke-width="2"/><rect x="0" y="0" width="${W}" height="18" rx="8" fill="#3b3f42"/>`;
   s+=T(14,13,'THANDAR',{size:9.5,fill:'#f0ede4',w:700})+T(W-14,13,'TS3022S  ·  30V-2A PRECISION DC POWER SUPPLY',{size:8.5,fill:'#f0ede4',a:'end',w:600});
@@ -33,7 +33,7 @@ function key(k){const d=RT.S.psu;
   const m=k.match(/^([LR])(VC|VF|I|ON)([+-]?)$/);if(!m)return;const U=d.u[m[1]==='L'?0:1];const dir=m[3]==='+'?1:-1;
   if(m[2]==='ON'){U.on=!U.on;RT.dirty=true;return}
   if(m[2]==='VC')U.v=clamp(Math.round((U.v+dir*RES.c)*1000)/1000,0,30);
-  if(m[2]==='VF')U.v=clamp(Math.round((U.v+dir*RES.f)*1000)/1000,0,30);
+  if(m[2]==='VF'){const f=U.v>=9.9995||U.v+dir*RES.f>=9.9995?Math.max(RES.f,0.01):RES.f;const v=clamp(Math.round((U.v+dir*f)*1000)/1000,0,30);if(v!==U.v)U.fk=(U.fk||0)+dir;U.v=v}   // the FINE pointer turns ≈12° per step
   if(m[2]==='I')U.ilim=clamp(Math.round((U.ilim+dir*0.01)*100)/100,0,2);
   RT.dirty=true}
 const LEADS=[{k:'Lm',label:'L −',t:TERM[0].m},{k:'Lp',label:'L +',t:TERM[0].p},{k:'Rm',label:'R −',t:TERM[1].m},{k:'Rp',label:'R +',t:TERM[1].p}];

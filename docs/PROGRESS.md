@@ -183,3 +183,4 @@ Updated after every finished item (commit + push each time).
 - Ask the owner whether the request continued after item 8 (the message was cut off after "everywhere in the UI and").
 - Portrait layout for tables with many instruments (stack them; the lead tray now allows it).
 - Check on real devices: Safari iPhone/iPad, Android Chrome, Firefox; hall frame rate on a phone.
+- Batch 5 item 9: TTi / Thandar FINE knob. Every input path worked, but the FINE pointer turned ≈3° per step and in EE312 Exp 9 a 1 mV step did not show on the 2-decimal VOLTS display, so FINE looked dead. Now: VOLTS shows x.xxx below 10 V, FINE turns ≈12° per step, at ≥ 10 V a FINE step is one display digit (10 mV). New test `tests/exp/supply.mjs` (8 experiments with a supply, both units, both directions, arrows / wheel / touch drag / ◀ ▶ pad).
