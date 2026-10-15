@@ -10,13 +10,14 @@ export async function run(page, vp, ok) {
   const set2 = async () => { await H.focus('ac'); for (let k = 0; k < 80; k++) { const { Vs } = await status(); if (Vs != null && Math.abs(Vs - 2) <= 0.02) return; await H.key(Vs == null || Vs < 2 ? 'a:V+' : 'a:V-'); } };
   /* every circuit in a layout of its own (U-core at node 16, the supply on nodes 14 / 22), not the figures' reference */
   await H.focus('board'); await H.placeIC('UC', 16, [[0, 0], [0, 1], [1, 0], [1, 1]]);
-  await H.lead('h4v', 16); await H.lead('h4c', 23); await H.focus('hm4'); ok(await done(1), `I1 Rdc1 ${JSON.stringify((await status()).ST)}`);
+  /* Rdc on M1 (any meter: the manual says "the multimeter") */
+  await H.focus('hm1'); await H.key('h1:SW+', 2); await H.lead('h1v', 16); await H.lead('h1c', 23); ok(await done(1), `I1 Rdc1 ${JSON.stringify((await status()).ST)}`);
   ok(await done(2), 'I2 R1 = 1.15 Rdc (calculation)');
-  await H.lead('h4v', 17); await H.lead('h4c', 24); ok(await done(3), 'I3 Rdc2');
-  await H.unplug('h4v'); await H.place('BR', 15, 16); await H.place('BR', 22, 23); await H.lead('acL', 14); await H.lead('acN', 22); await H.lead('h4ma', 14); await H.lead('h4c', 15); await H.lead('h1v', 14); await H.lead('h1c', 22);
+  await H.lead('h1v', 17); await H.lead('h1c', 24); ok(await done(3), 'I3 Rdc2');
+  await H.place('BR', 15, 16); await H.place('BR', 22, 23); await H.lead('acL', 14); await H.lead('acN', 22); await H.lead('h4ma', 14); await H.lead('h4c', 15); await H.lead('h1v', 14); await H.lead('h1c', 22);
   ok(await done(4), 'I4 Fig. 7 built');
   await power(); ok(await done(5), 'I instructor check, power on');
-  await H.focus('hm1'); await H.key('h1:SW-'); await H.focus('hm4'); await H.key('h4:SW+', 3); await set2(); ok(await done(7), `I5 coil 1 at 2 V, I6 calculation ${JSON.stringify(await status())}`);
+  await H.focus('hm1'); await H.key('h1:SW-', 3); await H.focus('hm4'); await H.key('h4:SW+', 3); await set2(); ok(await done(7), `I5 coil 1 at 2 V, I6 calculation ${JSON.stringify(await status())}`);
   await off(); await H.focus('board'); await H.lead('h4c', 17); await H.del(22, 23); await H.lead('acN', 24); await H.lead('h1c', 24); await power(); await set2();
   ok(await done(8), `I7 coil 2 ${JSON.stringify((await status()).ST)}`);
   await off(); await H.focus('board'); await H.lead('h4c', 15); await H.place('BR', 22, 23); await H.lead('acN', 22); await H.lead('h1c', 22); await H.lead('h2v', 17); await H.lead('h2c', 24);
