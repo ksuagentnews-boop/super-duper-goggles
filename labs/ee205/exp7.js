@@ -49,7 +49,7 @@ const SRC=[{lead:'acL',at:8},{lead:'acN',at:22},{lead:'h1v',at:8},{lead:'h1c',at
 const BOT=[{wire:[17,24]},{wire:[24,23]},{wire:[23,22]}],F='labs/ee205/fig/';
 const figs={
   '7':{img:F+'e7-fig7.png',cap:'Fig. 7 · coil 1 on the 60 Hz source (A in series, V across the source)',lines:[UCX,...SRC,...AMM,{wire:[9,10]},...BOT]},
-  '7b':{img:F+'e7-fig7.png',cap:'Fig. 7 · repeated for coil 2 (A → B)',lines:[UCX,...SRC,...AMM,{wire:[9,2]},{wire:[2,3]},{wire:[3,4]},{wire:[4,11]},{wire:[18,25]},{wire:[25,24]},{wire:[24,23]},{wire:[23,22]}]},
+  '7b':{img:F+'e7-fig7.png',cap:'Fig. 7 · repeated for coil 2 (A → B)',lines:[UCX,...SRC,{lead:'h4ma',at:8},{lead:'h4c',at:1},{wire:[1,2]},{wire:[2,3]},{wire:[3,4]},{wire:[4,11]},{wire:[18,25]},{wire:[25,24]},{wire:[24,23]},{wire:[23,22]}]},
   '8':{img:F+'e7-fig8.png',cap:'Fig. 8 · V<sub>2</sub> on coil 2',lines:[UCX,...SRC,...AMM,{wire:[9,10]},...BOT,{lead:'h2v',at:11},{lead:'h2c',at:18}]},
   '9':{img:F+'e7-fig9.png',cap:'Fig. 9 · B joined to coil 1, V<sub>T</sub> across 1 and A',lines:[UCX,...SRC,{wire:[8,9]},{wire:[9,10]},...BOT,{wire:[17,18]},{lead:'h2v',at:11},{lead:'h2c',at:18},{lead:'h3v',at:10},{lead:'h3c',at:11}]},
   '10':{img:F+'e7-fig10.png',cap:'Fig. 10 · series aiding (2 joined to B)',lines:[UCX,...SRC,...AMM,{wire:[9,10]},{wire:[17,18]},{wire:[11,12]},{wire:[12,19]},{wire:[19,26]},{wire:[26,25]},{wire:[25,24]},{wire:[24,23]},{wire:[23,22]}]},
