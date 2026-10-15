@@ -131,14 +131,16 @@ ENGINE.xf3=function(RT,opt){const KEY='x3',P='x',W=300,H=345,F=60,VP=opt.vp||24,
   /* Leybold-Heraeus three-phase extra-low voltage transformer (old red housing, docs/ee205/instruments/threephase-notes.md):
      two printed star / delta diagrams, each with four black 4 mm sockets L1 · L2 · L3 · N. Right: 23 V / 40 V (the experiment's
      leads x3a, x3b, x3c, x3n); left: 6 V / 10 V (spare sockets: any banana lead plugs in, leads x3a6 … x3n6). The two N are joined. */
-  const TRI=[{t:{x:92,y:196},bl:{x:46,y:258},br:{x:124,y:272},n:{x:86,y:238},vl:'6 V',vd:'10 V',suf:'6',vp:VP*6/23},
-             {t:{x:200,y:208},bl:{x:150,y:272},br:{x:232,y:282},n:{x:192,y:250},vl:'23 V',vd:'40 V',suf:'',vp:VP}];
+  /* a straight, symmetric layout (owner, 15 Oct: the slant in the lab crops is camera perspective): two equal triangles side by
+     side, the four bottom corners on one line, each apex above the middle of its base, each N straight below its apex */
+  const TY=200,BY=278,NY=250,HW=42,tri=(cx,o)=>({t:{x:cx,y:TY},bl:{x:cx-HW,y:BY},br:{x:cx+HW,y:BY},n:{x:cx,y:NY},...o});
+  const TRI=[tri(92,{vl:'6 V',vd:'10 V',suf:'6',vp:VP*6/23}),tri(208,{vl:'23 V',vd:'40 V',suf:'',vp:VP})];
   const J={};TRI.forEach(t=>{J['a'+t.suf]=t.t;J['b'+t.suf]=t.br;J['c'+t.suf]=t.bl;J['n'+t.suf]=t.n});
   const PH={a:0,b:-2*Math.PI/3,c:2*Math.PI/3};const INK='#1d1d1b';
   function fresh(){return {pwr:false,ok:false,sig:''}}
   const sock=p=>`<circle cx="${p.x}" cy="${p.y}" r="10" fill="#d9d3c0"/><circle cx="${p.x}" cy="${p.y}" r="8.6" fill="#1a1a1a" stroke="#000" stroke-width="1"/><circle cx="${p.x-2.5}" cy="${p.y-3}" r="3.5" fill="#fff" opacity=".12"/><circle cx="${p.x}" cy="${p.y}" r="3.4" fill="#4b4b4b"/>`;
   const seg=(a,b,dash)=>`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${INK}" stroke-width="1.6"${dash?' stroke-dasharray="5 3.5"':''}/>`;
-  const vlab=(a,b,t,dx=0,dy=0)=>T(((a.x+b.x)/2+dx).toFixed(1),((a.y+b.y)/2+dy+2).toFixed(1),t,{size:5.6,fill:INK,a:'middle',w:700});
+  const vlab=(a,b,t,dx=0,dy=0,sz=5.6)=>T(((a.x+b.x)/2+dx).toFixed(1),((a.y+b.y)/2+dy+2).toFixed(1),t,{size:sz,fill:INK,a:'middle',w:700});
   function svg(){const d=RT.S[KEY];let s='';
     // red housing seen from the front, the grey carrying handle in its recess on top
     s+=`<rect x="100" y="-12" width="100" height="22" rx="6" fill="#55595b" stroke="#2c2e2f"/><rect x="108" y="-8" width="84" height="8" rx="3" fill="#7b8082"/>`;
@@ -157,11 +159,11 @@ ENGINE.xf3=function(RT,opt){const KEY='x3',P='x',W=300,H=345,F=60,VP=opt.vp||24,
     // the two printed star / delta diagrams, N joined across, ⚠ and the pilot lamp between them
     s+=seg(TRI[0].n,TRI[1].n,false);
     TRI.forEach(t=>{s+=seg(t.t,t.bl,false)+seg(t.t,t.br,false)+seg(t.bl,t.br,true)+seg(t.n,t.t,true)+seg(t.n,t.bl,true)+seg(t.n,t.br,true);
-      s+=vlab(t.t,t.bl,t.vd,-13,-1)+vlab(t.t,t.br,t.vd,13,-1)+vlab(t.bl,t.br,t.vd,0,10)+vlab(t.n,t.t,t.vl,8,0)+vlab(t.n,t.bl,t.vl,-1,-7)+vlab(t.n,t.br,t.vl,4,-8);
+      s+=vlab(t.t,t.bl,t.vd,-13,-1)+vlab(t.t,t.br,t.vd,13,-1)+vlab(t.bl,t.br,t.vd,0,10)+vlab(t.n,t.t,t.vl,12,0)+vlab(t.n,t.bl,t.vl,-1,-8.5,5)+vlab(t.n,t.br,t.vl,1,-8.5,5);
       const lb=(p,q,dy)=>T(p.x,p.y+dy,q,{size:5.4,fill:INK,a:'middle',w:700});s+=lb(t.t,'L1',-12)+lb(t.br,'L2',16)+lb(t.bl,'L3',16)+lb(t.n,'N',16);
       [t.t,t.bl,t.br,t.n].forEach(p=>s+=sock(p))});
-    s+=`<path d="M142 214 l9 15 h-18 z" fill="none" stroke="${INK}" stroke-width="1.5" stroke-linejoin="round"/>`+T(142,227,'!',{size:9,fill:INK,a:'middle',w:800});
-    s+=`<circle cx="142" cy="242" r="3.8" fill="${d.pwr?'#ff3020':'#6a1d16'}" stroke="#3a0d08"/>`+(d.pwr?`<circle cx="142" cy="242" r="9" fill="#ff3020" opacity=".3"/>`:'');
+    s+=`<path d="M150 210 l9 15 h-18 z" fill="none" stroke="${INK}" stroke-width="1.5" stroke-linejoin="round"/>`+T(150,223,'!',{size:9,fill:INK,a:'middle',w:800});
+    s+=`<circle cx="150" cy="237" r="3.8" fill="${d.pwr?'#ff3020':'#6a1d16'}" stroke="#3a0d08"/>`+(d.pwr?`<circle cx="150" cy="237" r="9" fill="#ff3020" opacity=".3"/>`:'');
     // black name band: Leybold-Heraeus mark at the left, the product name at the right
     s+=`<rect x="13" y="${H-42}" width="${W-26}" height="28" fill="#121212"/><rect x="20" y="${H-38}" width="15" height="15" rx="1" fill="#f4f4f0"/><path d="M23.5 ${H-26} v-8.5 l4 5 l4 -5 v8.5" fill="none" stroke="#121212" stroke-width="1.4"/>`;
     s+=T(40,H-27,'LEYBOLD-HERAEUS',{size:6,fill:'#f4f4f0',w:700})+T(W-20,H-29,'Drehstrom-Kleinspannungs-Transformator  521 29',{size:5,fill:'#f4f4f0',a:'end',w:700})+T(W-20,H-20,'three-phase extra-low voltage transformer',{size:5,fill:'#f4f4f0',a:'end',w:700});

@@ -204,3 +204,4 @@ Updated after every finished item (commit + push each time).
 - Batch 6 conversion: EE312 Exp 4 (Figs. 4.2 / +scope / C 10 µF / 470 µF / R_L 270 Ω, 4.3 / +scope / 270 Ω; A Assemble + 1–19, B 1–12) and Exp 7 (Figs. 7.1a, 7.1b, 7.1c 270 / 470 / 1k; A 1–5, B 1–6, C 1–6) — Exam tests full marks, circuits test passes.
 - Batch 6 conversion: EE205 Exp 6 (Figs. 9, 10), Exp 7 (Figs. 7, 7b, 8, 9, 10, 10b; Proc I–IV with the instructor check), Exp 8 (Figs. 6, 7, 7cl, 8, 9; Proc I–IV; Table 2 grading fixed) — Exam tests full marks, circuits test passes. Matcher: alt may list several keys; EE312 Exp 9 decade boxes either way round.
 - Batch 6 done: full suite desktop + phone ALL PASSED (1225 checks, 0 console errors); merged into main.
+- Batch 7 item 1: three-phase transformer sockets on a straight symmetric layout (equal triangles, bottom corners on one line, apex and N above the middle of each base); screenshot docs/ee205/instruments/threephase-straight.png.
