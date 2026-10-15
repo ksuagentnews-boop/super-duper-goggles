@@ -47,7 +47,7 @@ const figs={'9.2a':{img:FIG,cap:'Fig. 9.2a · R<sub>B</sub> = 27 kΩ, R<sub>C</s
     {part:['R2k7',10,17]},Q,{wire:[16,23]},...GND,{part:['R27k',18,11]},{wire:[11,12]},{lead:'Rp',alt:'Lp',at:12},{lead:'Rm',alt:'Lm',at:26},
     {lead:'mh',alt:'m2h',at:17},{lead:'ml',alt:'m2l',at:16},{lead:'m2h',alt:'mh',at:18},{lead:'m2l',alt:'ml',at:16}]},
   '9.2b':{img:FIG,cap:'Fig. 9.2b · R<sub>C</sub> and R<sub>B</sub> on the two decade boxes',lines:[{lead:'gr',at:8},{lead:'gb',at:22},{lead:'dB1',alt:BX,at:8},{lead:'dB2',alt:BX,at:18},Q,{wire:[16,23]},...GND,
-    {part:['LED',10,17],pol:true},{lead:'dA2',alt:BX,at:10},{lead:'dA1',alt:BX,at:12},{lead:'Rp',alt:'Lp',at:12},{lead:'Rm',alt:'Lm',at:26}]}};
+    {part:['LED',10,17],pol:true},{lead:'dA2',alt:BX,at:10},{lead:'dA1',alt:BX,at:12},{lead:'Lp',alt:'Rp',at:12},{lead:'Lm',alt:'Rm',at:26}]}};
 return {figs,procs:[{id:'A',title:'VTC of the CE circuit: Fig. 9.2a (Table 9.2)'},{id:'B',title:'The BJT as an LED switch: Fig. 9.2b'}],
 sheet:`<div class="paper" id="paper">
 <h2>Experiment 9 · The BJT CE Circuit with Emphasis on Switching</h2>
@@ -135,30 +135,73 @@ setup(RT){
     g.proc('B');g.add(G.near(v('q6rc'),140/3,0.1)&&G.near(v('q6rb'),4300/3,1),'PLQ 6 RC, RB','RC = (5 − 3.4 − 0.2)/30 mA ≈ 46.67 Ω; RB = (5 − 0.7)/3 mA ≈ 1433.3 Ω');
     g.add([46.4,47].some(x=>G.near(v('q6rcs'),x,0.05))&&[1430,1500].some(x=>G.near(v('q6rbs'),x,1)),'PLQ 6 standard','RC: 46.4 Ω (E96) or 47 Ω (E24); RB: 1.43 kΩ (E96) or 1.5 kΩ (E24)');
     g.show($('result'))});
+  /* "do it for me" helpers (Batch 7 item 3) */
+  const UK=u=>u?'R':'L';
+  /* turn COARSE while it brings the value closer, then FINE (a COARSE step that overshoots is turned back) — as in Exp 1 */
+  const knobTo=async(A,u,get,t,tol)=>{let fineOnly=false;for(let i=0;i<600;i++){const x=get();if(x==null)return;const e=x-t;if(Math.abs(e)<=tol)return;
+      const k='p:'+u+(fineOnly?'VF':'VC')+(e<0?'+':'-');await A.tap(k,fineOnly?35:90);
+      if(!fineOnly){const y=get();if(y==null)return;if(Math.abs(y-t)>=Math.abs(e)||Math.sign(y-t)!==Math.sign(e)&&Math.abs(y-t)>tol){if(Math.abs(y-t)>=Math.abs(e))await A.tap('p:'+u+'VC'+(e<0?'-':'+'),90);fineOnly=true}}}};
+  /* the V_CC unit of the circuit on the bench: ∼ POWER, 5 V, ⎓ ON */
+  const vcc5=async(A,on)=>{const c=circuit();if(!c||!c.vcc)return;if(!RT.S.psu.pwr)await A.press('p:PWR');const u=c.vcc.u;await knobTo(A,UK(u),()=>RT.S.psu.u[u].v,5,0.0015);if(on&&!RT.S.psu.u[u].on)await A.press('p:'+UK(u)+'ON')};
+  /* V_I (its unit's COARSE, then FINE) until v_O = target; v_O falls as V_I rises */
+  const seek=async(A,t)=>{const c=circuit();if(!c||!c.vi)return;const K='p:'+UK(c.vi.u),get=()=>status().vo;let fine=false;
+    for(let i=0;i<900;i++){const e=get()-t;if(Math.abs(e)<=0.006)return;const d=e>0?'+':'-',bk=e>0?'-':'+';await A.tap(K+(fine?'VF':'VC')+d,fine?35:90);const e2=get()-t;
+      if(Math.abs(e2-e)<1e-9&&fine)return;
+      if(Math.sign(e2)!==Math.sign(e)&&Math.abs(e2)>0.006){if(!fine){await A.tap(K+'VC'+bk,90);fine=true}else{if(Math.abs(e2)>Math.abs(e))await A.tap(K+'VF'+bk,35);return}}}};
+  /* the meter that reads v_BE moves its red lead to + of the V_I unit (Fig. 9.2a's reference node 12) */
+  const F92=figs['9.2a'],BASE=F92.lines.filter(l=>!l.lead||!/^m/.test(l.lead));
+  const VIF={m:{lines:[...BASE,{lead:'mh',at:12}]},m2:{lines:[...BASE,{lead:'m2h',at:12}]}};
+  const meterBE=()=>{const c=circuit();if(!c)return null;return RT.meters().find(m=>m.hi===c.n.b&&m.lo===c.n.e)||null};
+  const row=j=>async A=>{const c=circuit();if(!c||c.kind!=='A')return;await A.connect('9.2a');await seek(A,VO[j]);A.st();
+    const m=meterBE();if(m){await A.connect(VIF[m.key==='dmm2'?'m2':'m']);A.st()}A.capture();A.capture()};
+  const genSet=async(A,fk,digits,uk)=>{if(!RT.S.gen.pwr)await A.press('g:PWR');if(RT.S.gen.edit)await A.press('g:F5');await A.press('g:'+fk);for(const ch of digits)await A.press('g:'+ch);await A.press('g:'+uk)};
+  const boxes=async A=>{const want={a:[0,8,2,0,0],b:[0,0,3,4,0]};for(const k of ['a','b']){await A.focus(k==='a'?'dbox':'dbox2');const D=RT.S.dbox[k];
+    for(let j=0;j<5;j++)while(D[j]!==want[k][j]){RT.press('b:'+k.toUpperCase()+j+(want[k][j]>D[j]?'+':'-'));BENCH.onRender();await A.wait(120)}}};
+  const meters=async A=>{for(const [p,k] of [['m','dmm'],['m2','dmm2']]){if(!RT.S[k].pwr)await A.press(p+':PWR');if(RT.S[k].fn!=='DCV')await A.press(p+':DCV')}};
+  const g=()=>RT.S.gen,near=(a,b,t=1e-4)=>Math.abs(a-b)<t;
   return {status,
     steps:[
-      /* Procedure A (manual p. 70), steps a–c */
-      {dev:'board',build:'9.2a',t:'Procedure A · a. وصّل الدائرة Fig. 9.2a.'},
-      {dev:'psu',t:'b. بوحدة dc ثبّت V<sub>CC</sub> على 5 V، وبوحدة ثانية غيّر V<sub>I</sub> لين تحصل قيم V<sub>O</sub> اللي في Table 9.2. لكل قيمة V<sub>O</sub> قِس V<sub>BE</sub> و V<sub>I</sub> وسجّلها في الجدول.',
-        acts:['وحدة V<sub>CC</sub> على 5.00 V، ووحدة V<sub>I</sub> تبدأ من 0 V، وشغّل الـ dc للوحدتين.','الملتيميترين على DCV: واحد على C–E يقرا V<sub>O</sub>، والثاني على B–E يقرا V<sub>BE</sub>.',
-          'ارفع V<sub>I</sub> (COARSE وبعدها FINE) لين V<sub>O</sub> = 4.900 V، سجّل V<sub>BE</sub>، وبعدها انقل الطرف الأحمر للملتيميتر الثاني على + وحدة V<sub>I</sub> وسجّل V<sub>I</sub>.',
-          'كرّر لباقي قيم V<sub>O</sub>: 4.500، 3.500، 3.400، 2.000، 1.000، 0.500، 0.200، 0.100 V.'],ok:s=>s.rows(VO.map((_,j)=>j)),
-        rec:VO.flatMap((vo,j)=>[{to:'vbe'+j,val:()=>ST.vbe[j]!=null?ST.vbe[j]:null,unit:'V',dec:3,label:`V<sub>BE</sub> @ V<sub>O</sub> = ${vo.toFixed(3)}`,none:'اضبط V<sub>O</sub> وقِس V<sub>BE</sub> أول'},
-          {to:'vi'+j,val:()=>ST.vi[j]!=null?ST.vi[j]:null,unit:'V',dec:3,label:`V<sub>I</sub> @ V<sub>O</sub> = ${vo.toFixed(3)}`,none:'قِس V<sub>I</sub> (على + وحدة V<sub>I</sub>) أول'}])},
-      {dev:'board',t:'c. سوّ الحسابات المطلوبة في Table 9.2 بالمعادلات I<sub>B</sub> = (V<sub>I</sub> − V<sub>BE</sub>)/R<sub>B</sub> (9.1)، I<sub>C</sub> = (V<sub>CC</sub> − V<sub>O</sub>)/R<sub>C</sub> (9.2)، I<sub>E</sub> = I<sub>C</sub> + I<sub>B</sub> (9.3).',
-        ok:()=>VO.every((_,j)=>['vbc','ib','ic','ie'].every(k=>isFinite(G.v(k+j)))&&G.s('md'+j)),
-        rec:VO.map((vo,j)=>({val:()=>calcRow(j),label:`V<sub>O</sub> = ${vo.toFixed(3)} V`,none:'سجّل V<sub>BE</sub> و V<sub>I</sub> لهذا السطر أول'}))},
+      /* Procedure A (manual p. 70), steps a–c; every step split into its sub-steps (Batch 7 item 3) */
+      {dev:'board',build:'9.2a',t:'Procedure A · a. وصّل الدائرة Fig. 9.2a.',subs:[
+        {k:'build',fig:'9.2a',t:'وصّل الدائرة <bdi dir="ltr">Fig. 9.2a</bdi>: R<sub>B</sub> = 27 kΩ، R<sub>C</sub> = 2.7 kΩ، وحدة V<sub>CC</sub> ووحدة V<sub>I</sub>، والملتيميترين على v<sub>O</sub> = v<sub>CE</sub> و v<sub>BE</sub>.'}]},
+      {dev:'psu',t:'b. بوحدة dc ثبّت V<sub>CC</sub> على 5 V، وبوحدة ثانية غيّر V<sub>I</sub> لين تحصل قيم V<sub>O</sub> اللي في Table 9.2. لكل قيمة V<sub>O</sub> قِس V<sub>BE</sub> و V<sub>I</sub> وسجّلها في الجدول.',subs:[
+        {k:'set',dev:'psu',t:'شغّل الـ dc supply بمفتاح ∼ POWER.',ok:()=>RT.S.psu.pwr,do:A=>A.press('p:PWR')},
+        {k:'set',dev:'psu',t:'وحدة V<sub>CC</sub>: بالـ COARSE و FINE خلّ الجهد 5.000 V.',ok:s=>s.kind==='A'&&near(s.c.vcc.U.v,5,0.003),do:A=>vcc5(A,false),
+          hint:s=>s.kind==='A'?`V<sub>CC</sub> الحين ${s.c.vcc.U.v.toFixed(3)} V: لف COARSE لين قريب من 5 V، وكمّل بالـ FINE`:'وصّل Fig. 9.2a أول'},
+        {k:'set',dev:'psu',t:'شغّل مفتاح الـ dc ⎓ ON للوحدتين (V<sub>CC</sub> و V<sub>I</sub>).',ok:s=>s.kind==='A'&&s.c.vcc.on&&s.c.vi.on,
+          do:async A=>{const c=circuit();if(!c||c.kind!=='A')return;for(const x of [c.vcc,c.vi])if(!RT.S.psu.u[x.u].on)await A.press('p:'+UK(x.u)+'ON')}},
+        {k:'measure',dev:'dmm',t:'الملتيميترين على DCV: واحد على C–E يقرا V<sub>O</sub>، والثاني على B–E يقرا V<sub>BE</sub>.',ok:()=>RT.meters().every(m=>m.D.pwr&&m.D.fn==='DCV'),do:meters,hint:'شغّل الملتيميترين (POWER) واختر DCV لكل واحد'},
+        ...VO.map((vo,j)=>({k:'rec',dev:'psu',t:j?`V<sub>O</sub> = ${vo.toFixed(3)} V: نفس الشي، وسجّل V<sub>BE</sub> و V<sub>I</sub>.`:`V<sub>O</sub> = ${vo.toFixed(3)} V: ارفع V<sub>I</sub> (COARSE وبعدها FINE) لين الـ DMM على C–E يقرا ${vo.toFixed(3)} V، سجّل V<sub>BE</sub>، وبعدها انقل الطرف الأحمر للملتيميتر اللي على B–E على + وحدة V<sub>I</sub> وسجّل V<sub>I</sub>.`,
+          ok:()=>ST.vbe[j]!=null&&ST.vi[j]!=null,do:row(j),
+          hint:s=>s.kind!=='A'?'وصّل Fig. 9.2a أول':s.row===j?(ST.vbe[j]==null?'الـ DMM الثاني على B–E (DCV) عشان V<sub>BE</sub>':'انقل الأحمر للـ DMM الثاني على + وحدة V<sub>I</sub> عشان V<sub>I</sub> (لا تحرّك V<sub>I</sub>)'):`V<sub>O</sub> الحين ${s.vo!=null?s.vo.toFixed(3)+' V':'؟'}: ${s.vo>vo?'ارفع':'نزّل'} V<sub>I</sub> (FINE) لين ${vo.toFixed(3)} V`,
+          rec:[{to:'vbe'+j,val:()=>ST.vbe[j]!=null?ST.vbe[j]:null,unit:'V',dec:3,label:`V<sub>BE</sub> @ V<sub>O</sub> = ${vo.toFixed(3)} V`,none:'اضبط V<sub>O</sub> وقِس V<sub>BE</sub> أول'},
+            {to:'vi'+j,val:()=>ST.vi[j]!=null?ST.vi[j]:null,unit:'V',dec:3,label:`V<sub>I</sub> @ V<sub>O</sub> = ${vo.toFixed(3)} V`,none:'قِس V<sub>I</sub> (على + وحدة V<sub>I</sub>) أول'}]}))]},
+      {dev:'board',t:'c. سوّ الحسابات المطلوبة في Table 9.2 بالمعادلات I<sub>B</sub> = (V<sub>I</sub> − V<sub>BE</sub>)/R<sub>B</sub> (9.1)، I<sub>C</sub> = (V<sub>CC</sub> − V<sub>O</sub>)/R<sub>C</sub> (9.2)، I<sub>E</sub> = I<sub>C</sub> + I<sub>B</sub> (9.3).',subs:[
+        {k:'rec',t:'احسب لكل سطر V<sub>BC</sub> = V<sub>BE</sub> − V<sub>O</sub> والـ Mode و I<sub>B</sub> و I<sub>C</sub> و I<sub>E</sub>، وسجّلها في Table 9.2.',
+          ok:()=>VO.every((_,j)=>['vbc','ib','ic','ie'].every(k=>isFinite(G.v(k+j)))&&G.s('md'+j)),
+          rec:VO.map((vo,j)=>({val:()=>calcRow(j),label:`V<sub>O</sub> = ${vo.toFixed(3)} V`,none:'سجّل V<sub>BE</sub> و V<sub>I</sub> لهذا السطر أول'}))}]},
       /* Procedure B (manual pp. 70–71), steps 1–5 */
-      {dev:'board',t:'Procedure B · 1. احسب قيمة R<sub>C</sub> المطلوبة من المعادلة (9.3): R<sub>C</sub> = (V<sub>CC</sub> − V<sub>LED</sub> − 0.2)/I<sub>Csat</sub>.',ok:()=>G.near(G.v('d_rc'),280,1),
-        rec:[{to:'d_rc',val:()=>(5-2-0.2)/0.01,unit:'Ω',dec:0,label:'R<sub>C</sub>'},{to:'d_rcs',val:()=>270,unit:'Ω',label:'Standard R<sub>C</sub> (E24)'}]},
-      {dev:'board',t:'2. افترض β<sub>forced</sub> = 10 واحسب I<sub>B</sub> المطلوب من (9.4): I<sub>B</sub> = I<sub>Csat</sub>/β<sub>forced</sub>.',ok:()=>G.near(G.v('d_ib'),1,0.01),
-        rec:[{to:'d_ib',val:()=>10/10,unit:'mA',dec:3,label:'I<sub>B</sub>'},{to:'d_is',val:()=>1,unit:'mA',dec:3,label:'Current of the controlling source ≈ I<sub>B</sub>'}]},
-      {dev:'board',t:'3. احسب R<sub>B</sub> المطلوبة من (9.5): R<sub>B</sub> = (V<sub>Control_Hi</sub> − 0.7)/I<sub>B</sub>.',ok:()=>G.near(G.v('d_rb'),4300,10),
-        rec:[{to:'d_rb',val:()=>(5-0.7)/1e-3,unit:'Ω',dec:0,label:'R<sub>B</sub>'},{to:'d_rbs',val:()=>4300,unit:'Ω',label:'Standard R<sub>B</sub> (E24)'}]},
-      {dev:'board',build:'9.2b',t:'4. ركّب الدائرة (Fig. 9.2b) واختبرها بموجة square لـ V<sub>Control</sub>: Hi_Level = 5 V و Lo_Level = 0 V، والتردد 0.2 Hz. لـ R<sub>C</sub> و R<sub>B</sub> استخدم صندوقين مقاومات (decade boxes).',
-        acts:['اضبط صندوق على R<sub>C</sub> = 280 Ω والثاني على R<sub>B</sub> = 4.3 kΩ.','وصّل Fig. 9.2b، و V<sub>CC</sub> = 5 V شغّال.','الجنريتر: Square، Hi_Level (F4) = 5 V، Lo_Level (F5) = 0 V، 0.2 Hz، وشغّل CH1. لاحظ الـ LED يولّع ويطفي.'],
-        ok:s=>s.kind==='B'&&s.vcc5&&s.boxOK&&!!ST.f02},
-      {dev:'gen',t:'5. اختبر الدائرة لما يزيد تردد الـ controlling signal لـ 2 Hz و 60 Hz. ليش الـ switching ما ينلاحظ على 60 Hz؟',acts:['غيّر التردد لـ 2 Hz.','غيّر التردد لـ 60 Hz، وجاوب في الـ sheet.'],ok:s=>!!ST.f2&&!!ST.f60}
+      {dev:'board',t:'Procedure B · 1. احسب قيمة R<sub>C</sub> المطلوبة من المعادلة (9.3): R<sub>C</sub> = (V<sub>CC</sub> − V<sub>LED</sub> − 0.2 V)/I<sub>Csat</sub>.',subs:[
+        {k:'rec',t:'R<sub>C</sub> = (5 V − 2 V − 0.2 V)/10 mA، وأقرب قيمة standard (Appendix F).',ok:()=>G.near(G.v('d_rc'),280,1),
+          rec:[{to:'d_rc',val:()=>(5-2-0.2)/0.01,unit:'Ω',dec:0,label:'R<sub>C</sub>'},{to:'d_rcs',val:()=>270,unit:'Ω',label:'Standard R<sub>C</sub> (E24)'}]}]},
+      {dev:'board',t:'2. افترض β<sub>forced</sub> = 10 واحسب I<sub>B</sub> المطلوب من (9.4): I<sub>B</sub> = I<sub>Csat</sub>/β<sub>forced</sub>.',subs:[
+        {k:'rec',t:'I<sub>B</sub> = 10 mA / β<sub>forced</sub>، وهو تقريباً التيار اللي يسحبه الـ controlling source.',ok:()=>G.near(G.v('d_ib'),1,0.01),
+          rec:[{to:'d_ib',val:()=>10/10,unit:'mA',dec:3,label:'I<sub>B</sub>'},{to:'d_is',val:()=>1,unit:'mA',dec:3,label:'Current of the controlling source ≈ I<sub>B</sub>'}]}]},
+      {dev:'board',t:'3. احسب R<sub>B</sub> المطلوبة من (9.5): R<sub>B</sub> = (V<sub>Control_Hi</sub> − 0.7 V)/I<sub>B</sub>.',subs:[
+        {k:'rec',t:'R<sub>B</sub> = (5 V − 0.7 V)/1 mA، وأقرب قيمة standard.',ok:()=>G.near(G.v('d_rb'),4300,10),
+          rec:[{to:'d_rb',val:()=>(5-0.7)/1e-3,unit:'Ω',dec:0,label:'R<sub>B</sub>'},{to:'d_rbs',val:()=>4300,unit:'Ω',label:'Standard R<sub>B</sub> (E24)'}]}]},
+      {dev:'board',build:'9.2b',t:'4. ركّب الدائرة (Fig. 9.2b) واختبرها بموجة square لـ V<sub>Control</sub>: Hi_Level = 5 V و Lo_Level = 0 V، والتردد 0.2 Hz. لـ R<sub>C</sub> و R<sub>B</sub> استخدم صندوقين مقاومات (decade boxes).',subs:[
+        {k:'set',dev:'dbox',t:'اضبط صندوق على R<sub>C</sub> = 280 Ω والثاني على R<sub>B</sub> = 4.3 kΩ.',ok:s=>s.boxOK,do:boxes,hint:s=>`الصندوقين الحين ${s.boxes[0]} Ω و ${s.boxes[1]} Ω: لف مفاتيح الـ ×10 و ×100 و ×1k`},
+        {k:'build',fig:'9.2b',t:'وصّل الدائرة <bdi dir="ltr">Fig. 9.2b</bdi>: الـ LED في الـ collector، والصندوقين R<sub>C</sub> و R<sub>B</sub>، والجنريتر على R<sub>B</sub>.'},
+        {k:'set',dev:'psu',t:'وحدة V<sub>CC</sub> على 5 V ومفتاح الـ dc ⎓ ON شغّال.',ok:s=>s.kind==='B'&&!!s.vcc5,do:A=>vcc5(A,true)},
+        {k:'set',dev:'gen',t:'شغّل الجنريتر واختر Square.',ok:()=>g().pwr&&g().wave==='Square',do:async A=>{if(!g().pwr)await A.press('g:PWR');await A.press('g:Square')}},
+        {k:'set',dev:'gen',t:'Hi_Level (F4) = 5 V و Lo_Level (F5) = 0 V.',ok:()=>near(g().off+g().amp/2,5,0.002)&&near(g().off-g().amp/2,0,0.002),do:async A=>{await genSet(A,'F4','5','F2');await genSet(A,'F5','0','F2')}},
+        {k:'set',dev:'gen',t:'التردد (F1) = 0.2 Hz.',ok:()=>near(g().freq,0.2),do:A=>genSet(A,'F1','0.2','F3')},
+        {k:'set',dev:'gen',t:'شغّل CH1 ولاحظ الـ LED يولّع ويطفي.',ok:()=>!!ST.f02,do:async A=>{if(!g().out)await A.press('g:CH1');await A.wait(400)},
+          hint:s=>s.kind!=='B'?'الدائرة لازم تكون Fig. 9.2b':!s.vcc5?'V<sub>CC</sub> = 5 V لازم يكون شغّال':!s.sq?'الجنريتر: Square من 0 V إلى 5 V و CH1 شغّال':'الـ LED ما يولّع: شيك قطبيته وقيم الصندوقين'}]},
+      {dev:'gen',t:'5. اختبر الدائرة لما يزيد تردد الـ controlling signal لـ 2 Hz و 60 Hz. ليش الـ switching ما ينلاحظ على 60 Hz؟',subs:[
+        {k:'set',dev:'gen',t:'غيّر التردد لـ 2 Hz ولاحظ الـ LED.',ok:()=>!!ST.f2,do:A=>genSet(A,'F1','2','F3')},
+        {k:'set',dev:'gen',t:'غيّر التردد لـ 60 Hz، وجاوب في الـ sheet ليش ما تشوف الـ switching.',ok:()=>!!ST.f60,do:A=>genSet(A,'F1','60','F3')}]}
     ],
     onReset(){for(const k in ST)delete ST[k];ST.vbe={};ST.vi={};$('result').innerHTML='';$('ivplot').innerHTML=''}};
 }};})();

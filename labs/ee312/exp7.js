@@ -10,7 +10,9 @@
    Assumptions: two MT3805 meters (DMM 1 on RD for VRD, DMM 2 on G–S / D–S; either meter may take either place); the IRF620
    sits on three neighbouring nodes in the order G D S (TO-220 seen from the front); RD values for Procedure C (270 Ω,
    470 Ω) are on the bench although the materials list names only the 1 kΩ; Procedure C step 1 sets VDD and VGS with the
-   1 kΩ still in place, step 2 then swaps RD to 270 Ω (the manual's order). */
+   1 kΩ still in place, step 2 then swaps RD to 270 Ω (the manual's order).
+   Batch 7 item 3: every step split into its sub-steps with its own "do it for me" (supply knobs COARSE then FINE, the
+   current limit, meters to DCV, the gate–drain tie pulled out, the Table 7.1 sweeps by V_DD with a capture per row). */
 EXP_DEFS['ee312/exp7']=(()=>{const H=ENGINE.sheet;
 const VDS=[0.05,0.1,0.15,0.3,0.45,0.75,1.5,3];const RDS=[['R270',270],['R470',470],['R1k',1000]];
 const t71=`<table class="tbl"><caption>Table 7.1 · I<sub>D</sub> (mA) = V<sub>RD</sub> (V) with R<sub>D</sub> = 1 kΩ</caption>
@@ -127,29 +129,90 @@ setup(RT){
     none:`اضبط V<sub>DD</sub> لين V<sub>DS</sub> = ${vd.toFixed(2)} V، والـ DMM على R<sub>D</sub> و D–S`}));
   const cRec=i=>[{to:'c_vrd'+i,val:()=>ST.c[i]&&ST.c[i].vrd,unit:'V',dec:3,label:'V<sub>RD</sub>'},{to:'c_id'+i,val:()=>ST.c[i]&&ST.c[i].vrd!=null?ST.c[i].vrd/RDS[i][1]*1e3:null,unit:'mA',dec:3,label:'I<sub>D</sub>'},
     {to:'c_vds'+i,val:()=>ST.c[i]&&ST.c[i].vds,unit:'V',dec:3,label:'V<sub>DS</sub>'}].map(t=>({...t,none:'خلّ DMM على R<sub>D</sub> و DMM على D–S، والمصدر مضبوط'}));
+  /* "do it for me" helpers (Batch 7 item 3): the V_DD unit (the one feeding R_D) and the V_GS unit (Fig. 7.1b), their knobs
+     COARSE then FINE (as in Exp 1), and the meters on R_D, D–S and G–S switched on and set to DCV */
+  const P=()=>RT.S.psu,uKey=u=>u?'R':'L';
+  const VD=()=>{const c=circuit();return c&&c.vdd?c.vdd.u:(RT.leadNet('Rp')!=null&&RT.leadNet('Lp')==null?1:0)};
+  const VG=()=>{const c=circuit();return c&&c.vgs?c.vgs.u:1-VD()};
+  const knobTo=async(A,u,get,t,tol,done)=>{let fineOnly=false;for(let i=0;i<500;i++){if(done&&done())return;const x=get();if(x==null)return;const e=x-t;if(Math.abs(e)<=tol)return;
+      const k='p:'+u+(fineOnly?'VF':'VC')+(e<0?'+':'-');await A.tap(k,fineOnly?35:90);
+      if(!fineOnly){const y=get();if(y==null)return;if(Math.abs(y-t)>=Math.abs(e)||Math.sign(y-t)!==Math.sign(e)&&Math.abs(y-t)>tol){if(Math.abs(y-t)>=Math.abs(e))await A.tap('p:'+u+'VC'+(e<0?'-':'+'),90);fineOnly=true}}}};
+  const setU=(A,u,v,tol=0.004)=>knobTo(A,uKey(u),()=>P().u[u].v,v,tol);
+  const ilimTo=async(A,u,t)=>{const U=P().u[u];for(let q=0;q<200&&Math.abs(U.ilim-t)>=5e-4;q++)await A.tap('p:'+uKey(u)+'I'+(U.ilim<t?'+':'-'),40)};
+  const pwrOn=async A=>{if(!P().pwr)await A.press('p:PWR')};
+  const unitsOn=async(A,us)=>{await pwrOn(A);for(const u of us)if(!P().u[u].on)await A.press('p:'+uKey(u)+'ON')};
+  const pwrOff=async A=>{if(P().pwr)await A.press('p:PWR')};
+  const meterAt=(a,b)=>a==null||b==null?null:RT.meters().find(m=>m.hi===a&&m.lo===b||m.hi===b&&m.lo===a);
+  const dcvOn=(a,b)=>{const m=meterAt(a,b);return !!m&&m.D.pwr&&m.D.fn==='DCV'};
+  const dcv=async(A,a,b)=>{const m=meterAt(a,b);if(!m)return;const p=m.key==='dmm2'?'m2':'m';if(!RT.S[m.key].pwr)await A.press(p+':PWR');if(RT.S[m.key].fn!=='DCV')await A.press(p+':DCV')};
+  const nets=()=>{const c=circuit();return c&&c.kind?{rd:[c.vdd.P,c.n.d],ds:[c.n.d,c.n.s],gs:[c.n.g,c.n.s]}:null};
+  const onPair=w=>()=>{const n=nets();return !!n&&dcvOn(...n[w])};
+  const measPair=(w,fig)=>async A=>{if(!onPair(w)()&&fig)await A.connect(fig);const n=nets();if(n)await dcv(A,...n[w])};
+  const vgsSet=k=>s=>s.kind==='B'&&ST.vth!=null&&A(P().u[s.c.vgs.u].v-(ST.vth+0.15*k))<=0.006;
+  const vgsTo=k=>A2=>ST.vth==null?null:setU(A2,VG(),+(ST.vth+0.15*k).toFixed(2),0.005);
+  /* Table 7.1, one curve: V_DD turned until V_DS sits on each row's value, then DMM 1's V_RD captured */
+  const sweep=k=>async A2=>{for(let j=0;j<VDS.length;j++){await knobTo(A2,uKey(VD()),()=>{const s=A2.st();return s.kind==='B'?s.vds:null},VDS[j],0.005,()=>{const s=A2.st();return !!(s.live&&s.live.k===k&&s.live.j===j&&s.live.vrd!=null)});
+      A2.st();A2.capture()}};
+  const offAll=async A2=>pwrOff(A2);
   return {status,
     steps:[
-      /* Procedure A (manual p. 53) */
-      {dev:'board',build:'7.1a',t:'Procedure A · 1. وصّل الدائرة Fig. 7.1a واستخدم IRF620 كـ MOSFET.'},
-      {dev:'psu',t:'2. شغّل الـ dc supply. بـ CURRENT خلّ حد التيار 0.100 A، وبعدها اضغط مفتاح الـ dc على ON.',ok:s=>s.kind==='A'&&s.vddOn&&s.ilim},
-      {dev:'psu',t:'3. غيّر جهد المصدر لين V<sub>RD</sub> يصير 0.25 V، يعني تيار drain = 250 µA.',ok:s=>!!ST.vrd},
-      {dev:'dmm2',t:'4. بالـ DMM قيس V<sub>GS</sub> اللي تقابلها وسجّلها: هذي القيمة اسمها في الـ datasheets V<sub>GS(TH)</sub>.',ok:s=>ST.vth!=null,
-        rec:[{to:'a_vth',val:()=>ST.vth,unit:'V',dec:3,label:'V<sub>GS(TH)</sub>'}]},
-      {dev:'psu',t:'5. طفّ الـ dc power supply.',ok:s=>!!ST.offA},
-      /* Procedure B (manual p. 54) */
-      {dev:'board',build:'7.1b',t:'Procedure B · 1. شيل التوصيلة بين الـ drain والـ gate، ووصّل الوحدة الثانية من الـ dc power supply بين الـ gate والـ source (Fig. 7.1b).',ok:s=>!!ST.offA},
-      {dev:'psu',t:'2. بوحدة من المصدر، اضبط V<sub>GS</sub> على V<sub>GS(TH)</sub> + 0.15 V وثبّتها.',ok:s=>s.kind==='B'&&s.vgsOn&&s.curve===1},
-      {dev:'psu',t:'3. بالوحدة الثانية غيّر V<sub>DD</sub> لين توصل لقيم V<sub>DS</sub> اللي في Table 7.1. لكل V<sub>DS</sub> قيس V<sub>RD</sub> وسجّلها؛ I<sub>D</sub> تطلع من Ohm\'s law.',ok:s=>pts(1)===VDS.length,rec:rowRec(1)},
-      {dev:'psu',t:'4. زِد V<sub>GS</sub> بـ 0.15 V، وكرّر خطوة 3 و V<sub>GS</sub> ثابتة.',ok:s=>pts(2)===VDS.length,rec:rowRec(2)},
-      {dev:'psu',t:'5. زِد V<sub>GS</sub> بـ 0.15 V ثانية، وكرّر خطوة 3 و V<sub>GS</sub> ثابتة.',ok:s=>pts(3)===VDS.length,rec:rowRec(3)},
-      {dev:'psu',t:'6. طفّ الـ dc power supply.',ok:s=>!!ST.offB},
-      /* Procedure C (manual p. 54) */
-      {dev:'psu',t:'Procedure C · 1. شغّل الـ dc supply. اضبط V<sub>DD</sub> على 10.0 V و V<sub>GS</sub> على V<sub>GS(TH)</sub> + 0.3 V.',ok:s=>ST.offB&&s.kind==='B'&&s.cset&&s.vddOn},
-      {dev:'board',build:'7.1c-270',t:'2. ابدأ بـ R<sub>D</sub> = 270 Ω.',ok:s=>s.kind==='B'&&s.cset&&s.c.rd.type==='R270'&&s.vddOn},
-      {dev:'dmm',t:'3. بالـ digital multimeter قيس V<sub>DS</sub> و V<sub>RD</sub> وسجّلها في Table 7.2. احسب I<sub>D</sub> بـ Ohm\'s law.',ok:s=>s.cDone(0),rec:cRec(0)},
-      {dev:'board',build:'7.1c-470',t:'4. غيّر R<sub>D</sub> إلى 470 Ω، وكرّر الخطوة اللي قبل.',ok:s=>s.cDone(1),rec:cRec(1)},
-      {dev:'board',build:'7.1c-1k',t:'5. غيّر R<sub>D</sub> إلى 1 kΩ، وكرّر خطوة 3.',ok:s=>s.cDone(2),rec:cRec(2)},
-      {dev:'psu',t:'6. طفّ الـ dc supply، وفكّ كل القطع ورجّعها مكانها، ورتّب طاولتك.',ok:s=>!!ST.offC}
+      /* Procedure A (manual p. 54); every step split into its sub-steps (Batch 7 item 3) */
+      {dev:'board',build:'7.1a',t:'Procedure A · 1. وصّل الدائرة Fig. 7.1a واستخدم IRF620 كـ MOSFET.',subs:[
+        {k:'build',fig:'7.1a',t:'وصّل الدائرة <bdi dir="ltr">Fig. 7.1a</bdi>: IRF620، الـ gate موصول بالـ drain، R<sub>D</sub> = 1 kΩ.'}]},
+      {dev:'psu',t:'2. شغّل الـ dc supply. بـ CURRENT خلّ حد التيار 0.100 A، وبعدها اضغط مفتاح الـ dc على ON.',subs:[
+        {k:'set',dev:'psu',t:'شغّل مفتاح ∼ POWER.',ok:()=>P().pwr,do:pwrOn,hint:'مفتاح ∼ POWER تحت يمين المصدر'},
+        {k:'set',dev:'psu',t:'بالـ CURRENT خلّ حد التيار 0.100 A.',ok:s=>s.kind==='A'&&s.ilim,do:A2=>ilimTo(A2,VD(),0.1),hint:'لف CURRENT حق الوحدة اللي على الدائرة لين 0.100 A'},
+        {k:'set',dev:'psu',t:'شغّل مفتاح الـ dc ⎓ ON.',ok:s=>s.kind==='A'&&s.vddOn&&s.ilim,do:A2=>unitsOn(A2,[VD()]),hint:'مفتاح الـ dc تحت الوحدة'}]},
+      {dev:'psu',t:'3. غيّر جهد المصدر لين V<sub>RD</sub> يصير 0.25 V، يعني تيار drain = 250 µA.',subs:[
+        {k:'measure',dev:'dmm',t:'الـ DMM اللي على R<sub>D</sub> (DMM 1) على DCV عشان تقرا V<sub>RD</sub>.',ok:onPair('rd'),do:measPair('rd','7.1a'),hint:'شغّل الـ DMM اللي على R<sub>D</sub> واختر DCV'},
+        {k:'set',dev:'psu',t:'بالـ COARSE و FINE خلّ V<sub>RD</sub> = 0.25 V.',ok:()=>!!ST.vrd,do:A2=>knobTo(A2,uKey(VD()),()=>{const s=A2.st();return s.kind==='A'?s.vrd:null},0.25,0.005,()=>!!ST.vrd),
+          hint:s=>`V<sub>RD</sub> الحين ${s.vrd!=null?s.vrd.toFixed(3)+' V':'؟'}: لف COARSE ثم FINE لين 0.250 V`}]},
+      {dev:'dmm2',t:'4. بالـ DMM قيس V<sub>GS</sub> اللي تقابلها وسجّلها: هذي القيمة اسمها في الـ datasheets V<sub>GS(TH)</sub>.',subs:[
+        {k:'measure',dev:'dmm2',t:'الـ DMM الثاني (DMM 2) على G–S على DCV.',ok:onPair('gs'),do:measPair('gs','7.1a'),hint:'شغّل الـ DMM اللي بين الـ gate والـ source واختر DCV'},
+        {k:'rec',t:'سجّل V<sub>GS(TH)</sub>.',ok:()=>ST.vth!=null,rec:[{to:'a_vth',val:()=>ST.vth,unit:'V',dec:3,label:'V<sub>GS(TH)</sub>'}]}]},
+      {dev:'psu',t:'5. طفّ الـ dc power supply.',subs:[
+        {k:'set',dev:'psu',t:'طفّ الـ dc supply (∼ POWER).',ok:()=>!!ST.offA,do:offAll,hint:'مفتاح ∼ POWER أو مفتاح الـ dc'}]},
+      /* Procedure B (manual p. 55) */
+      {dev:'board',build:'7.1b',t:'Procedure B · 1. شيل التوصيلة بين الـ drain والـ gate، ووصّل الوحدة الثانية من الـ dc power supply بين الـ gate والـ source (Fig. 7.1b).',subs:[
+        {k:'set',dev:'board',t:'شيل التوصيلة بين الـ drain والـ gate.',ok:()=>{const f=RT.parts('FET');if(f.length!==1)return false;const g=RT.pinNet(f[0],'g'),d=RT.pinNet(f[0],'d');return !!ST.offA&&(g==null||g!==d)},
+          do:async A2=>{const f=RT.parts('FET')[0];if(!f){await A2.build('7.1b');return}const S=RT.S,g=RT.pinNet(f,'g'),d=RT.pinNet(f,'d');const tie=(a,b)=>a===g&&b===d||a===d&&b===g;
+            S.parts=S.parts.filter(p=>!(RT.PARTS[p.type]&&RT.PARTS[p.type].t==='BR'&&tie(...RT.partNets(p))));S.wires=S.wires.filter(w=>!(w.b!=null&&tie(RT.netOf(w.a),RT.netOf(w.b))));RT.dirty=true;RT.render();
+            const g2=RT.pinNet(f,'g');if(g2!=null&&g2===RT.pinNet(f,'d'))await A2.build('7.1b')},hint:'شيل الـ bridging plug (أو السلك) اللي بين الـ gate والـ drain'},
+        {k:'connect',fig:'7.1b',t:'وصّل الوحدة الثانية بين الـ gate (+) والـ source (−)، وانقل DMM 2 على D–S.',
+          /* the free unit by name (no alt: the V_DD unit's − on the source must not stand in for the gate unit's −) */
+          do:async A2=>{const g=uKey(VG());await A2.connect({...figs['7.1b'],lines:figs['7.1b'].lines.map(l=>l.lead==='Rp'&&l.at===16?{lead:g+'p',at:16}:l.lead==='Rm'&&l.at===23?{lead:g+'m',at:23}:l)})}}]},
+      {dev:'psu',t:'2. بوحدة من المصدر، اضبط V<sub>GS</sub> على V<sub>GS(TH)</sub> + 0.15 V وثبّتها.',subs:[
+        {k:'set',dev:'psu',t:'بوحدة V<sub>GS</sub> (COARSE ثم FINE) خلّ الجهد V<sub>GS(TH)</sub> + 0.15 V.',ok:vgsSet(1),do:vgsTo(1),hint:s=>ST.vth!=null?`المطلوب ${(ST.vth+0.15).toFixed(2)} V على الوحدة اللي بين الـ gate والـ source`:'قيس V<sub>GS(TH)</sub> في Procedure A أول'},
+        {k:'set',dev:'psu',t:'شغّل المصدر ومفتاح الـ dc حق الوحدتين.',ok:s=>s.kind==='B'&&s.vgsOn&&s.vddOn&&s.curve===1,do:A2=>unitsOn(A2,[VG(),VD()]),hint:'∼ POWER ومفتاح الـ dc حق كل وحدة'}]},
+      {dev:'psu',t:'3. بالوحدة الثانية غيّر V<sub>DD</sub> لين توصل لقيم V<sub>DS</sub> اللي في Table 7.1. لكل V<sub>DS</sub> قيس V<sub>RD</sub> وسجّلها؛ I<sub>D</sub> تطلع من Ohm\'s law.',subs:[
+        {k:'measure',dev:'dmm',t:'DMM 1 على R<sub>D</sub> (V<sub>RD</sub>) و DMM 2 على D–S (V<sub>DS</sub>)، الاثنين على DCV.',ok:()=>onPair('rd')()&&onPair('ds')(),do:async A2=>{await measPair('rd','7.1b')(A2);await measPair('ds','7.1b')(A2)},hint:'الـ DMM اللي على R<sub>D</sub> والـ DMM اللي على D–S: شغّلهم واختر DCV'},
+        {k:'rec',t:'لكل V<sub>DS</sub> في Table 7.1: اضبط V<sub>DD</sub> وسجّل V<sub>RD</sub>.',ok:()=>pts(1)===VDS.length,rec:rowRec(1),do:sweep(1)}]},
+      {dev:'psu',t:'4. زِد V<sub>GS</sub> بـ 0.15 V، وكرّر خطوة 3 و V<sub>GS</sub> ثابتة.',subs:[
+        {k:'set',dev:'psu',t:'زِد V<sub>GS</sub> إلى V<sub>GS(TH)</sub> + 0.30 V.',ok:vgsSet(2),do:vgsTo(2),hint:s=>ST.vth!=null?`المطلوب ${(ST.vth+0.3).toFixed(2)} V`:''},
+        {k:'rec',t:'لكل V<sub>DS</sub> في Table 7.1: اضبط V<sub>DD</sub> وسجّل V<sub>RD</sub>.',ok:()=>pts(2)===VDS.length,rec:rowRec(2),do:sweep(2)}]},
+      {dev:'psu',t:'5. زِد V<sub>GS</sub> بـ 0.15 V ثانية، وكرّر خطوة 3 و V<sub>GS</sub> ثابتة.',subs:[
+        {k:'set',dev:'psu',t:'زِد V<sub>GS</sub> إلى V<sub>GS(TH)</sub> + 0.45 V.',ok:vgsSet(3),do:vgsTo(3),hint:s=>ST.vth!=null?`المطلوب ${(ST.vth+0.45).toFixed(2)} V`:''},
+        {k:'rec',t:'لكل V<sub>DS</sub> في Table 7.1: اضبط V<sub>DD</sub> وسجّل V<sub>RD</sub>.',ok:()=>pts(3)===VDS.length,rec:rowRec(3),do:sweep(3)}]},
+      {dev:'psu',t:'6. طفّ الـ dc power supply.',subs:[
+        {k:'set',dev:'psu',t:'طفّ الـ dc supply (∼ POWER).',ok:()=>!!ST.offB,do:offAll,hint:'مفتاح ∼ POWER'}]},
+      /* Procedure C (manual p. 55) */
+      {dev:'psu',t:'Procedure C · 1. شغّل الـ dc supply. اضبط V<sub>DD</sub> على 10.0 V و V<sub>GS</sub> على V<sub>GS(TH)</sub> + 0.3 V.',subs:[
+        {k:'set',dev:'psu',t:'شغّل الـ dc supply (∼ POWER، ومفتاح الـ dc حق الوحدتين).',ok:s=>!!ST.offB&&s.kind==='B'&&s.vddOn&&s.vgsOn,do:A2=>unitsOn(A2,[VD(),VG()]),hint:'∼ POWER ومفتاح الـ dc حق كل وحدة'},
+        {k:'set',dev:'psu',t:'V<sub>DD</sub> = 10.0 V (COARSE ثم FINE).',ok:s=>s.kind==='B'&&A(P().u[s.c.vdd.u].v-10)<0.006,do:A2=>setU(A2,VD(),10),hint:'الوحدة اللي على R<sub>D</sub>: لف COARSE لين 10 V وكمّل بالـ FINE'},
+        {k:'set',dev:'psu',t:'V<sub>GS</sub> = V<sub>GS(TH)</sub> + 0.3 V.',ok:s=>s.kind==='B'&&s.cset&&s.vddOn,do:vgsTo(2),hint:s=>ST.vth!=null?`المطلوب ${(ST.vth+0.3).toFixed(2)} V على وحدة الـ gate`:''}]},
+      {dev:'board',build:'7.1c-270',t:'2. ابدأ بـ R<sub>D</sub> = 270 Ω.',subs:[
+        {k:'build',fig:'7.1c-270',t:'بدّل R<sub>D</sub> بـ 270 Ω (<bdi dir="ltr">Fig. 7.1c</bdi>).',ok:s=>s.kind==='B'&&s.cset&&s.c.rd.type==='R270'&&s.vddOn}]},
+      {dev:'dmm',t:'3. بالـ digital multimeter قيس V<sub>DS</sub> و V<sub>RD</sub> وسجّلها في Table 7.2. احسب I<sub>D</sub> بـ Ohm\'s law.',subs:[
+        {k:'measure',dev:'dmm',t:'DMM 1 على R<sub>D</sub> و DMM 2 على D–S، الاثنين على DCV.',ok:()=>onPair('rd')()&&onPair('ds')(),do:async A2=>{await measPair('rd','7.1c-270')(A2);await measPair('ds','7.1c-270')(A2)},hint:'الـ DMM اللي على R<sub>D</sub> والـ DMM اللي على D–S على DCV'},
+        {k:'rec',t:'سجّل V<sub>RD</sub> و I<sub>D</sub> و V<sub>DS</sub> في Table 7.2.',ok:s=>s.cDone(0),rec:cRec(0)}]},
+      {dev:'board',build:'7.1c-470',t:'4. غيّر R<sub>D</sub> إلى 470 Ω، وكرّر الخطوة اللي قبل.',subs:[
+        {k:'build',fig:'7.1c-470',t:'بدّل R<sub>D</sub> بـ 470 Ω.'},
+        {k:'rec',t:'سجّل V<sub>RD</sub> و I<sub>D</sub> و V<sub>DS</sub> في Table 7.2.',ok:s=>s.cDone(1),rec:cRec(1)}]},
+      {dev:'board',build:'7.1c-1k',t:'5. غيّر R<sub>D</sub> إلى 1 kΩ، وكرّر خطوة 3.',subs:[
+        {k:'build',fig:'7.1c-1k',t:'بدّل R<sub>D</sub> بـ 1 kΩ.'},
+        {k:'rec',t:'سجّل V<sub>RD</sub> و I<sub>D</sub> و V<sub>DS</sub> في Table 7.2.',ok:s=>s.cDone(2),rec:cRec(2)}]},
+      {dev:'psu',t:'6. طفّ الـ dc supply، وفكّ كل القطع ورجّعها مكانها، ورتّب طاولتك.',subs:[
+        {k:'set',dev:'psu',t:'طفّ الـ dc supply (∼ POWER).',ok:()=>!!ST.offC,do:offAll,hint:'مفتاح ∼ POWER'}]}
     ],
     onReset(){for(const k in ST)delete ST[k];ST.b={};ST.c={};$('result').innerHTML='';$('ivplot').innerHTML=''}};
 }};})();
