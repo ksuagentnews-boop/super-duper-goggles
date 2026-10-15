@@ -62,7 +62,7 @@ instruments:[
 parts:PARTS,
 tray:[['UC','2 coils on U-core'],['BR','Bridging plug'],['W','Wire']],
 setup(RT){
-  const K=ENGINE.labkit(RT),N=K.N,G=ENGINE.sheet;let ST={};
+  const K=ENGINE.labkit(RT),G=ENGINE.sheet;let ST={};
   const uc=()=>RT.S.parts.find(p=>p.type==='UC');
   const pin=r=>{const p=uc();return p?RT.pinNet(p,r):null};
   const src=()=>({L:RT.leadNet('acL'),N:RT.leadNet('acN'),on:RT.S.ac.pwr});

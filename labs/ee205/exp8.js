@@ -71,7 +71,7 @@ instruments:[
 parts:PARTS,
 tray:[['R10','10 Ω'],['R100','100 Ω'],['R5k','5 kΩ'],['L175','17.5 mH coil'],['L438','4.38 mH coil'],['C47','4.7 µF'],['C1','1 µF'],['C01','0.1 µF'],['C10n','10 nF'],['BR','Bridging plug'],['W','Wire']],
 setup(RT){
-  const K=ENGINE.labkit(RT),N=K.N,G=ENGINE.sheet;let ST={};
+  const K=ENGINE.labkit(RT),G=ENGINE.sheet;let ST={};
   const W1=2*Math.PI*1000;
   /* theory (nominal values, coil resistances included) */
   const c=(r,i)=>({r,i}),add=(a,b)=>c(a.r+b.r,a.i+b.i),inv=a=>{const d=a.r*a.r+a.i*a.i;return c(a.r/d,-a.i/d)},abs=a=>Math.hypot(a.r,a.i),arg=a=>Math.atan2(a.i,a.r)*180/Math.PI;
@@ -158,12 +158,12 @@ setup(RT){
         acts:['وصّل Fig. 7: bridging plug في كل مكان يروح له الأميتر (الخط الرئيسي وكل فرع)، والـ Fluke (V~) على E.','OUTPUT ON على 1 kHz، وعدّل AMPL لين E = 2.00 V.','قِس I و I<sub>C</sub> و I<sub>R</sub> و I<sub>L</sub>: الـ BK مكان الـ plug، وبعدين رجّع الـ plug.','θ: 10 Ω بين الـ bottom bus والأرضي، CH I على E و CH II على الـ 10 Ω، و DUAL. بعدها رجّع الـ plug مكان الـ 10 Ω.'],
         ok:s=>['e2','i2','ir2','ic2','il2'].every(k=>ST[k]!=null)&&ST.th2,
         rec:[{to:'e2',label:'E',unit:'V',dec:3,val:()=>ST.e2},{to:'i2',label:'I',unit:'mA',dec:2,val:mA('i2')},{to:'ir2',label:'I<sub>R</sub>',unit:'mA',dec:2,val:mA('ir2')},{to:'ic2',label:'I<sub>C</sub>',unit:'mA',dec:2,val:mA('ic2')},{to:'il2',label:'I<sub>L</sub>',unit:'mA',dec:2,val:mA('il2')},
-          {to:'th2',label:'θ (CRO)',unit:'°',dec:1,val:()=>{const s=BENCH.sim.status();return s.th!=null?s.th:null},none:'حط الـ 10 Ω بين الـ bottom bus والأرضي، و CH I على E و CH II على الـ 10 Ω، و DUAL'}]},
+          {to:'th2',label:'θ (CRO)',unit:'°',dec:1,val:()=>{const s=status();return s.th!=null?s.th:null},none:'حط الـ 10 Ω بين الـ bottom bus والأرضي، و CH I على E و CH II على الـ 10 Ω، و DUAL'}]},
       {dev:'board',t:'2. احسب Z<sub>R</sub> و Z<sub>C</sub> و Z<sub>L</sub> و Z بقانون أوم.',ok:s=>ST.il2!=null},
       {dev:'board',t:'3. احسب I من I = E/Z = EY وقارن النتيجة بالقيمة المقاسة.',ok:s=>ST.i2!=null},
-      {dev:'sc',build:'7cl',t:'4. باستخدام الـ CRO قِس زاوية الطور بين I<sub>C</sub> و I<sub>L</sub> (تلميح: استخدم مقاومة 10 Ω على التوالي مع L ومع C عشان تلقى الزاوية).',
+      {dev:'board',build:'7cl',t:'4. باستخدام الـ CRO قِس زاوية الطور بين I<sub>C</sub> و I<sub>L</sub> (تلميح: استخدم مقاومة 10 Ω على التوالي مع L ومع C عشان تلقى الزاوية).',
         acts:['10 Ω تحت المكثف و 10 Ω تحت الـ coil، والـ R على الأرضي مباشرة.','CH I على الـ 10 Ω اللي مع C، و CH II على اللي مع L، والأرضي على الأرضي، و DUAL.'],ok:s=>ST.cl2,
-        rec:[{to:'cl2',label:'I<sub>C</sub> ↔ I<sub>L</sub>',unit:'°',dec:1,val:()=>{const s=BENCH.sim.status();return s.cl!=null?s.cl:null}}]},
+        rec:[{to:'cl2',label:'I<sub>C</sub> ↔ I<sub>L</sub>',unit:'°',dec:1,val:()=>{const s=status();return s.cl!=null?s.cl:null}}]},
       /* Procedure III (manual p. 73), steps 1–5 */
       {dev:'board',build:'8',t:'Procedure III · 1. وصّل الدائرة اللي في Fig. 8.',acts:['الـ BK على ACA 20m على التوالي، و CH I على المصدر يقيس V (الـ Fluke ما يلحق الـ kHz العالية).']},
       {dev:'gen',t:'2. خلّ جهد الدخل الـ sinusoidal على 2 V<sub>rms</sub> وغيّر التردد من 7.5 kHz لين 15 kHz بخطوات 500 Hz. عند كل تردد ثبّت V على 2 V<sub>rms</sub> (5.66 Vpp على CH I)، وقِس التيار I، وسجّل القيم في Table 1.',ok:s=>F3.every(f=>ST['s'+f]!=null),rec:sweep('s',F3,'s')},
