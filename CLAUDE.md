@@ -257,7 +257,7 @@ Standing rules for EVERY experiment of every lab (EE312, EE205 and every lab bui
 - Keep `docs/PROGRESS.md` (done / in progress / next) updated and commit + push after every finished item, so a new session can resume exactly where the last one stopped if usage runs out.
 
 ## Branches: development vs. the students' copy
-- Work only on `main` (and short-lived feature branches merged into `main`). Never push to, reset or merge into `release` unless the owner explicitly asks ("انقل main إلى release" / "promote main to release").
+- Work only on `main` (and short-lived feature branches merged into `main`). After every finished item: commit, push the branch, then merge it into `main` and push `main`, so the live site is always up to date even if the session stops (owner, 15 Oct). Never push to, reset or merge into `release` unless the owner explicitly asks ("انقل main إلى release" / "promote main to release").
 - At launch the owner creates `release` from `main` and points GitHub Pages at it; from then on `release` is the frozen copy students use.
 
 ## Hard rules
