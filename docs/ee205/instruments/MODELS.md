@@ -45,7 +45,7 @@ Read from the lab photo, enlarged and sharpened:
   - the two upper edges of each triangle are solid lines; the bottom edge and the three lines from N to the corners are dashed;
   - every line carries its voltage: the line-to-line (delta) value on the edges and the line-to-N (star) value on the dashed lines from N. The datasheet gives 23 V / 40 V for one set and 6 V / 10 V for the other. Read which set is which from the crop;
   - a solid printed line joins the two N sockets across the panel;
-  - the right diagram sits a little lower than the left one, and its bottom-left socket is right next to the left diagram's bottom-right socket.
+  - **the sockets sit on a straight, square layout** (owner's correction, 15 Oct): the two triangles are the same size and side by side at the same height. All four bottom-corner sockets lie on ONE horizontal line, both apex sockets at the same height straight above the middle of their own base, and both N sockets at the same height straight below their apex. The edges are symmetrical. The right triangle's bottom-left socket is close to the left triangle's bottom-right socket, on the same line. The slant in the lab crops is only camera perspective (the photo is taken at an angle): do not copy it. `ref/threephase-transformer-leybold.jpg`, taken straight on, shows the true layout.
 - Between the two triangles, above the N–N line: a ⚠ triangle with a small red pilot lamp under it.
 - Bottom strip: a black band across the panel, with the old Leybold-Heraeus logo (white square mark) and a name at the left, and two lines of white text at the right: the product name in German and English, with the catalogue number.
 - The handwritten pen marks on the real panel are dirt; do not draw them.
