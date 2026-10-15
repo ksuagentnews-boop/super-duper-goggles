@@ -11,7 +11,7 @@
    VBC is −5.000 V (the manual prints 5.000); BD137 legs E C B from the left (TO-225 front view); the LED is the
    green 5 mm LED of Exp 1 (≈ 2 V at 10 mA); the supply knobs move 0.1 V (COARSE) and 1 mV (FINE) per step here
    (the real pots are continuous) so VO can be set within ±8 mV of the table values; either supply unit may be V_CC or V_I;
-   either decade box may be R_C or R_B, its red post (1) on the source side (V_CC / GEN OUT); the meters
+   either decade box may be R_C or R_B, either way round (non-polar); the meters
    in Fig. 9.2a sit on its vO = vCE and vBE terminals (DMM 1 on C–E, DMM 2 on B–E; DMM 2 then moves to VI); the standard values captured in
    Manual are E24 (270 Ω, 4.3 kΩ). */
 EXP_DEFS['ee312/exp9']=(()=>{const H=ENGINE.sheet;
@@ -41,11 +41,13 @@ const plq=`<h3>Post Lab Questions (PLQs)</h3><ol class="en">
 const GND=[{wire:[22,23]},{wire:[23,24]},{wire:[24,25]},{wire:[25,26]}],Q={ic:'BD137',pins:{E:16,C:17,B:18}};
 /* Fig. 9.2a draws v_O = v_CE and v_BE: DMM 1 on C–E, DMM 2 on B–E (either meter may take either place) */
 const FIG='labs/ee312/fig/fig9-2.png';
+/* a decade box is non-polar and either box may be R_C or R_B: any post may take any of the four places (the step check keeps each box's two posts on one branch) */
+const BX=['dA1','dA2','dB1','dB2'];
 const figs={'9.2a':{img:FIG,cap:'Fig. 9.2a · R<sub>B</sub> = 27 kΩ, R<sub>C</sub> = 2.7 kΩ, V<sub>CC</sub> = 5 V',lines:[{lead:'Lp',alt:'Rp',at:8},{lead:'Lm',alt:'Rm',at:22},{wire:[8,9]},{wire:[9,10]},
     {part:['R2k7',10,17]},Q,{wire:[16,23]},...GND,{part:['R27k',18,11]},{wire:[11,12]},{lead:'Rp',alt:'Lp',at:12},{lead:'Rm',alt:'Lm',at:26},
     {lead:'mh',alt:'m2h',at:17},{lead:'ml',alt:'m2l',at:16},{lead:'m2h',alt:'mh',at:18},{lead:'m2l',alt:'ml',at:16}]},
-  '9.2b':{img:FIG,cap:'Fig. 9.2b · R<sub>C</sub> and R<sub>B</sub> on the two decade boxes',lines:[{lead:'gr',at:8},{lead:'gb',at:22},{lead:'dB1',alt:'dA1',at:8},{lead:'dB2',alt:'dA2',at:18},Q,{wire:[16,23]},...GND,
-    {part:['LED',10,17],pol:true},{lead:'dA2',alt:'dB2',at:10},{lead:'dA1',alt:'dB1',at:12},{lead:'Rp',alt:'Lp',at:12},{lead:'Rm',alt:'Lm',at:26}]}};
+  '9.2b':{img:FIG,cap:'Fig. 9.2b · R<sub>C</sub> and R<sub>B</sub> on the two decade boxes',lines:[{lead:'gr',at:8},{lead:'gb',at:22},{lead:'dB1',alt:BX,at:8},{lead:'dB2',alt:BX,at:18},Q,{wire:[16,23]},...GND,
+    {part:['LED',10,17],pol:true},{lead:'dA2',alt:BX,at:10},{lead:'dA1',alt:BX,at:12},{lead:'Rp',alt:'Lp',at:12},{lead:'Rm',alt:'Lm',at:26}]}};
 return {figs,procs:[{id:'A',title:'VTC of the CE circuit: Fig. 9.2a (Table 9.2)'},{id:'B',title:'The BJT as an LED switch: Fig. 9.2b'}],
 sheet:`<div class="paper" id="paper">
 <h2>Experiment 9 · The BJT CE Circuit with Emphasis on Switching</h2>

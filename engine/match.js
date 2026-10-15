@@ -4,7 +4,8 @@
    A figure is given by its reference wiring (def.figs[id].lines, the same line format the steps used:
      {part:[type,a,b], pol}  a two-leg part between reference nodes a and b (polar parts: a = anode / +)
      {ic:type, pins:{pin:node}} a multi-pin part, pins by name or role
-     {lead:k, at:node, alt}   an instrument terminal (alt: the same connection on the other unit / meter)
+     {lead:k, at:node, alt}   an instrument terminal (alt: a key or a list of keys that may take this place instead,
+                              e.g. the other unit / meter, or the other post of a non-polar box; each key is used once)
      {wire:[a,b]}             a wire or bridging plug (nodes a and b are one net)
      {stub:node, n}           breadboard: standing jumpers for hooks (not part of the circuit)
    the reference nodes only say which terminals share a net). The bench netlist comes from the live state (parts, wires,
@@ -21,7 +22,7 @@ function figNets(fig){const par={};const f=x=>{x=String(x);if(par[x]==null)par[x
     if(L.wire)u(L.wire[0],L.wire[1]);
     else if(L.part){const [t,a,b]=L.part;if((api.PARTS[t]||{}).t==='BR')u(a,b);else parts.push({type:t,a,b,polar:!!api.PARTS[t]&&api.polar(t)})}
     else if(L.ic)ics.push({type:L.ic,pins:L.pins});
-    else if(L.lead){const keys=[L.lead,L.alt].filter(Boolean);leads.push({keys,at:L.at});if(api.leadDef(L.lead)&&api.leadDef(L.lead).earth){u(L.at,'E');earth=true}}});
+    else if(L.lead){const keys=[L.lead].concat(L.alt||[]).filter(Boolean);leads.push({keys,at:L.at});if(api.leadDef(L.lead)&&api.leadDef(L.lead).earth){u(L.at,'E');earth=true}}});
   const N=x=>f(x);
   return {parts:parts.map(p=>({...p,a:N(p.a),b:N(p.b)})),ics:ics.map(c=>({type:c.type,pins:Object.fromEntries(Object.entries(c.pins).map(([k,v])=>[k,N(v)]))})),
     leads:leads.map(l=>({...l,net:N(l.at)})),earth,E:earth?N('E'):null,find:N}}
@@ -31,7 +32,8 @@ function solve(F,B,opt={}){const map=new Map(),inv=new Map();const used=new Set(
   const unbind=undo=>undo.forEach(fn=>{inv.delete(map.get(fn));map.delete(fn)});
   if(F.earth&&!opt.noEarth){const u=[];if(!bind(F.E,-1,u))return null}
   const leads=F.leads.filter((_,i)=>!(opt.skipLead===i)),parts=F.parts.filter((_,i)=>!(opt.skipPart===i));
-  function L(i){if(i===leads.length)return C(0);const l=leads[i];for(const k of l.keys){const sn=B.leadNet(k);if(sn==null)continue;const u=[];if(bind(l.net,sn,u)&&L(i+1))return true;unbind(u)}return false}
+  const uk=new Set();
+  function L(i){if(i===leads.length)return C(0);const l=leads[i];for(const k of l.keys){if(uk.has(k))continue;const sn=B.leadNet(k);if(sn==null)continue;const u=[];uk.add(k);if(bind(l.net,sn,u)&&L(i+1))return true;uk.delete(k);unbind(u)}return false}
   function C(i){if(i===F.ics.length)return P(new Set());const c=F.ics[i];for(const q of B.parts){if(used.has(q.id)||q.type!==c.type||!q.pins)continue;const u=[];
       if(Object.entries(c.pins).every(([pin,fn])=>bind(fn,q.pins[pin],u))){used.add(q.id);if(C(i+1))return true;used.delete(q.id)}unbind(u)}return false}
   function P(done){if(done.size===parts.length)return true;
