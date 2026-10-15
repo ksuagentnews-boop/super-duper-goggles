@@ -26,7 +26,7 @@ export async function run(page, vp, ok) {
   await H.lead('h1v', null); await H.lead('h1c', null);
   /* a layout of its own (nodes 7–10, not the reference rectangle) */
   await H.focus('board'); await H.place('R4k7', 7, 8); await H.place('R1k', 8, 9); await H.place('R2k2', 9, 10); await H.lead('Lp', 7); await H.lead('Lm', 10);
-  ok(await done(5), 'II.1 Fig. 5 built ' + JSON.stringify(await page.evaluate(() => [BENCH.sim.RT.hint('5'), BENCH.cur(), BENCH.sim.RT.S.parts.map(p => [p.type, p.a, p.b])])));
+  ok(await done(5), 'II.1 Fig. 5 built');
   await H.focus('psu'); await H.key('p:PWR'); await H.key('p:LVC-', 2); await H.key('p:LON');
   await H.focus('hm1'); await H.key('h1:SW-', 2);
   for (const [a, b] of [[7, 8], [8, 9], [9, 10], [7, 10]]) { await H.lead('h1v', a); await H.lead('h1c', b); }
