@@ -40,3 +40,10 @@ These came up while building Exp 1–10. All of them are now closed. Each one sa
 - **µA741 model:** the output limits were fitted to the lab's own readings (slides 30, 33): +14.2 / −14.0 V at light load, +13.8 V sourcing ≈ 10 mA, −13.2 V sinking ≈ 12 mA; slew rate 0.68 V/µs (datasheet typ. 0.5) so the measured bandwidth at G = 11 (≈ 69 kHz, slide 28) is met.
 - **Rail check with the MT3805 (slides 19–20):** the slides measure each unit on the supply's own terminals; on the simulator the meter leads go on the breadboard's posts (Vc / Va against ⏚), after the banana leads, which reads the same voltage.
 - **Board size:** the Digilent board has 4 blocks × 64 columns; the simulator draws 2 blocks × 30 columns with a larger hole pitch, so every hole is reachable on a phone.
+
+## Batch 6 (steps follow the manual, circuits by equivalence)
+- Exp 2 Fig. 2.3a: the supply + goes to the diode's cathode with R_S on the anode side, exactly as drawn (the old build had + on R_S); the reverse readings are therefore negative, the grader compares magnitudes.
+- Exp 2 Procedure B step 1 rebuilds with the rectifier first, because B4 says "replace the rectifier diode with a Zener". A5/B4 swap diodes without a build check of their own.
+- Exp 3: Fig. 3.4a needs three 1N4001 (the materials list says two). Step 3 includes "Offset = 0 mV" (the previous group left 0.5 V). Both probe grounds on circuit ground.
+- Exam mode: a recording step with nothing extra to check ticks together with the step before it (e.g. Exp 3 A12/A13).
+- Exam score = the experiment's graded sheet items; «وصّل لي» / «تخطّي» −1, «تلميح» −0.5.
