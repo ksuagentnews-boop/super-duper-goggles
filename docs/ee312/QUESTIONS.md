@@ -47,3 +47,6 @@ These came up while building Exp 1–10. All of them are now closed. Each one sa
 - Exp 3: Fig. 3.4a needs three 1N4001 (the materials list says two). Step 3 includes "Offset = 0 mV" (the previous group left 0.5 V). Both probe grounds on circuit ground.
 - Exam mode: a recording step with nothing extra to check ticks together with the step before it (e.g. Exp 3 A12/A13).
 - Exam score = the experiment's graded sheet items; «وصّل لي» / «تخطّي» −1, «تلميح» −0.5.
+- Exp 5: only the slide 21 supply wiring passes (right unit = +15 V, left unit = −15 V, common = ⏚); swapping the units is not accepted (with alternates the matcher would also accept a wrong series connection). Setting each unit to 15 V and checking it with the MT3805 (slides 19–21) are actions under A1 (no manual step of their own); the 15 V is checked at switch-on, the DMM check is not graded. The generator joins the figure at manual step 2, the scope channels at step 3. 500 µs/div (slide 35) is an action under A8.
+- Exp 6: Procedure C step 6 includes running the simulation. "R1 → 270 Ω" in A16/B2 is still read as the load (R3), as before.
+- Exp 8: step A1 (download mosfet1u.lib) ticks by itself: the file is already on the lab PC.
