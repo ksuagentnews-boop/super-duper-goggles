@@ -20,17 +20,20 @@ export async function run(page, vp, ok) {
   ok(await done(2), 'A2 VBB = 25 V, 0.05 A, dc ON');
   await H.focus('dmm'); await H.key('m:PWR'); await H.key('m:DCV'); await H.focus('dmm2'); await H.key('m2:PWR'); await H.key('m2:DCV');
   await measure('D4001', 'R', 25); ok(await done(3), `A3 rectifier @25 V: VD ${F[key('D4001', 'R', 25) + '_vd']}, VRS ${F[key('D4001', 'R', 25) + '_vrs']}`);
-  for (const v of REV.slice(1)) await measure('D4001', 'R', v);
-  await H.focus('board'); await H.del(15, 22); await H.place('Z4733', 15, 22);
-  for (const v of [...REV].reverse()) await measure('Z4733', 'R', v);
-  ok(await done(5), `A4–A5 all reverse rows: Zener @25 V VD ${F[key('Z4733', 'R', 25) + '_vd']}, ID ${F[key('Z4733', 'R', 25) + '_vrs']} mA`);
+  /* the manual's order, as the sub-steps take it: the Zener at 25 V (step 4), then the other VBB values with the Zener, the rectifier back and its rows (step 5) */
+  await H.focus('board'); await H.del(15, 22); await H.place('Z4733', 15, 22); await measure('Z4733', 'R', 25); ok(await done(4), 'A4 Zener @25 V');
+  for (const v of REV.slice(1)) await measure('Z4733', 'R', v);
+  await H.focus('board'); await H.del(15, 22); await H.place('D4001', 15, 22);
+  for (const v of [...REV.slice(1)].reverse()) await measure('D4001', 'R', v);
+  ok(await done(5), `A5 all reverse rows: Zener @25 V VD ${F[key('Z4733', 'R', 25) + '_vd']}, ID ${F[key('Z4733', 'R', 25) + '_vrs']} mA`);
   await H.focus('psu'); await H.key('p:LON'); ok(await done(6), 'A6 dc OFF');
-  await H.focus('board'); await H.del(15, 22); await H.place('D4001', 15, 22); await H.lead('Lp', 14); await H.lead('Lm', 22); ok(await done(7), 'B1 supply swapped → Fig. 2.3b (rectifier)');
+  await H.focus('board'); await H.lead('Lp', 14); await H.lead('Lm', 22); ok(await done(7), 'B1 supply swapped → Fig. 2.3b (rectifier)');
   await setV(0.3); ok(await done(8), 'B2 VFF = 0.3 V'); await H.key('p:LON');
-  for (const v of FWD) await measure('D4001', 'F', v);
-  ok(await done(9), `B3 1N4001 @0.3 V: VD ${F[key('D4001', 'F', 0.3) + '_vd']}`);
+  await measure('D4001', 'F', 0.3); ok(await done(9), `B3 1N4001 @0.3 V: VD ${F[key('D4001', 'F', 0.3) + '_vd']}`);
   await H.focus('board'); await H.del(15, 22); await H.place('Z4733', 15, 22);
-  for (const v of [...FWD].reverse()) await measure('Z4733', 'F', v);
+  for (const v of FWD) await measure('Z4733', 'F', v);
+  await H.focus('board'); await H.del(15, 22); await H.place('D4001', 15, 22);
+  for (const v of [...FWD.slice(1)].reverse()) await measure('D4001', 'F', v);
   ok(await done(10), `B4 all forward rows: 1N4001 @10.7 V VD ${F[key('D4001', 'F', 10.7) + '_vd']}, ID ${F[key('D4001', 'F', 10.7) + '_vrs']} mA`);
   await H.focus('psu'); await H.key('p:LON'); ok(await done(11), 'B5 off — all steps done');
   const n = k => Math.abs(+F[k]);
