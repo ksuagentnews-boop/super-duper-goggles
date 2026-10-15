@@ -165,44 +165,140 @@ setup(RT){
   const okA=s=>s.kind==='A10'&&s.on&&s.f1k&&s.prA,okA100=s=>s.kind==='A100'&&s.on&&s.f1k,okB=s=>s.kind==='B'&&s.on&&s.f1k&&s.prB;
   const pp=(k,f)=>{const d=sig(k,f);return d?d.max-d.min:null},mx=(k,f)=>{const d=sig(k,f);return d?d.max:null},mn=(k,f)=>{const d=sig(k,f);return d?d.min:null};
   const NONE='ما فيه إشارة: شغّل المصدر والجنريتر، والدائرة والـ probes مثل الشكل.';
+  /* ---------- Batch 7 item 3: the sub-steps and their «do it for me» ---------- */
+  /* the lab's power wiring in its order (slide 21, owner): the four banana leads, then the jumpers; each «وصّل لي» lays the
+     reference wiring up to that point (cumulative partial figures, not in figs: they are not circuits of the manual) */
+  const PW=[{lead:'Lm',at:B.VA},{lead:'Lp',at:B.GND},{lead:'Rm',at:B.GND,via:'Lp'},{lead:'Rp',at:B.VB}];
+  const JG=[{wire:[B.GND,B.VRL],col:'black'},{wire:[B.VRL,B.VRR],col:'black'}],JS=[{wire:[B.VB,B.PB],col:'red'},{wire:[B.VA,B.NB],col:'yellow'}],
+    JL=[{wire:[B.PB,B.PU],col:'red'},{wire:[B.NB,B.NU],col:'yellow'},{wire:[B.VRL,B.GR],col:'black'}];
+  const part=lines=>({lines});
+  const same=(a,b)=>{const x=RT.netOf(a);return x!=null&&x===RT.netOf(b)};
+  const onPost=(k,p)=>{const n=RT.leadNet(k);return n!=null&&n===RT.netOf(p)};
+  const A1ok=f=>()=>f()||MT('5.4a');
+  /* the scope leads one channel at a time (the circuit and the generator as in the figure) */
+  const C1=k=>[{stub:B.P3,n:2},{stub:B.GR,n:2},{lead:'c1r',at:B.P3},{lead:'c1b',at:B.GR}],C2=[{stub:B.P6,n:1},{stub:B.GR,n:3},{lead:'c2r',at:B.P6},{lead:'c2b',at:B.GR}];
+  const FA1=part([...AMP('R10k'),...GEN,...C1()]),FB1=part([...CMP,...GEN,...C1()]),FB2=part([...CMP,...GEN,...C1(),...C2]);
+  /* generator keypad: F-key, the digits, the unit key (F1 … F4 of that quantity) */
+  const gOn=async A=>{if(!RT.S.gen.pwr)await A.press('g:PWR')};
+  const gKey=async(A,fk,str,uk)=>{await gOn(A);if(RT.S.gen.edit)await A.press('g:F5');await A.press('g:'+fk);for(const ch of str)await A.press('g:'+ch);await A.press('g:'+uk)};
+  const gFreq=(A,khz)=>gKey(A,'F1',String(khz),'F2'),gAmp=A=>gKey(A,'F2','400','F1'),gOff=A=>gKey(A,'F3','0','F2');
+  const gSine=async A=>{await gOn(A);if(RT.S.gen.wave!=='Sine')await A.press('g:Sine')};
+  const gAll=async A=>{const g=RT.S.gen;await gSine(A);if(Math.abs(g.freq-1000)>=0.01)await gFreq(A,1);if(Math.abs(g.amp-0.4)>=5e-4)await gAmp(A);if(Math.abs(g.off)>=5e-4)await gOff(A)};
+  /* scope: VOLTS/DIV, TIME/DIV, channel keys, Measure › Add Measurement */
+  const scOn=async A=>{if(!RT.S.sc.pwr)await A.press('s:PWR')};
+  const vdTo=async(A,c,t)=>{await scOn(A);const ch=RT.S.sc.ch[c];if(!ch.on)await A.press('s:CH'+(c+1));for(let i=0;i<16;i++){const v=RT.S.sc.ch[c].vd;if(Math.abs(v-t)<1e-9)return;await A.press(`s:V${c+1}${v<t?'+':'-'}`)}};
+  const tdTo=async(A,t)=>{await scOn(A);for(let i=0;i<24;i++){const v=RT.S.sc.td;if(Math.abs(v-t)<1e-12)return;await A.press(`s:H${v>t?'-':'+'}`)}};
+  const chOn=async(A,c)=>{await scOn(A);if(!RT.S.sc.ch[c].on)await A.press('s:CH'+(c+1))};
+  const VI=['Pk-Pk','Max','Min'];
+  const measAdd=async(A,src,type)=>{const sc=RT.S.sc;await chOn(A,src);if(sc.meas.some(m=>m.src===src&&m.type===type))return;
+    if(sc.menu!=='measure')await A.press('s:Measure');if(sc.side!=='add')await A.press('s:B0');
+    if(sc.msrc!==src){await A.press('s:S3');for(let i=0;i<6&&RT.S.sc.list&&RT.S.sc.list.idx!==src;i++)await A.press('s:VAR+');await A.press('s:SEL')}
+    if(!sc.list||sc.list.kind!=='vi')await A.press('s:S0');const want=VI.indexOf(type);for(let i=0;i<16&&RT.S.sc.list&&RT.S.sc.list.idx!==want;i++)await A.press('s:VAR+');
+    await A.press('s:SEL');await A.press('s:MOFF');await A.press('s:MOFF')};
+  const has=(src,t)=>RT.S.sc.meas.some(m=>m.src===src&&m.type===t);
+  /* supply: COARSE while it brings the value closer, then FINE (as in Exp 1) */
+  const knobTo=async(A,u,t)=>{const get=()=>RT.S.psu.u[u==='L'?0:1].v;let fineOnly=false;for(let i=0;i<500;i++){const x=get(),e=x-t;if(Math.abs(e)<=0.004)return;
+      await A.tap('p:'+u+(fineOnly?'VF':'VC')+(e<0?'+':'-'),fineOnly?35:90);
+      if(!fineOnly){const y=get();if(Math.abs(y-t)>=Math.abs(e)||Math.sign(y-t)!==Math.sign(e)&&Math.abs(y-t)>0.004){if(Math.abs(y-t)>=Math.abs(e))await A.tap('p:'+u+'VC'+(e<0?'-':'+'),90);fineOnly=true}}}};
+  const v15=u=>Math.abs(RT.S.psu.u[u].v-15)<0.006;
+  /* «شغّل الـ power supply، وبعدها الـ waveform generator» (A7, B6): the sub-steps of that manual step */
+  const onSubs=kind=>[
+    {k:'set',dev:'psu',t:'شغّل مفتاح ∼ POWER حق الـ EL302RD.',ok:()=>RT.S.psu.pwr,do:async A=>{if(!RT.S.psu.pwr)await A.press('p:PWR')}},
+    {k:'set',dev:'psu',t:'الوحدة اليسار (L): بالـ COARSE و FINE خلّها 15.00 V.',ok:()=>v15(0),do:A=>knobTo(A,'L',15),hint:'لف COARSE لين قريب من 15 V، وكمّل بالـ FINE لين 15.00 V'},
+    {k:'set',dev:'psu',t:'الوحدة اليمين (R): بالـ COARSE و FINE خلّها 15.00 V.',ok:()=>v15(1),do:A=>knobTo(A,'R',15),hint:'لف COARSE لين قريب من 15 V، وكمّل بالـ FINE لين 15.00 V'},
+    {k:'set',dev:'psu',t:'شغّل مفتاح الـ dc ⎓ ON للوحدتين: ±15 V على الدائرة.',ok:s=>s.psuOn,do:async A=>{if(!RT.S.psu.u[0].on)await A.press('p:LON');if(!RT.S.psu.u[1].on)await A.press('p:RON')}},
+    {k:'set',dev:'gen',t:'بعدها شغّل مخرج الجنريتر (زر CH1).',ok:s=>s.kind===kind&&s.psuOn&&s.genOn&&ST.order,
+      do:async A=>{await gOn(A);if(RT.S.gen.out&&!ST.order){await A.press('g:CH1');await A.wait(120)}if(!RT.S.gen.out)await A.press('g:CH1')},
+      hint:s=>s.genOn&&!ST.order?'الجنريتر انشغل قبل المصدر: طفّ مخرجه (CH1) وشغّله من جديد بعد ±15 V':s.kind!==kind?'الدائرة مو مثل الشكل':'شغّل مخرج الجنريتر بزر CH1'}];
+  const offSubs=end=>[
+    {k:'set',dev:'gen',t:'طفّ الـ waveform generator أول (زر CH1).',ok:s=>!s.genOn,do:async A=>{if(RT.S.gen.out)await A.press('g:CH1')}},
+    {k:'set',dev:'psu',t:'وبعدها طفّ الـ power supply (∼ POWER).',ok:()=>!!ST[end],do:async A=>{if(RT.S.psu.pwr)await A.press('p:PWR')},
+      hint:'الترتيب: الجنريتر أول، وبعدها المصدر. لو طفّيت المصدر قبل، شغّله وطفّه من جديد بعد الجنريتر'}];
+  /* bandwidth: raise the frequency (bisection on the keypad) until vO(pp) = 0.7 of its 1 kHz value */
+  const bwSearch=async A=>{let lo=10,hi=200;await gOn(A);for(let i=0;i<18&&!ST.bw;i++){const f=Math.round((lo+hi)/2*10)/10;await gFreq(A,f);await A.wait(150);const s=A.st();if(ST.bw)break;if(s.ratio==null)break;if(s.ratio>0.7)lo=f;else hi=f}};
   return {status,
     steps:[
       /* Procedure A (manual p. 40–41), steps 1–14, with the instructor's corrections (slides 34–35) */
-      {dev:'board',build:'5.4a',t:'Procedure A · 1. ركّب الدائرة Fig. 5.4a، وابدأ بـ R<sub>2</sub> = 10 kΩ.',
-        acts:['اضبط كل وحدة من الـ EL302RD على 15.00 V وتأكد منها بالـ MT3805 (slides 19–20).','الوحدتين على التوالي = ±15 V (slide 21): السلك الأخضر من L − لـ Va، والبرتقالي من L + لـ ⏚، والأزرق من L + لـ R −، والأحمر الغامق من R + لـ Vb.',
-          'jumpers (slides 23، 31): ⏚ → الـ rails العمودية (أرضي بس)، و Vb → الـ + rail و Va → الـ − rail تحت آخر بريدبورد، وبعدها jumpers بين الـ rails لين البريدبورد اللي فيه الـ µA741.',
-          'الـ µA741 عبر القناة، و +15 V → pin 7 و −15 V → pin 4، و R<sub>1</sub> = 1 kΩ من pin 2 للأرضي، و R<sub>2</sub> من pin 6 لـ pin 2 (slides 22–23).']},
-      {dev:'gen',build:'5.4a-gen',t:'2. بالـ waveform generator، طبّق sinusoid تردده 1 kHz و 400 mVpp على الـ noninverting terminal (pin 3) للـ op amp.',
-        acts:['الـ hook الأحمر على طرف jumper واقف في عمود pin 3، والأسود على jumper في الأرضي.','شغّل الجنريتر: Sine، و F1 ← 1 ← F2 (kHz)، و F2 ← 400 ← F1 (mVpp)، و Offset = 0 (slide 24).'],ok:s=>s.sig&&s.f1k},
-      {dev:'scope',build:'5.4a-sc',t:'3. شغّل الإسكوب وانتظر ثواني، واضغط Default وبعدها Autoset. اعرض v<sub>I</sub>(t) على CH1 و v<sub>O</sub>(t) على CH2.',ok:s=>s.pwr&&ST.auto&&s.chs},
-      {dev:'scope',t:'4. بمقبض SCALE حق CH1 خلّ الـ vertical sensitivity على 200 mV/div (تصحيح المعيد، slide 34).',ok:s=>s.chs&&vdIs(s,0,0.2)},
-      {dev:'scope',t:'5. بمقبض SCALE حق CH2 خلّ الـ vertical sensitivity على 1 V/div (تصحيح المعيد، slide 34).',ok:s=>s.chs&&vdIs(s,1,1)},
-      {dev:'scope',t:'6. اضغط Measure ← Add Measurement ← فعّل Source 1 ← بمقبض VARIABLE اختر CH2 واضغط Select ← فعّل V/I ← ظلّل Pk-Pk و Max و Min واضغط Select لكل واحد.',ok:s=>s.measA},
-      {dev:'psu',t:'7. شغّل الـ dc power supply، وبعدها الـ waveform generator.',acts:['مفتاح ⎓ ON للوحدتين (كل وحدة 15.00 V).','بعدها مخرج الجنريتر (CH1).'],ok:s=>s.kind==='A10'&&s.psuOn&&s.genOn&&ST.order},
-      {dev:'scope',t:'8. سجّل v<sub>I</sub>(t) و v<sub>O</sub>(t) على Fig. 5.5.',acts:['TIME/DIV على 500 µs/div (slide 35).'],ok:s=>!!CAPS.f55,rec:[{scope:'f55',label:'Fig. 5.5'}]},
-      {dev:'scope',t:'9. سجّل الـ peak-to-peak للدخل والخرج، واحسب الـ voltage gain: G = V<sub>o(pp)</sub> / V<sub>i(pp)</sub>.',ok:s=>okA(s)&&s.measA,
-        rec:[{to:'a_vi',val:()=>pp(0,okA),unit:'V',dec:2,label:'v<sub>I(pp)</sub>',none:NONE},{to:'a_vo',val:()=>pp(1,okA),unit:'V',dec:2,label:'v<sub>O(pp)</sub>',none:NONE},
-          {to:'a_g',val:()=>{const a=pp(0,okA),b=pp(1,okA);return a&&b!=null?b/a:null},dec:2,label:'G',none:NONE}]},
-      {dev:'gen',t:'10. ارفع تردد الدخل لين الـ peak للخرج ينزل لـ 0.7 من قيمته عند 1 kHz، وسجّل هالتردد (الـ bandwidth BW) من الجنريتر في Fig. 5.5.',ok:s=>!!ST.bw,
-        rec:[{to:'a_bw',val:()=>ST.bw?ST.bw/1e3:null,unit:'kHz',dec:1,label:'BW',none:'لسّا الخرج ما نزل لـ 0.7 من قيمته عند 1 kHz'},{to:'a_gbw',val:()=>ST.bw&&ST.g10?ST.g10*ST.bw/1e3:null,unit:'kHz',dec:1,label:'G × BW'}]},
-      {dev:'gen',t:'11. نزّل تردد الدخل لين 1 kHz.',ok:s=>!!ST.back},
-      {dev:'board',build:'5.4a-100k',t:'12. كبّر الـ scale حق CH2 لـ 5 V/div. بدّل الـ 10 kΩ بـ 100 kΩ، وارسم v<sub>I</sub>(t) و v<sub>O</sub>(t) على Fig. 5.6.',ok:s=>vdIs(s,1,5)&&!!CAPS.f56,rec:[{scope:'f56',label:'Fig. 5.6'}]},
-      {dev:'scope',t:'13. خذ الـ upper limiting level V<sub>O+</sub> والـ lower limiting level V<sub>O−</sub> لـ v<sub>O</sub>(t) من Max و Min في الإسكوب، وسجّلها في Fig. 5.6.',ok:s=>okA100(s)&&s.measA,
-        rec:[{to:'b_vix',val:()=>mx(0,okA100),unit:'V',dec:2,label:'v<sub>I</sub> Max',none:NONE},{to:'b_vin',val:()=>mn(0,okA100),unit:'V',dec:2,label:'v<sub>I</sub> Min',none:NONE},
-          {to:'b_vox',val:()=>mx(1,okA100),unit:'V',dec:2,label:'V<sub>O+</sub>',none:NONE},{to:'b_von',val:()=>mn(1,okA100),unit:'V',dec:2,label:'V<sub>O−</sub>',none:NONE}]},
-      {dev:'gen',t:'14. طفّ الـ waveform generator وبعدها الـ power supply.',ok:s=>!!ST.endA},
+      {dev:'board',t:'Procedure A · 1. ركّب الدائرة Fig. 5.4a، وابدأ بـ R<sub>2</sub> = 10 kΩ.',subs:[
+        {k:'connect',dev:'psu',t:'الوحدتين على التوالي = ±15 V (slide 21): السلك <b>الأخضر</b> من L − إلى Va.',ok:A1ok(()=>onPost('Lm',B.VA)),do:A=>A.build(part(PW.slice(0,1))),hint:'banana أخضر في − الوحدة اليسار، وطرفه على الـ post الأصفر Va'},
+        {k:'connect',dev:'psu',t:'السلك <b>البرتقالي</b> من L + إلى ⏚ (الأرضي).',ok:A1ok(()=>onPost('Lp',B.GND)),do:A=>A.build(part(PW.slice(0,2))),hint:'banana برتقالي في + الوحدة اليسار، وطرفه على الـ post الأسود ⏚'},
+        {k:'connect',dev:'psu',t:'السلك <b>الأزرق</b> من R − ويركب فوق plug الـ L + (نقطة الوسط = الأرضي).',ok:A1ok(()=>RT.leadNet('Rm')!=null&&RT.leadNet('Rm')===RT.leadNet('Lp')),do:A=>A.build(part(PW.slice(0,3))),hint:'banana أزرق في − الوحدة اليمين، وطرفه الثاني فوق plug البرتقالي في L +'},
+        {k:'connect',dev:'psu',t:'السلك <b>الأحمر الغامق</b> من R + إلى Vb (+15 V).',ok:A1ok(()=>onPost('Rp',B.VB)),do:A=>A.build(part(PW)),hint:'banana أحمر غامق في + الوحدة اليمين، وطرفه على الـ post الأزرق Vb'},
+        {k:'connect',dev:'board',t:'jumper أسود من ⏚ إلى الـ rails العمودية (الاثنين أرضي بس).',ok:A1ok(()=>same(B.GND,B.VRL)&&same(B.GND,B.VRR)),do:A=>A.build(part([...PW,...JG])),hint:'jumper من الـ post ⏚ للـ rail العمودي، وjumper بين الـ rail العمودي والثاني'},
+        {k:'connect',dev:'board',t:'jumper أحمر من Vb إلى الـ + rail، و jumper أصفر من Va إلى الـ − rail، تحت آخر بريدبورد (slides 23، 31).',ok:A1ok(()=>same(B.VB,B.PB)&&same(B.VA,B.NB)),do:A=>A.build(part([...PW,...JG,...JS])),hint:'+15 V على الـ rail الأحمر (+) و −15 V على الأزرق (−) للبريدبورد اللي تحت'},
+        {k:'connect',dev:'board',t:'jumpers بين الـ rails لين البريدبورد اللي فيه الـ µA741: +15 V و −15 V والأرضي.',ok:A1ok(()=>same(B.VB,B.PU)&&same(B.VA,B.NU)&&same(B.GND,B.GR)),do:A=>A.build(part([...PW,...JG,...JS,...JL])),hint:'وصّل الـ + rail بالـ + rail اللي فوقه، والـ − بالـ −، وrail أرضي للبريدبورد الوسط من الـ rail العمودي'},
+        {k:'build',fig:'5.4a',t:'الـ µA741 عبر القناة: +15 V → pin 7 و −15 V → pin 4، و R<sub>1</sub> = 1 kΩ من pin 2 للأرضي، و R<sub>2</sub> = 10 kΩ من pin 6 لـ pin 2 (slides 22–23): الدائرة Fig. 5.4a.'}]},
+      {fig:PF,figCap:'Fig. 5.4a',dev:'gen',t:'2. بالـ waveform generator، طبّق sinusoid تردده 1 kHz و 400 mVpp على الـ noninverting terminal (pin 3) للـ op amp.',subs:[
+        {k:'connect',fig:'5.4a-gen',t:'وصّل الجنريتر (OUT1): الـ hook الأحمر على طرف jumper واقف في عمود pin 3، والأسود على jumper في الأرضي.'},
+        {k:'set',dev:'gen',t:'شغّل الجنريتر (زر POWER) واختر Sine.',ok:()=>RT.S.gen.pwr&&RT.S.gen.wave==='Sine',do:gSine},
+        {k:'set',dev:'gen',t:'Frequency = 1 kHz (F1، وبعدها الأرقام و kHz).',ok:s=>RT.S.gen.pwr&&s.f1k,do:A=>gFreq(A,1)},
+        {k:'set',dev:'gen',t:'Amplitude = 400 mVpp (F2، وبعدها الأرقام و mVpp).',ok:()=>RT.S.gen.pwr&&Math.abs(RT.S.gen.amp-0.4)<5e-4,do:gAmp},
+        {k:'set',dev:'gen',t:'Offset = 0 mV (F3، slide 24).',ok:s=>s.sig&&s.f1k,do:gOff}]},
+      {fig:PF,figCap:'Fig. 5.4a',dev:'scope',t:'3. شغّل الإسكوب وانتظر ثواني، واضغط Default وبعدها Autoset. اعرض v<sub>I</sub>(t) على CH1 و v<sub>O</sub>(t) على CH2.',subs:[
+        {k:'set',dev:'scope',t:'شغّل الإسكوب (POWER) وانتظر ثواني.',ok:s=>s.pwr,do:scOn},
+        {k:'set',dev:'scope',t:'اضغط Default.',ok:()=>!!ST.def,do:async A=>{await scOn(A);await A.press('s:Default')}},
+        {k:'set',dev:'scope',t:'وبعدها Autoset.',ok:()=>!!ST.auto,do:async A=>{await scOn(A);await A.press('s:Autoset')}},
+        {k:'connect',fig:FA1,t:'وصّل CH1 على v<sub>I</sub>: الـ hook الأحمر على jumper في عمود pin 3، والأسود على الأرضي.'},
+        {k:'connect',fig:'5.4a-sc',t:'وصّل CH2 على v<sub>O</sub>: الـ hook الأحمر على jumper في عمود pin 6، والأسود على الأرضي.'},
+        {k:'set',dev:'scope',t:'اعرض CH2 (زر CH2).',ok:s=>s.chs,do:async A=>{await chOn(A,0);await chOn(A,1)}}]},
+      {dev:'scope',t:'4. بمقبض SCALE حق CH1 خلّ الـ vertical sensitivity على 200 mV/div (تصحيح المعيد، slide 34).',subs:[
+        {k:'set',dev:'scope',t:'CH1 SCALE = 200 mV/div.',ok:s=>s.chs&&vdIs(s,0,0.2),do:A=>vdTo(A,0,0.2)}]},
+      {dev:'scope',t:'5. بمقبض SCALE حق CH2 خلّ الـ vertical sensitivity على 1 V/div (تصحيح المعيد، slide 34).',subs:[
+        {k:'set',dev:'scope',t:'CH2 SCALE = 1 V/div.',ok:s=>s.chs&&vdIs(s,1,1),do:A=>vdTo(A,1,1)}]},
+      {dev:'scope',t:'6. اضغط Measure ← Add Measurement ← فعّل Source 1 ← بمقبض VARIABLE اختر CH2 واضغط Select ← فعّل V/I ← ظلّل Pk-Pk و Max و Min واضغط Select لكل واحد.',subs:[
+        {k:'set',dev:'scope',t:'Measure ← Add Measurement ← Source1 = CH2 ← V/I ← Pk-Pk ← Select.',ok:()=>has(1,'Pk-Pk'),do:A=>measAdd(A,1,'Pk-Pk')},
+        {k:'set',dev:'scope',t:'Max ← Select.',ok:()=>has(1,'Max'),do:A=>measAdd(A,1,'Max')},
+        {k:'set',dev:'scope',t:'Min ← Select.',ok:()=>has(1,'Min'),do:A=>measAdd(A,1,'Min')}]},
+      {dev:'psu',t:'7. شغّل الـ dc power supply، وبعدها الـ waveform generator.',subs:onSubs('A10')},
+      {dev:'scope',t:'8. سجّل v<sub>I</sub>(t) و v<sub>O</sub>(t) على Fig. 5.5.',subs:[
+        {k:'set',dev:'scope',t:'TIME/DIV = 500 µs/div (slide 35).',ok:()=>Math.abs(RT.S.sc.td-5e-4)<1e-12,do:A=>tdTo(A,5e-4)},
+        {k:'rec',t:'سجّل شاشة الإسكوب على Fig. 5.5.',ok:()=>!!CAPS.f55,rec:[{scope:'f55',label:'Fig. 5.5'}]}]},
+      {dev:'scope',t:'9. سجّل الـ peak-to-peak للدخل والخرج، واحسب الـ voltage gain: G = V<sub>o(pp)</sub> / V<sub>i(pp)</sub>.',subs:[
+        {k:'rec',t:'سجّل v<sub>I(pp)</sub> و v<sub>O(pp)</sub> (Pk-Pk) و G.',ok:s=>okA(s)&&s.measA,
+          rec:[{to:'a_vi',val:()=>pp(0,okA),unit:'V',dec:2,label:'v<sub>I(pp)</sub>',none:NONE},{to:'a_vo',val:()=>pp(1,okA),unit:'V',dec:2,label:'v<sub>O(pp)</sub>',none:NONE},
+            {to:'a_g',val:()=>{const a=pp(0,okA),b=pp(1,okA);return a&&b!=null?b/a:null},dec:2,label:'G',none:NONE}]}]},
+      {dev:'gen',t:'10. ارفع تردد الدخل لين الـ peak للخرج ينزل لـ 0.7 من قيمته عند 1 kHz، وسجّل هالتردد (الـ bandwidth BW) من الجنريتر في Fig. 5.5.',subs:[
+        {k:'set',dev:'gen',t:'ارفع الـ Frequency لين v<sub>O(pp)</sub> = 0.7 من قيمته عند 1 kHz.',ok:()=>!!ST.bw,do:bwSearch,hint:s=>s.ratio!=null?`v<sub>O(pp)</sub> الحين ${(s.ratio*100).toFixed(0)} % من قيمته عند 1 kHz: ${s.ratio>0.7?'ارفع':'نزّل'} التردد`:'ارفع التردد فوق 5 kHz والدائرة شغّالة'},
+        {k:'rec',t:'سجّل الـ BW و G × BW.',ok:()=>!!ST.bw,
+          rec:[{to:'a_bw',val:()=>ST.bw?ST.bw/1e3:null,unit:'kHz',dec:1,label:'BW',none:'لسّا الخرج ما نزل لـ 0.7 من قيمته عند 1 kHz'},{to:'a_gbw',val:()=>ST.bw&&ST.g10?ST.g10*ST.bw/1e3:null,unit:'kHz',dec:1,label:'G × BW'}]}]},
+      {dev:'gen',t:'11. نزّل تردد الدخل لين 1 kHz.',subs:[
+        {k:'set',dev:'gen',t:'Frequency = 1 kHz.',ok:()=>!!ST.back,do:A=>gFreq(A,1)}]},
+      {dev:'board',t:'12. كبّر الـ scale حق CH2 لـ 5 V/div. بدّل الـ 10 kΩ بـ 100 kΩ، وارسم v<sub>I</sub>(t) و v<sub>O</sub>(t) على Fig. 5.6.',subs:[
+        {k:'set',dev:'scope',t:'CH2 SCALE = 5 V/div.',ok:s=>vdIs(s,1,5),do:A=>vdTo(A,1,5)},
+        {k:'build',fig:'5.4a-100k',t:'بدّل R<sub>2</sub> = 10 kΩ بـ 100 kΩ.'},
+        {k:'rec',t:'سجّل شاشة الإسكوب على Fig. 5.6.',ok:()=>!!CAPS.f56,rec:[{scope:'f56',label:'Fig. 5.6'}]}]},
+      {dev:'scope',t:'13. خذ الـ upper limiting level V<sub>O+</sub> والـ lower limiting level V<sub>O−</sub> لـ v<sub>O</sub>(t) من Max و Min في الإسكوب، وسجّلها في Fig. 5.6.',subs:[
+        {k:'rec',t:'سجّل Max و Min لـ v<sub>I</sub> و v<sub>O</sub>.',ok:s=>okA100(s)&&s.measA,
+          rec:[{to:'b_vix',val:()=>mx(0,okA100),unit:'V',dec:2,label:'v<sub>I</sub> Max',none:NONE},{to:'b_vin',val:()=>mn(0,okA100),unit:'V',dec:2,label:'v<sub>I</sub> Min',none:NONE},
+            {to:'b_vox',val:()=>mx(1,okA100),unit:'V',dec:2,label:'V<sub>O+</sub>',none:NONE},{to:'b_von',val:()=>mn(1,okA100),unit:'V',dec:2,label:'V<sub>O−</sub>',none:NONE}]}]},
+      {dev:'gen',t:'14. طفّ الـ waveform generator وبعدها الـ power supply.',subs:offSubs('endA')},
       /* Procedure B (manual p. 41), steps 1–9 */
-      {dev:'board',build:'5.4b',t:'Procedure B · 1. ركّب الدائرة Fig. 5.4b.',acts:['pin 2 على الأرضي، و 1 kΩ من pin 6 لـ v<sub>O</sub>، و D1 + الزينر D2 (كاثود على كاثود) من v<sub>O</sub> للأرضي، و D3 + D4 من الأرضي لـ v<sub>O</sub> (slide 31).']},
-      {dev:'gen',build:'5.4b-gen',t:'2. استخدم نفس إشارة الدخل اللي استخدمتها في Procedure A.',ok:s=>s.sig&&s.f1k},
-      {dev:'scope',build:'5.4b-sc',t:'3. وصّل الـ non-inverting input للـ op amp على CH1، وخرج الـ op amp على CH2، وخرج الدائرة كلها على CH3.',acts:['شغّل CH3 في الإسكوب.'],ok:s=>s.ch3},
-      {dev:'scope',t:'4. أضف Max و Min measurement لـ CH3.',ok:s=>s.measB},
-      {dev:'scope',t:'5. خلّ الـ scale حق CH3 على 2 V/Div.',acts:['CH1 على 200 mV/div و CH2 على 5 V/div (slide 35).'],ok:s=>s.ch3&&vdIs(s,0,0.2)&&vdIs(s,1,5)&&vdIs(s,2,2)},
-      {dev:'psu',t:'6. شغّل الـ power supply، وبعدها الـ waveform generator.',ok:s=>s.kind==='B'&&s.psuOn&&s.genOn&&ST.order},
-      {dev:'scope',t:'7. سجّل v<sub>I</sub>(t) و v<sub>6</sub>(t) و v<sub>O</sub>(t) على Fig. 5.7.',ok:s=>!!CAPS.f57,rec:[{scope:'f57',label:'Fig. 5.7'}]},
-      {dev:'scope',t:'8. خذ الـ upper و lower limiting levels لـ v<sub>6</sub>(t) و v<sub>O</sub>(t) من Max و Min في الإسكوب، وسجّلها تحت Fig. 5.7.',ok:s=>okB(s)&&s.measA&&s.measB,
-        rec:[{to:'c_v6x',val:()=>mx(1,okB),unit:'V',dec:2,label:'v<sub>6</sub> Max',none:NONE},{to:'c_v6n',val:()=>mn(1,okB),unit:'V',dec:2,label:'v<sub>6</sub> Min',none:NONE},
-          {to:'c_vox',val:()=>mx(2,okB),unit:'V',dec:2,label:'v<sub>O</sub> Max',none:NONE},{to:'c_von',val:()=>mn(2,okB),unit:'V',dec:2,label:'v<sub>O</sub> Min',none:NONE}]},
-      {dev:'gen',t:'9. طفّ الـ waveform generator وبعدها الـ power supply.',ok:s=>!!ST.endB}
+      {dev:'board',t:'Procedure B · 1. ركّب الدائرة Fig. 5.4b.',subs:[
+        {k:'build',fig:'5.4b',t:'pin 2 على الأرضي، و 1 kΩ من pin 6 لـ v<sub>O</sub>، و D1 + الزينر D2 (كاثود على كاثود) من v<sub>O</sub> للأرضي، و D3 + D4 من الأرضي لـ v<sub>O</sub> (slide 31): الدائرة Fig. 5.4b.'}]},
+      {fig:PF,figCap:'Fig. 5.4b',dev:'gen',t:'2. استخدم نفس إشارة الدخل اللي استخدمتها في Procedure A.',subs:[
+        {k:'connect',fig:'5.4b-gen',t:'الجنريتر على pin 3 (الـ hook الأحمر) والأرضي (الأسود).'},
+        {k:'set',dev:'gen',t:'Sine، و Frequency = 1 kHz، و Amplitude = 400 mVpp، و Offset = 0 mV.',ok:s=>s.sig&&s.f1k,do:gAll}]},
+      {fig:PF,figCap:'Fig. 5.4b',dev:'scope',t:'3. وصّل الـ non-inverting input للـ op amp على CH1، وخرج الـ op amp على CH2، وخرج الدائرة كلها على CH3.',subs:[
+        {k:'connect',fig:FB1,t:'CH1 على الـ non-inverting input (pin 3).'},
+        {k:'connect',fig:FB2,t:'CH2 على خرج الـ op amp (pin 6).'},
+        {k:'connect',fig:'5.4b-sc',t:'CH3 على خرج الدائرة v<sub>O</sub>.'},
+        {k:'set',dev:'scope',t:'شغّل CH3 في الإسكوب (زر CH3).',ok:s=>s.ch3,do:async A=>{for(const c of [0,1,2])await chOn(A,c)}}]},
+      {dev:'scope',t:'4. أضف Max و Min measurement لـ CH3.',subs:[
+        {k:'set',dev:'scope',t:'Measure ← Add Measurement ← Source1 = CH3 ← V/I ← Max ← Select.',ok:()=>has(2,'Max'),do:A=>measAdd(A,2,'Max')},
+        {k:'set',dev:'scope',t:'Min ← Select.',ok:()=>has(2,'Min'),do:A=>measAdd(A,2,'Min')}]},
+      {dev:'scope',t:'5. خلّ الـ scale حق CH3 على 2 V/Div.',subs:[
+        {k:'set',dev:'scope',t:'CH3 SCALE = 2 V/div.',ok:s=>s.ch3&&vdIs(s,2,2),do:A=>vdTo(A,2,2)},
+        {k:'set',dev:'scope',t:'CH1 SCALE = 200 mV/div (slide 35).',ok:s=>s.ch3&&vdIs(s,0,0.2),do:A=>vdTo(A,0,0.2)},
+        {k:'set',dev:'scope',t:'CH2 SCALE = 5 V/div (slide 35).',ok:s=>s.ch3&&vdIs(s,1,5),do:A=>vdTo(A,1,5)}]},
+      {dev:'psu',t:'6. شغّل الـ power supply، وبعدها الـ waveform generator.',subs:onSubs('B')},
+      {dev:'scope',t:'7. سجّل v<sub>I</sub>(t) و v<sub>6</sub>(t) و v<sub>O</sub>(t) على Fig. 5.7.',subs:[
+        {k:'rec',t:'سجّل شاشة الإسكوب على Fig. 5.7.',ok:()=>!!CAPS.f57,rec:[{scope:'f57',label:'Fig. 5.7'}]}]},
+      {dev:'scope',t:'8. خذ الـ upper و lower limiting levels لـ v<sub>6</sub>(t) و v<sub>O</sub>(t) من Max و Min في الإسكوب، وسجّلها تحت Fig. 5.7.',subs:[
+        {k:'set',dev:'scope',t:'تأكد إن Max و Min لـ CH2 (v<sub>6</sub>) معروضة.',ok:()=>has(1,'Max')&&has(1,'Min'),do:async A=>{await measAdd(A,1,'Max');await measAdd(A,1,'Min')}},
+        {k:'rec',t:'سجّل Max و Min لـ v<sub>6</sub> و v<sub>O</sub>.',ok:s=>okB(s)&&s.measB&&has(1,'Max')&&has(1,'Min'),
+          rec:[{to:'c_v6x',val:()=>mx(1,okB),unit:'V',dec:2,label:'v<sub>6</sub> Max',none:NONE},{to:'c_v6n',val:()=>mn(1,okB),unit:'V',dec:2,label:'v<sub>6</sub> Min',none:NONE},
+            {to:'c_vox',val:()=>mx(2,okB),unit:'V',dec:2,label:'v<sub>O</sub> Max',none:NONE},{to:'c_von',val:()=>mn(2,okB),unit:'V',dec:2,label:'v<sub>O</sub> Min',none:NONE}]}]},
+      {dev:'gen',t:'9. طفّ الـ waveform generator وبعدها الـ power supply.',subs:offSubs('endB')}
     ],
     onReset(){ST={};prev.gen=prev.psu=false;['f55','f56','f57'].forEach(id=>{$(id).textContent=id.replace(/f5(\d)/,'Fig. 5.$1');delete CAPS[id]});$('result').innerHTML=''}};
 }};})();

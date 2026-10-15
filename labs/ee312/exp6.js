@@ -116,55 +116,162 @@ D4 0 n 1N4148
   const imax=()=>{const r=cur('CZ');return r&&ST.iR1?fin(pk(r,'I(R1)')*1e3):null};
   const yn=(f,t)=>()=>{const x=f();return x==null?null:t(x)?'y':'n'},YN=v=>v==='y'?'Yes':'No';
   const NR='شغّل المحاكاة على دائرة الخطوة أول (Simulate › Run).';
+  /* ---------- Batch 7 item 3: «do it for me» on the PC. The app's own state is changed one item at a time and redrawn, so
+     the student sees the parts, wires, labels and directives appear (menu commands go through RT.act). L = the reference
+     drawing of a figure: comps {type,x,y,rot,name}, wires [[x1,y1,x2,y2]], labels {name,x,y}. ---------- */
+  const PC=(()=>{const draw=()=>{BENCH.sim.render();BENCH.onRender()};const lc=x=>String(x||'').toLowerCase();
+    const find=d=>RT.S.comps.find(q=>d.name?lc(q.name)===lc(d.name):q.type===d.type&&q.x===d.x&&q.y===d.y);
+    const mk=d=>{const s=RT.S;let c=find(d);if(c)return c;c={id:RT.uid++,type:d.type,x:d.x,y:d.y,rot:d.rot||0,mir:false,val:'',model:null};
+      const p=SPICE.SYM[d.type].pre;if(p){c.name=d.name||p+((s.cnt[p]||0)+1);const n=+c.name.slice(p.length);s.cnt[p]=Math.max(s.cnt[p]||0,isFinite(n)?n:0)}
+      if(d.type==='R')c.val='R';if(d.type==='C')c.val='C';if(d.type==='L')c.val='L';if(d.type==='D')c.model='D';if(d.type==='V')c.src={kind:'DC',dc:''};
+      if(d.type==='NM')c.model='NMOS';if(d.type==='PM')c.model='PMOS';if(d.type==='OA')c.model=d.model||'OP747';s.comps.push(c);return c};
+    const setv=(c,d)=>{if(d.val!=null)c.val=d.val;if(d.model)c.model=d.model;if(d.dc!=null){c.src={kind:'DC',dc:String(d.dc)};c.val=String(d.dc)}
+      if(d.wave){c.src={kind:d.wave,args:d.args.map(String)};c.val=`${d.wave}(${c.src.args.join(' ')})`}};
+    const P={draw,find,
+      /* the parts of the list that are not there yet, one by one at their reference place */
+      place:async(A,list)=>{for(const d of list){if(find(d))continue;mk(d);draw();await A.wait(160)}},
+      /* every part of the drawing to its reference place (made when missing), then the wires of the drawing instead of the old ones */
+      wire:async(A,L)=>{L.comps.forEach(d=>{const c=mk(d);c.x=d.x;c.y=d.y;c.rot=d.rot||0;c.mir=false});RT.S.wires=[];draw();await A.wait(160);
+        for(const [x1,y1,x2,y2] of L.wires){RT.S.wires.push({id:RT.uid++,x1,y1,x2,y2});draw();await A.wait(110)}},
+      label:async(A,list)=>{for(const l of list){if(RT.S.labels.some(q=>lc(q.name)===lc(l.name)))continue;RT.S.labels.push({id:RT.uid++,x:l.x,y:l.y,name:l.name});draw();await A.wait(160)}},
+      value:async(A,name,props)=>{const c=find({name});if(!c)return;setv(c,props);draw();await A.wait(200)},
+      dir:async(A,text,x,y)=>{if(RT.directives().some(l=>lc(l)===lc(text)))return;RT.S.dirs.push({id:RT.uid++,x,y,text});draw();await A.wait(200)},
+      /* Edit › SPICE Analysis › OK: the analysis line replaces the old .tran / .dc / .op line */
+      ana:async(A,line,x,y)=>{const s=RT.S;const old=s.dirs.find(q=>/^\s*\.(tran|dc|op)\b/im.test(q.text));
+        if(old)old.text=old.text.split('\n').map(l=>/^\s*\.(tran|dc|op)\b/i.test(l)?line:l).join('\n');else s.dirs.push({id:RT.uid++,x,y,text:line});draw();await A.wait(200)},
+      act:async(A,k)=>{RT.S.tool='sel';RT.act(k);await A.wait(200)},
+      run:async A=>{RT.S.tool='sel';RT.S.dlg=null;RT.run();await A.wait(250)},
+      trace:async(A,e)=>{const s=RT.S;if(!RT.evalTrace(e))return;if(!s.traces.some(t=>lc(t.expr)===lc(e)))s.traces.push({expr:e,c:s.traces.length});s.wavesOpen=true;draw();await A.wait(220)},
+      untrace:async(A,e)=>{const s=RT.S;s.traces=s.traces.filter(t=>lc(t.expr)!==lc(e));if(lc(s.avg)===lc(e))s.avg=null;draw();await A.wait(200)},
+      zoom:async(A,x0,x1)=>{const s=RT.S;s.wavesOpen=true;s.zoom={x0,x1,y0:null,y1:null};s.zooms=(s.zooms||0)+1;draw();await A.wait(250)},
+      avg:async(A,e)=>{RT.S.avg=e;draw();await A.wait(250)},
+      fit:async A=>{const s=RT.S;s.zoom=null;s.fitted=(s.fitted||0)+1;draw();await A.wait(200)},
+      /* every pin of the drawing is joined to another pin or to ground (nothing left dangling) */
+      wired:()=>{const N=RT.fromSchematic();const cnt={};N.list.forEach(e=>e.nodes.forEach(n=>{if(n!=null)cnt[n]=(cnt[n]||0)+1}));
+        return N.list.length>1&&N.list.every(e=>e.nodes.every(n=>n!=null&&(n==='0'||cnt[n]>=2)))}};
+    return P})();
+  /* the reference drawings (the layout tests/exp/ee312-exp6.mjs draws): Fig. 6.1, with C1, Fig. 6.2, Fig. 6.4 */
+  const G4=(...p)=>p.map(([x,y])=>({type:'GND',x,y}));
+  const C61=[{type:'V',name:'V1',x:0,y:0},{type:'R',name:'R1',x:0,y:0,rot:3},{type:'R',name:'R2',x:8,y:0,rot:3},{type:'R',name:'R3',x:32,y:4},{type:'L',name:'L1',x:4,y:0},{type:'L',name:'L2',x:8,y:0},
+    {type:'D',name:'D1',x:12,y:0},{type:'D',name:'D2',x:20,y:-4},{type:'D',name:'D3',x:20,y:0},{type:'D',name:'D4',x:12,y:-4}],GN61=G4([0,4],[4,4],[16,-4],[32,8]);
+  const W61=[[8,4,8,6],[8,6,22,6],[22,6,22,0],[22,0,20,0],[12,-4,20,-4],[12,4,20,4],[20,4,32,4]];
+  const L61={comps:[...C61,...GN61],wires:W61},CAP=[{type:'C',name:'C1',x:28,y:4},...G4([28,8])],L61C={comps:[...C61,...GN61,...CAP],wires:W61};
+  const REG=[{type:'R',name:'R4',x:28,y:4,rot:3},{type:'D',name:'D5',x:36,y:8,rot:2},...G4([36,8])];
+  const L62={comps:[...L61C.comps,...REG],wires:[...W61.filter(w=>w.join()!=='20,4,32,4'),[20,4,28,4],[32,4,36,4]]};
+  const C64=[{type:'OA',name:'U1',x:10,y:0,model:'OP747'},{type:'V',name:'V1',x:12,y:-1,rot:2},{type:'V',name:'V2',x:12,y:7,rot:2},{type:'V',name:'V3',x:6,y:0},{type:'R',name:'R1',x:14,y:1,rot:3},
+    {type:'D',name:'D1',x:18,y:1},{type:'D',name:'D2',x:18,y:5},{type:'D',name:'D3',x:22,y:5,rot:2},{type:'D',name:'D4',x:22,y:9,rot:2}],GN64=G4([10,2],[6,4],[12,-5],[12,7],[18,9],[22,9]);
+  const L64={comps:[...C64,...GN64],wires:[[6,0,10,0],[18,1,22,1]]};
+  const ofT=(L,...t)=>L.filter(d=>t.includes(d.type));
+  const dcIs=(c,v)=>c&&c.src&&c.src.kind==='DC'&&A(SPICE.num(c.src.dc)-v)<1e-9;
+  const D2rev=()=>{const e=RT.fromSchematic().list.find(x=>/^d2$/i.test(x.name||''));return !!e&&e.nodes[0]==='0'};
+  const runHint=k=>`اضغط Run؛ لو ما تحقق، قارن الدائرة والقيم مع ${k}`;
   return {status,
     steps:[
       /* Procedure A (manual pp. 45–46), steps 1–16 */
-      {dev:'new',t:'Procedure A · 1. افتح LTspice، وروح File › New Schematic.',ok:s=>s.open},
-      {dev:'R',t:'2. أول شي حط كل القطع اللي تحتاجها دائرة Fig. 6.1 على الـ schematic، ما عدا المكثف. عشان تضيف coupling coefficient بين الملفين: Edit › SPICE directive واكتب <b>K1 L1 L2 1</b>.',
-        acts:['V1، و R1 و R2 و R3، و L1 و L2، و D1–D4.','الـ directive (S): K1 L1 L2 1.'],ok:s=>comps('V').length>=1&&comps('R').length>=3&&comps('L').length>=2&&comps('D').length>=4&&dirHas(/^k1\s+l1\s+l2\s+1$/i)},
-      {dev:'GND',t:'3. أضف circuit ground (GND)، ووصّل كل القطع (F3)، وسمّ الـ nodes: <b>S1</b> و <b>S2</b> و <b>out</b> (Label Net، F4).',ok:s=>comps('GND').length>=1&&['s1','s2','out'].every(n=>labels().includes(n))},
-      {dev:'R',t:'4. عشان تغيّر قيمة قطعة: كليك يمين عليها واكتب القيمة (meg = 1e6، k = 1e3، m = 1e-3، u = 1e-6، n = 1e-9، p = 1e-12).',acts:['R1 = 20، R2 = 2، R3 = 4.7k، L1 = 400m، L2 = 1m.','D1–D4 = 1N4148 (Pick New Diode).'],
-        ok:s=>val(byName('R1'),20)&&val(byName('R2'),2)&&val(byName('R3'),4700)&&val(byName('L1'),0.4)&&val(byName('L2'),1e-3)&&comps('D').every(d=>d.model==='1N4148')},
-      {dev:'comp',t:'5. كليك يمين على مصدر الجهد وعبّي: DC offset = 0، Amplitude = 311، Freq = 60، Tdelay = 0، Theta = 0، Phi = 0، Ncycles = 12.',ok:s=>srcIs(byName('V1'),[0,311,60,0,0,0,12])},
-      {dev:'ana',t:'6. روح Edit › SPICE analysis وعبّي: Stop time = 0.2، Time to start saving data = 0، Maximum Timestep = 0.2m.',ok:s=>ana(0.2,0.2e-3)},
-      {dev:'run',t:'7. شغّل المحاكاة: Simulate › Run.',ok:s=>!!ST.seen.A0},
-      {dev:'run',t:'8. اضغط على node الـ <b>out</b> في الـ schematic عشان تعرض موجة جهد الخرج.',ok:s=>ST.seen.A0&&tr('V(out)')},
-      {dev:'run',t:'9. عشان تعرض جهد الـ secondary winding: حط الماوس على S1، واضغط وأنت ساحب لين S2 وفك. كم الـ peak amplitude لهالموجة (V<sub>SM</sub>)؟',ok:s=>tr('V(s1,s2)'),
-        rec:[{to:'a_vsm',val:vsm,unit:'V',dec:2,label:'V<sub>SM</sub>',none:'اعرض V(s1,s2) من آخر run لدائرة Fig. 6.1'}]},
-      {dev:'run',t:'10. بنفس الطريقة اعرض الفرق على D1: V(S1, out). كم الـ peak inverse voltage PIV لـ D1؟ لازم يكون أقل من الـ V<sub>RRM</sub> بـ 25 % على الأقل (Fig. 6.3).',ok:s=>tr('V(s1,out)'),
-        rec:[{to:'a_piv',val:piv,unit:'V',dec:2,label:'PIV',none:NR},{to:'a_pivok',val:yn(piv,x=>x<=0.75*100),txt:YN,label:'PIV ≤ 0.75 V<sub>RRM</sub>',none:NR}]},
-      {dev:'C',t:'11. وصّل المكثف مثل Fig. 6.1 (C1 = 470µ)، وأعد المحاكاة وشوف أثره على الـ ripple. وجرّب سعة أقل (10µ مثلاً).',ok:s=>ST.seen.A470&&ST.seen.A10,
-        rec:[{to:'a_rip',val:()=>ST.rip.A470!=null&&ST.rip.A10!=null?(ST.rip.A470<ST.rip.A10?'a':'b'):null,txt:v=>v==='a'?'470 µF → smaller ripple':'10 µF → smaller ripple',label:'Ripple',none:'شغّل بـ 470µ وبـ 10µ'}]},
-      {dev:'run',t:'12. حط الماوس على D1 (يتحوّل لشكل clamp meter) واضغط: يطلع تيار الدايود. لاحظ الـ surge في بداية المحاكاة؛ الدايود لازم يكون I<sub>FSM</sub> حقه 1.5 مرة الـ surge.',acts:['رجّع C1 = 470µ وشغّل قبلها.'],ok:s=>s.kind==='A470'&&tr('I(D1)'),
-        rec:[{to:'a_surge',val:surge,unit:'A',dec:3,label:'Surge I(D1)',none:'شغّل بـ C1 = 470µ واعرض I(D1)'},{to:'a_surgeok',val:yn(surge,x=>2>=1.5*x),txt:YN,label:'I<sub>FSM</sub> ≥ 1.5 × surge'}]},
-      {dev:'run',t:'13. في نافذة الموجات اسحب الماوس بشكل قطري عشان تعرض الدورات المستقرة بس (بدون الـ surge). اضغط Ctrl مع كليك على I(D1) (أو ∑): يطلع المتوسط. لازم ما يزيد عن 0.7 I<sub>F(AV)</sub>.',ok:s=>!!ST.avgD1,
-        rec:[{to:'a_iavg',val:iavg,unit:'mA',dec:2,label:'Average I(D1)',none:'كبّر على الدورات المستقرة واطلب متوسط I(D1)'},{to:'a_iavgok',val:yn(iavg,x=>x<=105),txt:YN,label:'≤ 0.7 I<sub>F(AV)</sub>'}]},
-      {dev:'run',t:'14. اضغط Ctrl+E (أو ⤢ Zoom Full) عشان ترجع للعرض الأصلي.',ok:s=>!!ST.fitted},
-      {dev:'run',t:'15. احذف منحنيات I(D1) و V(S1,out).',ok:s=>ST.fitted&&!tr('I(D1)')&&!tr('V(s1,out)')},
-      {dev:'R',t:'16. نزّل قيمة الحمل (R3 = 4.7k) إلى 270 Ω وأعد المحاكاة، وشوف أثرها على الـ ripple في الخرج.',ok:s=>ST.seen.A270||ST.seen.A270b,
-        rec:[{to:'a_270',val:()=>{const r=ST.rip.A270??ST.rip.A270b,b=ST.rip.A470??ST.rip.A10;return r!=null&&b!=null?(r>b?'a':'b'):null},txt:v=>v==='a'?'increases':'decreases',label:'Ripple with 270 Ω',none:'شغّل بالحمل 270 Ω'}]},
+      {dev:'new',t:'Procedure A · 1. افتح LTspice، وروح File › New Schematic.',subs:[
+        {k:'set',dev:'new',t:'File › New Schematic.',ok:s=>s.open,do:async A=>{if(!RT.S.open)await PC.act(A,'new')}}]},
+      {dev:'R',t:'2. أول شي حط كل القطع اللي تحتاجها دائرة Fig. 6.1 على الـ schematic، ما عدا المكثف. عشان تضيف coupling coefficient بين الملفين: Edit › SPICE directive واكتب <b>K1 L1 L2 1</b>.',subs:[
+        {k:'set',dev:'comp',t:'مصدر الجهد V1 (Component › voltage).',ok:()=>comps('V').length>=1,do:A=>PC.place(A,ofT(C61,'V'))},
+        {k:'set',dev:'R',t:'المقاومات R1 و R2 و R3.',ok:()=>comps('R').length>=3,do:A=>PC.place(A,ofT(C61,'R'))},
+        {k:'set',dev:'L',t:'الملفين L1 و L2.',ok:()=>comps('L').length>=2,do:A=>PC.place(A,ofT(C61,'L'))},
+        {k:'set',dev:'D',t:'الدايودات D1–D4.',ok:()=>comps('D').length>=4,do:A=>PC.place(A,ofT(C61,'D'))},
+        {k:'set',dev:'dir',t:'Edit › SPICE directive: <b>K1 L1 L2 1</b>.',ok:()=>dirHas(/^k1\s+l1\s+l2\s+1$/i),do:A=>PC.dir(A,'K1 L1 L2 1',25,-3)}]},
+      {dev:'GND',t:'3. أضف circuit ground (GND)، ووصّل كل القطع (F3)، وسمّ الـ nodes: <b>S1</b> و <b>S2</b> و <b>out</b> (Label Net، F4).',subs:[
+        {k:'set',dev:'GND',t:'أضف الـ GND.',ok:()=>comps('GND').length>=1,do:A=>PC.place(A,GN61)},
+        {k:'set',dev:'wire',t:'وصّل كل القطع بالـ wires (F3) مثل Fig. 6.1.',ok:()=>PC.wired(),do:A=>PC.wire(A,L61),hint:'فيه طرف قطعة مو موصول بشي: كل طرف لازم يلاقي طرف ثاني أو wire أو GND'},
+        {k:'set',dev:'label',t:'سمّ الـ nodes: S1 و S2 و out (Label Net، F4).',ok:()=>['s1','s2','out'].every(n=>labels().includes(n)),do:A=>PC.label(A,[{name:'S1',x:12,y:0},{name:'S2',x:20,y:0},{name:'out',x:32,y:4}])}]},
+      {dev:'R',t:'4. عشان تغيّر قيمة قطعة: كليك يمين عليها واكتب القيمة (meg = 1e6، k = 1e3، m = 1e-3، u = 1e-6، n = 1e-9، p = 1e-12).',subs:[
+        {k:'set',dev:'R',t:'R1 = 20 Ω، و R2 = 2 Ω، و R3 = 4.7 kΩ (اكتب 4.7k).',ok:()=>val(byName('R1'),20)&&val(byName('R2'),2)&&val(byName('R3'),4700),
+          do:async A=>{await PC.value(A,'R1',{val:'20'});await PC.value(A,'R2',{val:'2'});await PC.value(A,'R3',{val:'4.7k'})}},
+        {k:'set',dev:'L',t:'L1 = 400 mH (اكتب 400m)، و L2 = 1 mH (اكتب 1m).',ok:()=>val(byName('L1'),0.4)&&val(byName('L2'),1e-3),
+          do:async A=>{await PC.value(A,'L1',{val:'400m'});await PC.value(A,'L2',{val:'1m'})}},
+        {k:'set',dev:'D',t:'D1–D4 = 1N4148 (Pick New Diode).',ok:()=>comps('D').length>=4&&comps('D').every(d=>d.model==='1N4148'),
+          do:async A=>{for(const d of comps('D'))await PC.value(A,d.name,{model:'1N4148'})}}]},
+      {dev:'comp',t:'5. كليك يمين على مصدر الجهد وعبّي: DC offset = 0 V، Amplitude = 311 V، Freq = 60 Hz، Tdelay = 0 s، Theta = 0 s⁻¹، Phi = 0°، Ncycles = 12 دورة.',subs:[
+        {k:'set',dev:'comp',t:'V1 › SINE: DC offset = 0 V، Amplitude = 311 V، Freq = 60 Hz، Tdelay = 0 s، Theta = 0 s⁻¹، Phi = 0°، Ncycles = 12 دورة.',ok:()=>srcIs(byName('V1'),[0,311,60,0,0,0,12]),
+          do:A=>PC.value(A,'V1',{wave:'SINE',args:[0,311,60,0,0,0,12]})}]},
+      {dev:'ana',t:'6. روح Edit › SPICE analysis وعبّي: Stop time = 0.2 s، Time to start saving data = 0 s، Maximum Timestep = 0.2 ms.',subs:[
+        {k:'set',dev:'ana',t:'Transient: Stop time = 0.2 s، Time to start saving data = 0 s، Maximum Timestep = 0.2 ms.',ok:()=>ana(0.2,0.2e-3),do:A=>PC.ana(A,'.tran 0 0.2 0 0.2m',33,-3)}]},
+      {dev:'run',t:'7. شغّل المحاكاة: Simulate › Run.',subs:[{k:'set',dev:'run',t:'Simulate › Run.',ok:()=>!!ST.seen.A0,do:PC.run,hint:runHint('Fig. 6.1')}]},
+      {dev:'run',t:'8. اضغط على node الـ <b>out</b> في الـ schematic عشان تعرض موجة جهد الخرج.',subs:[{k:'set',dev:'run',t:'اضغط على node الـ out: V(out).',ok:()=>ST.seen.A0&&tr('V(out)'),do:A=>PC.trace(A,'V(out)')}]},
+      {dev:'run',t:'9. عشان تعرض جهد الـ secondary winding: حط الماوس على S1، واضغط وأنت ساحب لين S2 وفك. كم الـ peak amplitude لهالموجة (V<sub>SM</sub>)؟',subs:[
+        {k:'set',dev:'run',t:'اسحب من S1 إلى S2: V(S1,S2).',ok:()=>tr('V(s1,s2)'),do:A=>PC.trace(A,'V(s1,s2)')},
+        {k:'rec',t:'سجّل V<sub>SM</sub>.',ok:()=>tr('V(s1,s2)'),rec:[{to:'a_vsm',val:vsm,unit:'V',dec:2,label:'V<sub>SM</sub>',none:'اعرض V(s1,s2) من آخر run لدائرة Fig. 6.1'}]}]},
+      {dev:'run',t:'10. بنفس الطريقة اعرض الفرق على D1: V(S1, out). كم الـ peak inverse voltage PIV لـ D1؟ لازم يكون أقل من الـ V<sub>RRM</sub> بـ 25 % على الأقل (Fig. 6.3).',subs:[
+        {k:'set',dev:'run',t:'اسحب من S1 إلى out: V(S1,out).',ok:()=>tr('V(s1,out)'),do:A=>PC.trace(A,'V(s1,out)')},
+        {k:'rec',t:'سجّل الـ PIV وقارنه بـ 0.75 V<sub>RRM</sub>.',ok:()=>tr('V(s1,out)'),rec:[{to:'a_piv',val:piv,unit:'V',dec:2,label:'PIV',none:NR},{to:'a_pivok',val:yn(piv,x=>x<=0.75*100),txt:YN,label:'PIV ≤ 0.75 V<sub>RRM</sub>',none:NR}]}]},
+      {dev:'C',t:'11. وصّل المكثف مثل Fig. 6.1 (C1 = 470 µF)، وأعد المحاكاة وشوف أثره على الـ ripple. وجرّب سعة أقل (10 µF مثلاً).',subs:[
+        {k:'set',dev:'C',t:'وصّل C1 = 470 µF (اكتب 470u) بين out والأرضي.',ok:()=>comps('C').some(c=>val(c,470e-6))||!!ST.seen.A470,do:async A=>{await PC.place(A,CAP);await PC.value(A,'C1',{val:'470u'})}},
+        {k:'set',dev:'run',t:'أعد المحاكاة (Run).',ok:()=>!!ST.seen.A470,do:PC.run,hint:runHint('Fig. 6.1 مع C1 = 470 µF')},
+        {k:'set',dev:'C',t:'غيّر C1 = 10 µF (اكتب 10u) وأعد المحاكاة.',ok:()=>!!ST.seen.A10,do:async A=>{await PC.value(A,'C1',{val:'10u'});await PC.run(A)}},
+        {k:'rec',t:'سجّل أثر السعة على الـ ripple.',ok:()=>ST.seen.A470&&ST.seen.A10,
+          rec:[{to:'a_rip',val:()=>ST.rip.A470!=null&&ST.rip.A10!=null?(ST.rip.A470<ST.rip.A10?'a':'b'):null,txt:v=>v==='a'?'470 µF → smaller ripple':'10 µF → smaller ripple',label:'Ripple',none:'شغّل بـ 470 µF وبـ 10 µF'}]}]},
+      {dev:'run',t:'12. حط الماوس على D1 (يتحوّل لشكل clamp meter) واضغط: يطلع تيار الدايود. لاحظ الـ surge في بداية المحاكاة؛ الدايود لازم يكون I<sub>FSM</sub> حقه 1.5 مرة الـ surge.',subs:[
+        {k:'set',dev:'C',t:'رجّع C1 = 470 µF وشغّل.',ok:s=>s.kind==='A470',do:async A=>{await PC.value(A,'C1',{val:'470u'});await PC.run(A)}},
+        {k:'set',dev:'run',t:'اضغط على D1: I(D1).',ok:s=>s.kind==='A470'&&tr('I(D1)'),do:A=>PC.trace(A,'I(D1)')},
+        {k:'rec',t:'سجّل الـ surge وقارنه بـ I<sub>FSM</sub>.',ok:s=>s.kind==='A470'&&tr('I(D1)'),rec:[{to:'a_surge',val:surge,unit:'A',dec:3,label:'Surge I(D1)',none:'شغّل بـ C1 = 470 µF واعرض I(D1)'},{to:'a_surgeok',val:yn(surge,x=>2>=1.5*x),txt:YN,label:'I<sub>FSM</sub> ≥ 1.5 × surge'}]}]},
+      {dev:'run',t:'13. في نافذة الموجات اسحب الماوس بشكل قطري عشان تعرض الدورات المستقرة بس (بدون الـ surge). اضغط Ctrl مع كليك على I(D1) (أو ∑): يطلع المتوسط. لازم ما يزيد عن 0.7 I<sub>F(AV)</sub>.',subs:[
+        {k:'set',dev:'run',t:'اسحب مستطيل على الدورات المستقرة (بدون الـ surge).',ok:s=>s.kind==='A470'&&(RT.S.zooms||0)>0,do:A=>PC.zoom(A,0.11,0.196)},
+        {k:'set',dev:'run',t:'Ctrl + كليك على I(D1) (أو ∑): المتوسط.',ok:()=>!!ST.avgD1,do:A=>PC.avg(A,'I(D1)')},
+        {k:'rec',t:'سجّل متوسط I(D1) وقارنه بـ 0.7 I<sub>F(AV)</sub>.',ok:()=>!!ST.avgD1,rec:[{to:'a_iavg',val:iavg,unit:'mA',dec:2,label:'Average I(D1)',none:'كبّر على الدورات المستقرة واطلب متوسط I(D1)'},{to:'a_iavgok',val:yn(iavg,x=>x<=105),txt:YN,label:'≤ 0.7 I<sub>F(AV)</sub>'}]}]},
+      {dev:'run',t:'14. اضغط Ctrl+E (أو ⤢ Zoom Full) عشان ترجع للعرض الأصلي.',subs:[{k:'set',dev:'run',t:'Ctrl+E (⤢ Zoom Full).',ok:()=>!!ST.fitted,do:PC.fit}]},
+      {dev:'run',t:'15. احذف منحنيات I(D1) و V(S1,out).',subs:[
+        {k:'set',dev:'run',t:'احذف I(D1) (✕ جنب اسمه).',ok:()=>ST.fitted&&!tr('I(D1)'),do:A=>PC.untrace(A,'I(D1)')},
+        {k:'set',dev:'run',t:'احذف V(S1,out).',ok:()=>ST.fitted&&!tr('V(s1,out)'),do:A=>PC.untrace(A,'V(s1,out)')}]},
+      {dev:'R',t:'16. نزّل قيمة الحمل (R3 = 4.7 kΩ) إلى 270 Ω وأعد المحاكاة، وشوف أثرها على الـ ripple في الخرج.',subs:[
+        {k:'set',dev:'R',t:'R3 = 270 Ω.',ok:()=>val(byName('R3'),270)||ST.seen.A270||ST.seen.A270b,do:A=>PC.value(A,'R3',{val:'270'})},
+        {k:'set',dev:'run',t:'أعد المحاكاة (Run).',ok:()=>ST.seen.A270||ST.seen.A270b,do:PC.run,hint:runHint('Fig. 6.1 مع R3 = 270 Ω')},
+        {k:'rec',t:'سجّل أثر الحمل على الـ ripple.',ok:()=>ST.seen.A270||ST.seen.A270b,
+          rec:[{to:'a_270',val:()=>{const r=ST.rip.A270??ST.rip.A270b,b=ST.rip.A470??ST.rip.A10;return r!=null&&b!=null?(r>b?'a':'b'):null},txt:v=>v==='a'?'increases':'decreases',label:'Ripple with 270 Ω',none:'شغّل بالحمل 270 Ω'}]}]},
       /* Procedure B (manual p. 47), steps 1–3 */
-      {dev:'R',t:'Procedure B · 1. أضف voltage regulator لدائرة الـ dc supply مثل Fig. 6.2 (R4 = 100 Ω و D5 = 1N750). رجّع الحمل لـ 4.7 kΩ وأعد المحاكاة. اقرا وسجّل قيمة الـ dc لـ v<sub>out</sub>(t).',ok:s=>!!ST.seen.B47,
-        rec:[{to:'b_v47',val:()=>vdc('B47'),unit:'V',dec:3,label:'V<sub>out</sub>(dc), 4.7 kΩ',none:NR}]},
-      {dev:'R',t:'2. نزّل الحمل لـ 270 Ω وأعد المحاكاة، وشوف أثره على الـ ripple. اقرا وسجّل قيمة الـ dc لـ v<sub>out</sub>(t).',ok:s=>!!ST.seen.B270,
-        rec:[{to:'b_v270',val:()=>vdc('B270'),unit:'V',dec:3,label:'V<sub>out</sub>(dc), 270 Ω',none:NR}]},
-      {dev:'save',t:'3. احفظ الـ schematic قبل ما تسكّر البرنامج (File › Save).',ok:s=>!!ST.savedB},
+      {dev:'R',t:'Procedure B · 1. أضف voltage regulator لدائرة الـ dc supply مثل Fig. 6.2 (R4 = 100 Ω و D5 = 1N750). رجّع الحمل لـ 4.7 kΩ وأعد المحاكاة. اقرا وسجّل قيمة الـ dc لـ v<sub>out</sub>(t).',subs:[
+        {k:'set',dev:'R',t:'أضف الـ regulator مثل Fig. 6.2: R4 = 100 Ω و D5 = 1N750.',ok:()=>val(byName('R4'),100)&&comps('D').some(d=>d.model==='1N750')||!!ST.seen.B47,
+          do:async A=>{await PC.wire(A,L62);await PC.value(A,'C1',{val:'470u'});await PC.value(A,'R4',{val:'100'});await PC.value(A,'D5',{model:'1N750'})}},
+        {k:'set',dev:'R',t:'رجّع الحمل R3 = 4.7 kΩ.',ok:()=>val(byName('R3'),4700)||!!ST.seen.B47,do:A=>PC.value(A,'R3',{val:'4.7k'})},
+        {k:'set',dev:'run',t:'أعد المحاكاة (Run).',ok:()=>!!ST.seen.B47,do:PC.run,hint:runHint('Fig. 6.2 مع R3 = 4.7 kΩ')},
+        {k:'rec',t:'سجّل V<sub>out</sub>(dc).',ok:()=>!!ST.seen.B47,rec:[{to:'b_v47',val:()=>vdc('B47'),unit:'V',dec:3,label:'V<sub>out</sub>(dc), 4.7 kΩ',none:NR}]}]},
+      {dev:'R',t:'2. نزّل الحمل لـ 270 Ω وأعد المحاكاة، وشوف أثره على الـ ripple. اقرا وسجّل قيمة الـ dc لـ v<sub>out</sub>(t).',subs:[
+        {k:'set',dev:'R',t:'R3 = 270 Ω.',ok:()=>val(byName('R3'),270)||!!ST.seen.B270,do:A=>PC.value(A,'R3',{val:'270'})},
+        {k:'set',dev:'run',t:'أعد المحاكاة (Run).',ok:()=>!!ST.seen.B270,do:PC.run,hint:runHint('Fig. 6.2 مع R3 = 270 Ω')},
+        {k:'rec',t:'سجّل V<sub>out</sub>(dc).',ok:()=>!!ST.seen.B270,rec:[{to:'b_v270',val:()=>vdc('B270'),unit:'V',dec:3,label:'V<sub>out</sub>(dc), 270 Ω',none:NR}]}]},
+      {dev:'save',t:'3. احفظ الـ schematic قبل ما تسكّر البرنامج (File › Save).',subs:[{k:'set',dev:'save',t:'File › Save.',ok:()=>!!ST.savedB,do:A=>PC.act(A,'save')}]},
       /* Procedure C (manual p. 48), steps 1–10 */
-      {dev:'new',t:'Procedure C · 1. روح File › New Schematic.',ok:s=>!!ST.newC},
-      {dev:'comp',t:'2. حط كل القطع اللي تحتاجها دائرة Fig. 6.4 على الـ schematic، ومعها circuit ground.',acts:['OP747 (Component ← OpAmps)، و V1 = 15 و V2 = 15 للـ ±15 V، و Vin.','R1 = 1000، و D1–D4 = 1N4148، و GND.'],
-        ok:s=>!!ST.newC&&comps('OA').length>=1&&comps('V').length>=3&&comps('R').length>=1&&comps('D').length>=4&&comps('GND').length>=1},
-      {dev:'label',t:'3. وصّل كل القطع، وسمّ الـ nodes: <b>in</b> و <b>IC_out</b> و <b>out</b>.',ok:s=>['in','ic_out','out'].every(n=>labels().includes(n))},
-      {dev:'comp',t:'4. كليك يمين على مصدر الدخل وعبّي: DC offset = 0، Amplitude = 1، Freq = 1000، Tdelay = 0، Theta = 0، Phi = 0، Ncycles = 3.',ok:s=>S().comps.some(c=>srcIs(c,[0,1,1000,0,0,0,3]))},
-      {dev:'ana',t:'5. روح Edit › SPICE analysis وعبّي: Stop time = 3m، Time to start saving data = 0، Maximum Timestep = 3u.',ok:s=>ana(3e-3,3e-6)},
-      {dev:'run',t:'6. شغّل، واضغط على nodes الـ in و IC_out و out بالترتيب عشان تعرض موجاتها.',ok:s=>ST.seen.C&&tr('V(in)')&&tr('V(ic_out)')&&tr('V(out)'),
-        rec:[{to:'c_max',val:()=>lim('C'),unit:'V',dec:2,label:'v<sub>out</sub> max',none:NR},{to:'c_min',val:()=>lim('C',true),unit:'V',dec:2,label:'v<sub>out</sub> min',none:NR}]},
-      {dev:'rot',t:'7. اقلب D2 (Ctrl+R مرتين)، وبعدها غيّر موديله إلى 1N750 (Zener diode).',ok:s=>{const d=byName('D2');return !!d&&d.model==='1N750'}},
-      {dev:'run',t:'8. أعد المحاكاة. قارن موجة الخرج باللي طلعت لك في Procedure B من تجربة الـ op amp (Exp 5).',ok:s=>!!ST.seen.CZ,
-        rec:[{to:'c_zmax',val:()=>lim('CZ'),unit:'V',dec:2,label:'v<sub>out</sub> max',none:NR},{to:'c_zmin',val:()=>lim('CZ',true),unit:'V',dec:2,label:'v<sub>out</sub> min',none:NR},
-          {to:'c_cmp',val:()=>cur('CZ')?'a':null,txt:()=>'Same shape: VD + VZ / −2VD',label:'vs Exp 5',none:NR}]},
-      {dev:'run',t:'9. حط الماوس على R1 (يتحوّل لشكل clamp meter) واضغط: تطلع موجة تيار خرج الـ op amp. كم أعلى قيمة؟ تأكد إنها أقل من 20 mA.',ok:s=>!!ST.iR1,
-        rec:[{to:'c_imax',val:imax,unit:'mA',dec:2,label:'I(R1) max',none:'اعرض I(R1) بعد الـ run'},{to:'c_iok',val:yn(imax,x=>x<20),txt:YN,label:'< 20 mA'}]},
-      {dev:'save',t:'10. احفظ الـ schematic قبل ما تسكّر البرنامج.',ok:s=>!!ST.savedC}
+      {dev:'new',t:'Procedure C · 1. روح File › New Schematic.',subs:[{k:'set',dev:'new',t:'File › New Schematic.',ok:()=>!!ST.newC,do:A=>PC.act(A,'new')}]},
+      {dev:'comp',t:'2. حط كل القطع اللي تحتاجها دائرة Fig. 6.4 على الـ schematic، ومعها circuit ground.',subs:[
+        {k:'set',dev:'comp',t:'الـ OP747 (Component › OpAmps).',ok:()=>!!ST.newC&&comps('OA').length>=1,do:A=>PC.place(A,ofT(C64,'OA'))},
+        {k:'set',dev:'comp',t:'V1 = 15 V و V2 = 15 V للـ ±15 V.',ok:()=>!!ST.newC&&comps('V').filter(c=>dcIs(c,15)).length>=2,
+          do:async A=>{await PC.place(A,C64.filter(d=>d.name==='V1'||d.name==='V2'));for(const n of ['V1','V2'])await PC.value(A,n,{dc:15})}},
+        {k:'set',dev:'comp',t:'مصدر الدخل Vin (V3).',ok:()=>!!ST.newC&&comps('V').length>=3,do:A=>PC.place(A,ofT(C64,'V'))},
+        {k:'set',dev:'R',t:'R1 = 1 kΩ (اكتب 1000).',ok:()=>!!ST.newC&&comps('R').some(c=>val(c,1000)),do:async A=>{await PC.place(A,ofT(C64,'R'));await PC.value(A,'R1',{val:'1000'})}},
+        {k:'set',dev:'D',t:'D1–D4 = 1N4148.',ok:()=>!!ST.newC&&comps('D').filter(d=>d.model==='1N4148').length>=4,do:async A=>{await PC.place(A,ofT(C64,'D'));for(const d of comps('D'))await PC.value(A,d.name,{model:'1N4148'})}},
+        {k:'set',dev:'GND',t:'الـ circuit ground (GND).',ok:()=>!!ST.newC&&comps('GND').length>=1,do:A=>PC.place(A,GN64)}]},
+      {dev:'label',t:'3. وصّل كل القطع، وسمّ الـ nodes: <b>in</b> و <b>IC_out</b> و <b>out</b>.',subs:[
+        {k:'set',dev:'wire',t:'وصّل كل القطع مثل Fig. 6.4.',ok:()=>PC.wired(),do:A=>PC.wire(A,L64),hint:'فيه طرف قطعة مو موصول بشي: كل طرف لازم يلاقي طرف ثاني أو wire أو GND'},
+        {k:'set',dev:'label',t:'سمّ الـ nodes: in و IC_out و out.',ok:()=>['in','ic_out','out'].every(n=>labels().includes(n)),do:A=>PC.label(A,[{name:'in',x:6,y:0},{name:'IC_out',x:14,y:1},{name:'out',x:22,y:1}])}]},
+      {dev:'comp',t:'4. كليك يمين على مصدر الدخل وعبّي: DC offset = 0 V، Amplitude = 1 V، Freq = 1 kHz (1000 Hz)، Tdelay = 0 s، Theta = 0 s⁻¹، Phi = 0°، Ncycles = 3 دورات.',subs:[
+        {k:'set',dev:'comp',t:'Vin › SINE: DC offset = 0 V، Amplitude = 1 V، Freq = 1000 Hz، Tdelay = 0 s، Theta = 0 s⁻¹، Phi = 0°، Ncycles = 3 دورات.',ok:()=>S().comps.some(c=>srcIs(c,[0,1,1000,0,0,0,3])),
+          do:async A=>{const v=comps('V').find(c=>!dcIs(c,15))||byName('V3');if(v)await PC.value(A,v.name,{wave:'SINE',args:[0,1,1000,0,0,0,3]})}}]},
+      {dev:'ana',t:'5. روح Edit › SPICE analysis وعبّي: Stop time = 3 ms، Time to start saving data = 0 s، Maximum Timestep = 3 µs.',subs:[
+        {k:'set',dev:'ana',t:'Transient: Stop time = 3 ms، Time to start saving data = 0 s، Maximum Timestep = 3 µs.',ok:()=>ana(3e-3,3e-6),do:A=>PC.ana(A,'.tran 0 3m 0 3u',26,-4)}]},
+      {dev:'run',t:'6. شغّل، واضغط على nodes الـ in و IC_out و out بالترتيب عشان تعرض موجاتها.',subs:[
+        {k:'set',dev:'run',t:'Simulate › Run.',ok:()=>!!ST.seen.C,do:PC.run,hint:runHint('Fig. 6.4')},
+        {k:'set',dev:'run',t:'اضغط على in: V(in).',ok:()=>ST.seen.C&&tr('V(in)'),do:A=>PC.trace(A,'V(in)')},
+        {k:'set',dev:'run',t:'اضغط على IC_out: V(IC_out).',ok:()=>ST.seen.C&&tr('V(ic_out)'),do:A=>PC.trace(A,'V(ic_out)')},
+        {k:'set',dev:'run',t:'اضغط على out: V(out).',ok:()=>ST.seen.C&&tr('V(out)'),do:A=>PC.trace(A,'V(out)')},
+        {k:'rec',t:'سجّل أعلى وأقل قيمة لـ v<sub>out</sub>.',ok:()=>ST.seen.C&&tr('V(in)')&&tr('V(ic_out)')&&tr('V(out)'),
+          rec:[{to:'c_max',val:()=>lim('C'),unit:'V',dec:2,label:'v<sub>out</sub> max',none:NR},{to:'c_min',val:()=>lim('C',true),unit:'V',dec:2,label:'v<sub>out</sub> min',none:NR}]}]},
+      {dev:'rot',t:'7. اقلب D2 (Ctrl+R مرتين)، وبعدها غيّر موديله إلى 1N750 (Zener diode).',subs:[
+        {k:'set',dev:'rot',t:'اختر D2 واضغط Ctrl+R مرتين.',ok:()=>D2rev()||!!ST.seen.CZ,do:async A=>{const d=byName('D2');if(!d)return;RT.S.tool='sel';RT.S.sel=d.id;for(let i=0;i<2&&!D2rev();i++)await PC.act(A,'rot')}},
+        {k:'set',dev:'D',t:'D2 = 1N750.',ok:()=>{const d=byName('D2');return !!d&&d.model==='1N750'},do:A=>PC.value(A,'D2',{model:'1N750'})}]},
+      {dev:'run',t:'8. أعد المحاكاة. قارن موجة الخرج باللي طلعت لك في Procedure B من تجربة الـ op amp (Exp 5).',subs:[
+        {k:'set',dev:'run',t:'أعد المحاكاة (Run).',ok:()=>!!ST.seen.CZ,do:PC.run,hint:runHint('Fig. 6.4 مع D2 = 1N750 مقلوب')},
+        {k:'rec',t:'سجّل حدود v<sub>out</sub> وقارنها بـ Exp 5.',ok:()=>!!ST.seen.CZ,
+          rec:[{to:'c_zmax',val:()=>lim('CZ'),unit:'V',dec:2,label:'v<sub>out</sub> max',none:NR},{to:'c_zmin',val:()=>lim('CZ',true),unit:'V',dec:2,label:'v<sub>out</sub> min',none:NR},
+            {to:'c_cmp',val:()=>cur('CZ')?'a':null,txt:()=>'Same shape: VD + VZ / −2VD',label:'vs Exp 5',none:NR}]}]},
+      {dev:'run',t:'9. حط الماوس على R1 (يتحوّل لشكل clamp meter) واضغط: تطلع موجة تيار خرج الـ op amp. كم أعلى قيمة؟ تأكد إنها أقل من 20 mA.',subs:[
+        {k:'set',dev:'run',t:'اضغط على R1: I(R1).',ok:()=>!!ST.iR1,do:A=>PC.trace(A,'I(R1)')},
+        {k:'rec',t:'سجّل أعلى قيمة لـ I(R1).',ok:()=>!!ST.iR1,rec:[{to:'c_imax',val:imax,unit:'mA',dec:2,label:'I(R1) max',none:'اعرض I(R1) بعد الـ run'},{to:'c_iok',val:yn(imax,x=>x<20),txt:YN,label:'< 20 mA'}]}]},
+      {dev:'save',t:'10. احفظ الـ schematic قبل ما تسكّر البرنامج.',subs:[{k:'set',dev:'save',t:'File › Save.',ok:()=>!!ST.savedC,do:A=>PC.act(A,'save')}]}
     ],
     onReset(){for(const k in ST)delete ST[k];ST.seen={};ST.kinds=[];ST.rip={};$('result').innerHTML=''}};
 }};})();

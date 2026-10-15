@@ -55,12 +55,12 @@ export async function run(page, vp, ok) {
   await P.place('R', 14, 1, 3); await P.act('R');
   await P.place('D', 18, 1); await P.place('D', 18, 5); await P.place('D', 22, 5, 2); await P.place('D', 22, 9, 2); await P.act('D');
   for (const [x, y] of [[10, 2], [6, 4], [12, -5], [12, 7], [18, 9], [22, 9]]) await P.place('GND', x, y); await P.act('GND');
-  ok(await done(21), 'C2 Fig. 6.4 parts and ground');
+  await P.value('R1', '1000'); for (const d of ['D1', 'D2', 'D3', 'D4']) await P.diode(d, '1N4148');
+  await P.source('V1', 'DC', '15'); await P.source('V2', 'DC', '15');
+  ok(await done(21), 'C2 Fig. 6.4 parts, values (V1 = V2 = 15 V, R1 = 1 kΩ, 1N4148) and ground');
   await P.wire([6, 0], [10, 0], [18, 1], [22, 1]); await P.act('wire');
   await P.label('in', 6, 0); await P.label('IC_out', 14, 1); await P.label('out', 22, 1);
   ok(await done(22), 'C3 wires and labels');
-  await P.value('R1', '1000'); for (const d of ['D1', 'D2', 'D3', 'D4']) await P.diode(d, '1N4148');
-  await P.source('V1', 'DC', '15'); await P.source('V2', 'DC', '15');
   await P.source('V3', 'SINE', [0, 1, 1000, 0, 0, 0, 3]); ok(await done(23), 'C4 Vin SINE(0 1 1000 0 0 0 3)');
   await P.tran('3m', '0', '3u'); await P.at(26, -4); ok(await done(24), 'C5 .tran 0 3m 0 3u');
   await P.run(); await P.view(-2, -7, vp === 'phone' ? 0.3 : 0.8); await P.probe(6, 0); await P.probe(14, 1); await P.probe(22, 1);
