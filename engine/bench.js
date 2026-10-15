@@ -304,7 +304,7 @@ const BENCH={
     const LK=((RT&&RT.locks)||[]).filter(l=>RT.S[l.key]),lkOk=LK.length&&LK.every(l=>l.isOk());
     const chk=!all&&LK.length&&(!lkOk||/المشرف/.test(s.t))?(lkOk?'<span class="chkok">✓ المشرف شيّك التوصيل</span>':'<button class="chk" id="scChk">👨‍🏫 المشرف يتأكد من التوصيل</button>'):'';
     const caps=!all&&s.rec&&this.mode==='manual'?this.capsOf(s):[];
-    const key=this.built+'|'+all+'|'+i+'|'+this.view+'|'+min+'|'+chk+'|'+caps.length+'|'+(this._skipAsk===i?1:0);if(c.dataset.key===key)return;c.dataset.key=key;
+    const key=this.built+'|'+all+'|'+i+'|'+(s?this.stepKey(s):'')+'|'+this.view+'|'+min+'|'+chk+'|'+caps.length+'|'+(this._skipAsk===i?1:0);if(c.dataset.key===key)return;c.dataset.key=key;
     if(all){const man=this.mode==='manual';c.innerHTML=`<div class="num done">✓</div><div class="body"><div class="k">خلصت خطوات ${man?'المانيوال':'الاختبار'} 🎉</div><div class="t">${man?'كل الخطوات تمت، والـ sheet تعبّت من تسجيلاتك: افتحها واقراها.':'كل الخطوات تمت. كمّل الـ sheet (الشاشات والقراءات والأسئلة) واضغط "صحّح" عشان تشوف درجتك.'}</div><div class="acts"><button class="go" id="scSheet">افتح الـ sheet</button></div></div>`;
       BIDI.fix(c);c.querySelector('#scSheet').onclick=()=>{this.togglePanel(true);const r=$q('#submit');if(r&&!man)r.scrollIntoView({block:'center'})};return}
     if(this.sim.setGuide&&!this._spot)this.sim.setGuide(null);
