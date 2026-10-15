@@ -44,7 +44,7 @@ export async function run(page, vp, ok) {
   ok(await page.evaluate(() => { const L = BENCH.sim.RT.layout; return !!(L.POS.dbox && L.POS.dbox2 && document.querySelector('#bench [data-k="mv:dbox"]') && document.querySelector('#bench [data-k="mv:dbox2"]') && BENCH.sim.regions.dbox2); }), 'the two decade boxes are separate instruments: own ✥ handle, position and zoom');
   await H.focus('board'); await H.del(16, 23); await H.del(17, 24); await H.place('LED', 16, 23); await H.flip(16, 23);
   await H.lead('Lp', 30); await H.lead('dA1', 30); await H.lead('dA2', 23); await H.lead('gr', 25); await H.lead('dB1', 25); await H.lead('dB2', 17); await H.lead('gb', 15);
-  await H.focus('psu'); await H.key('p:RON'); const m2b = await page.evaluate(() => ({ m: BENCH.sim.RT.match('9.2b').ok, k: BENCH.sim.status().kind, h: (BENCH.sim.RT.hint('9.2b') || {}).msg }));
+  await H.focus('psu'); await H.key('p:RON'); const m2b = await page.evaluate(() => ({ m: BENCH.sim.RT.match('9.2b').ok, k: BENCH.sim.status().kind }));
   ok(m2b.m && m2b.k === 'B', 'B4 Fig. 9.2b (a layout of its own) ' + JSON.stringify(m2b));
   await H.focus('gen'); await H.key('g:PWR'); await H.key('g:Square'); await H.gen('F4', '5', 'F2'); await H.gen('F5', '0', 'F2'); await H.gen('F1', '0.2', 'F3'); await H.key('g:CH1');
   await page.waitForTimeout(300); ok(await done(7), 'B4 0.2 Hz: LED blinks');

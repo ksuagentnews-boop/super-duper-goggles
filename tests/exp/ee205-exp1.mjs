@@ -21,11 +21,12 @@ export async function run(page, vp, ok) {
   for (const [j, n] of BOX) { const t = [0, 0, 0, 0, 0, 0]; t[j] = n; await dials(t); }
   ok(await done(4), `I.2 Table 3 five readings (box reversed on the meter), I.3–4 calculations: ${JSON.stringify(await st())}`);
   // ---- Procedure II (the decade box leaves the table, its leads back in the tray; the supply comes) ----
+  await page.waitForFunction(() => !!BENCH.sim.RT.layout.regions.psu, null, { timeout: 5000 }).catch(() => {});
   ok(await page.evaluate(() => !BENCH.sim.RT.layout.regions.yew1 && !!BENCH.sim.RT.layout.regions.psu && !BENCH.sim.RT.S.jack.y1H), 'II: decade box left, supply came');
   await H.lead('h1v', null); await H.lead('h1c', null);
   /* a layout of its own (nodes 7–10, not the reference rectangle) */
   await H.focus('board'); await H.place('R4k7', 7, 8); await H.place('R1k', 8, 9); await H.place('R2k2', 9, 10); await H.lead('Lp', 7); await H.lead('Lm', 10);
-  ok(await done(5), 'II.1 Fig. 5 built');
+  ok(await done(5), 'II.1 Fig. 5 built ' + JSON.stringify(await page.evaluate(() => [BENCH.sim.RT.hint('5'), BENCH.cur(), BENCH.sim.RT.S.parts.map(p => [p.type, p.a, p.b])])));
   await H.focus('psu'); await H.key('p:PWR'); await H.key('p:LVC-', 2); await H.key('p:LON');
   await H.focus('hm1'); await H.key('h1:SW-', 2);
   for (const [a, b] of [[7, 8], [8, 9], [9, 10], [7, 10]]) { await H.lead('h1v', a); await H.lead('h1c', b); }
@@ -34,6 +35,7 @@ export async function run(page, vp, ok) {
   await H.focus('psu'); await H.key('p:LON');
   await H.focus('board'); for (const [a, b] of [[7, 8], [8, 9], [9, 10]]) await H.del(a, b);
   await H.lead('Lp', null); await H.lead('Lm', null);
+  await page.waitForFunction(() => !!BENCH.sim.RT.layout.regions.hm2, null, { timeout: 5000 }).catch(() => {});
   ok(await page.evaluate(() => !BENCH.sim.RT.layout.regions.hm1 && !!BENCH.sim.RT.layout.regions.hm2), 'III: Fluke left, GoldStar came');
   await H.place('R1k', 23, 30); await H.place('R4k7', 24, 31); await H.place('R2k2', 25, 32);
   for (const [a, b] of [[30, 31], [31, 32], [16, 17], [17, 18], [16, 23], [17, 24], [18, 25], [15, 16]]) await H.place('BR', a, b);

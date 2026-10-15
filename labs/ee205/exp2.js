@@ -64,6 +64,8 @@ const figs={'1':{img:IMG('e2-fig1.png'),cap:'Fig. 1 · Oscilloscope for measurem
   '2':{img:IMG('e2-fig2.png'),cap:'Fig. 2 · Oscilloscope for measurement of AC voltage (Fig. 1 stays connected)',lines:L2},
   '3':{img:IMG('e2-fig3.png'),cap:'Fig. 3 · Series RL circuit (the Fluke across R for V<sub>R</sub>)',lines:L3}};
 /* the coil alone on the ohmmeter (step III.1) */
+/* step III.5: the Fluke (A~, 300 mA jack) in place of the plug between the generator and c */
+figs.I={img:IMG('e2-fig3.png'),cap:'Fig. 3 · the Fluke in series for I',lines:[{lead:'gr',at:8},{lead:'h1ma',at:8},{lead:'h1c',at:9},...L3.slice(2,8)]};
 const OHML={lines:[{part:['L175',0,1]},{lead:'h1v',at:0},{lead:'h1c',at:1}]};
 return {figs,procs:[{id:'I',title:'Familiarization with the oscilloscope (Figs. 1, 2)'},{id:'II',title:'Oscilloscope vs DMM for RMS'},{id:'III',title:'Series RL circuit measurements (Fig. 3)'}],
 sheet,params:()=>({}),

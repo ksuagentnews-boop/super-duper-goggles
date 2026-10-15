@@ -26,6 +26,7 @@ export async function run(page, vp, ok) {
   // ---- Procedure II ----
   await H.key('s:ADD');
   /* the supply leaves the table with Procedure I (its leads go back to the tray) */
+  await page.waitForFunction(() => !BENCH.sim.RT.layout.regions.psu, null, { timeout: 5000 }).catch(() => {});
   ok(await page.evaluate(() => !BENCH.sim.RT.layout.regions.psu && !BENCH.sim.RT.S.jack.Lp), 'II: supply left the table');
   await H.lead('c1r', null); await H.lead('c1b', null);
   await H.focus('gen'); await H.mtx('a', 10); await H.mtx('f', 100); ok(await done(9), 'II.1 10 Vpp');

@@ -26,6 +26,7 @@ export async function run(page, vp, ok) {
   await H.focus('gen'); await H.key('g:OUT'); await H.focus('board');
   for (const [a, b] of [[2, 3], [4, 11], [9, 10], [10, 11]]) await H.del(a, b);
   for (const k of ['y1H', 'y1L', 'gr', 'gb', 'h1v', 'h1c']) await H.lead(k, null);
+  await page.waitForFunction(() => !BENCH.sim.RT.layout.regions.hm2, null, { timeout: 5000 }).catch(() => {});
   ok(await page.evaluate(() => !BENCH.sim.RT.layout.regions.hm2 && !BENCH.sim.RT.S.parts.length), 'II: M2 left, board clear');
   await H.place('R100', 15, 16); await H.place('L175', 16, 17); await H.lead('y1H', 24); await H.lead('y1L', 17);
   for (const [a, b] of [[24, 25], [25, 26], [31, 32], [32, 33]]) await H.place('BR', a, b);

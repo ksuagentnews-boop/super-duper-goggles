@@ -72,6 +72,9 @@ const figs={'5':{img:IMG('e1-fig5.png'),cap:'Fig. 5 · Circuit to verify voltage
 const OHM={};['RC1','RC2','RC3'].forEach(t=>OHM[t]={lines:[{part:[t,0,1]},{lead:'h1v',at:0},{lead:'h1c',at:1}]});
 const OHMBOX={lines:[{lead:'y1H',alt:'y1L',at:0},{lead:'y1L',alt:'y1H',at:1},{lead:'h1v',at:0},{lead:'h1c',at:1}]};
 const VM={v1:[8,9],v2:[9,10],v3:[10,17],vt:[8,22]};Object.keys(VM).forEach(k=>VM[k]={lines:[...L5,{lead:'h1v',at:VM[k][0]},{lead:'h1c',at:VM[k][1]}]});
+/* two of these set-ups are listed with the figures (the voltmeter / ohmmeter leads belong to a figure): */
+figs.ohm={img:IMG('e1-fig5.png'),cap:'Procedure I · a resistor alone on the ohmmeter (M1)',lines:OHM.RC1.lines};
+figs.V1={img:IMG('e1-fig5.png'),cap:'Fig. 5 · M1 across R1 (V<sub>1</sub>)',lines:VM.v1.lines};
 const AM={};Object.keys(P6).forEach(k=>{const [a,b]=P6[k];AM[k]={lines:[...L6.filter(l=>l.wire!==P6[k]),{lead:'h2v',at:a},{lead:'h2c',at:b}]}});
 return {figs,procs:[{id:'I',title:'Resistance measurement (Tables 2, 3)'},{id:'II',title:'Voltage divider rule (Fig. 5, Table 4)'},{id:'III',title:'Current divider rule (Fig. 6, Table 5)'},{id:'IV',title:'Δ-Y transformation (Figs. 7, 8)'}],
 sheet:`<div class="paper" id="paper">

@@ -133,11 +133,12 @@ setup(RT){
   return {status,
     steps:[
       /* Procedure A (manual p. 76), steps 1–4 */
-      {dev:'dmm',t:'Procedure A · 1. بالـ DMM قِس كل مقاومة (وهي لحالها) وسجّل قيمتها في Table 10.1.',acts:['الـ DMM على Ω، الطرفين على مقاومة لحالها على اللوحة (مو موصولة بشي ثاني).','R<sub>C</sub> = 5.6 kΩ، R<sub>E</sub> = 4.7 kΩ، R<sub>1</sub> = 47 kΩ، R<sub>2</sub> = 27 kΩ.'],ok:s=>s.rAll,
+      {dev:'dmm',t:'Procedure A · 1. بالـ DMM قِس كل مقاومة (وهي لحالها) وسجّل قيمتها في Table 10.1.',acts:['الـ DMM على Ω، الطرفين على مقاومة لحالها على اللوحة (مو موصولة بشي ثاني).','R<sub>C</sub> = 5.6 kΩ، R<sub>E</sub> = 4.7 kΩ، R<sub>1</sub> = 47 kΩ، R<sub>2</sub> = 27 kΩ.'],
+        /* the DMM is not in a figure here: its leads (either meter) */lines:[{jack:'mh',altJack:'m2h'},{jack:'ml',altJack:'m2l'}],ok:s=>s.rAll,
         rec:[['t_rc','R5k6','R<sub>C</sub>'],['t_re','R4k7','R<sub>E</sub>'],['t_r1','R47k','R<sub>1</sub>'],['t_r2','R27k','R<sub>2</sub>']].map(([to,k,label])=>({to,val:()=>ST.r[k]!=null?ST.r[k]/1e3:null,unit:'kΩ',dec:3,label,none:'قِس هذي المقاومة لحالها بالـ DMM على Ω أول'}))},
       {dev:'board',build:'10.1',t:'2. وصّل الدائرة Fig. 10.1.',acts:['ركّب الدائرة مثل الشكل.','V<sub>CC</sub> = 12 V من الـ dc supply، وشغّل الـ dc.'],ok:s=>s.on},
       {dev:'dmm',t:'3. بالـ DMM على قياس الجهد المستمر (DCV)، قِس وسجّل V<sub>BE</sub> و V<sub>BC</sub> و V<sub>CE</sub> و V<sub>R1</sub> و V<sub>R2</sub> و V<sub>RC</sub> و V<sub>RE</sub> على Fig. 10.3.',
-        acts:['تقدر تقسم القياسات بين الملتيميترين.','V<sub>BC</sub>: الأحمر على B والأسود على C.'],ok:s=>s.vAll,
+        acts:['تقدر تقسم القياسات بين الملتيميترين.','V<sub>BC</sub>: الأحمر على B والأسود على C.'],lines:[{jack:'mh',altJack:'m2h'},{jack:'ml',altJack:'m2l'},{jack:'m2h',altJack:'mh'},{jack:'m2l',altJack:'ml'}],ok:s=>s.vAll,
         rec:[['be','V<sub>BE</sub>'],['bc','V<sub>BC</sub>'],['ce','V<sub>CE</sub>'],['r1','V<sub>R1</sub>'],['r2','V<sub>R2</sub>'],['rc','V<sub>RC</sub>'],['re','V<sub>RE</sub>']].map(([k,label])=>({to:'v_'+k,val:()=>ST.v[k]?(ST.v[k].lo+ST.v[k].hi)/2:null,unit:'V',dec:3,label,none:'قِس هذا الجهد بالـ DMM على DCV أول'}))},
       {dev:'board',t:'4. بالقيم المقاسة للمقاومات والجهود، احسب I<sub>C</sub> و I<sub>E</sub> و I<sub>1</sub> و I<sub>2</sub> بقانون أوم، وبعدها احسب I<sub>B</sub> بقانون كيرشوف للتيار (KCL).',
         ok:()=>['t_ic','t_ie','t_i1','t_i2','t_ib'].every(k=>isFinite(G.v(k))),
@@ -147,7 +148,7 @@ setup(RT){
       /* Procedure B (manual p. 77), steps 1–7 */
       {dev:'board',build:'10.2',t:'Procedure B · 1. وصّل الدائرة Fig. 10.2.',acts:['انتبه لقطبية المكثفات الكيميائية: الطرف + جهة الـ base والـ collector والـ emitter.']},
       {dev:'scope',t:'2. شغّل الإسكوب، انتظر كم ثانية، اضغط Default وبعدها Autoset. اعرض v<sub>i</sub>(t) على CH1 و v<sub>O</sub>(t) على CH2.',
-        acts:['CH1 على v<sub>i</sub> (طرف GEN OUT)، و CH2 على v<sub>O</sub> (بعد C<sub>2</sub>)، والأسود للاثنين على الأرضي.','شغّل CH2.'],ok:s=>ST.auto&&s.probes&&s.chs},
+        acts:['CH1 على v<sub>i</sub> (طرف GEN OUT)، و CH2 على v<sub>O</sub> (بعد C<sub>2</sub>)، والأسود للاثنين على الأرضي.','شغّل CH2.'],lines:[{jack:'c1r'},{jack:'c2r'}],ok:s=>ST.auto&&s.probes&&s.chs},
       {dev:'gen',t:'3. من الـ signal generator طبّق على الدائرة إشارة sine بـ 20 mVp-p و 1 kHz.',ok:s=>s.kind==='AC'&&s.sig&&A(s.amp-0.02)<5e-4},
       {dev:'scope',t:'4. أضف قياس Pk-Pk التلقائي لـ CH1 و CH2 في الإسكوب مثل ما تعلمت قبل.',ok:s=>s.meas},
       {dev:'scope',t:'5. اعرض وسجّل الموجتين v<sub>i</sub>(t) و v<sub>O</sub>(t) على Fig. 10.4. كم فرق الطور بينهم؟',ok:s=>!!CAPS.f104&&!!G.s('ph'),
