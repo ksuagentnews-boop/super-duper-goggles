@@ -575,7 +575,7 @@ function lineDone(L){const N=RT.netOf;if(RT.dirty)recompute();
   if(L.part){const [t,a,b]=L.part;return RT.between(N(a),N(b)).some(x=>x.p.type===t&&(!L.pol||x.dir===1))}
   if(L.ic)return RT.S.parts.some(p=>p.type===L.ic&&Object.entries(L.pins).every(([r,n])=>pinNet(p,r)===N(n)));
   /* alt: the manual does not name the unit / meter, so the same connection on the other one counts too */
-  if(L.lead)return [L.lead,L.alt].some(k=>k&&RT.leadNet(k)!=null&&RT.leadNet(k)===N(L.at));
+  if(L.lead)return [L.lead].concat(L.alt||[]).some(k=>k&&RT.leadNet(k)!=null&&RT.leadNet(k)===N(L.at));
   if(L.wire){const [a,b]=L.wire;return N(a)!=null&&N(a)===N(b)}
   /* breadboard: at least n standing jumpers (for hooks) in the group of node L.stub */
   if(L.stub!=null)return RT.S.wires.filter(w=>w.b==null&&N(w.a)!=null&&N(w.a)===N(L.stub)).length>=(L.n||1);
@@ -771,7 +771,7 @@ function trayDown(t,e){const S=RT.S;S.armA=null;if(t==='W'){S.wireMode=!S.wireMo
    (from the tray), ticked from the real connection */
 function jackLines(steps){const seen=new Set();steps.forEach(st=>{if(!st.lines)return;const out=[];
   st.lines.forEach(L=>{if(L.jack)seen.add(L.jack);const g=L.lead&&LEADDEF[L.lead]?grpOf(L.lead):null;
-    if(g&&!seen.has(g)){seen.add(g);out.push({altJack:L.alt?grpOf(L.alt):undefined,t:JKIND(g)==='banana'?`${KNAME(g)} → ${jackName(g)}`:`${KNAME(g)}: BNC → ${jackName(g)}`,note:'من «Coaxial cables & wires»'+(L.alt?` · أو ${jackName(grpOf(L.alt))}`:''),jack:g})}out.push(L)});st.lines=out});return steps}
+    if(g&&!seen.has(g)){seen.add(g);const A1=[].concat(L.alt||[])[0];out.push({altJack:A1?grpOf(A1):undefined,t:JKIND(g)==='banana'?`${KNAME(g)} → ${jackName(g)}`:`${KNAME(g)}: BNC → ${jackName(g)}`,note:'من «Coaxial cables & wires»'+(A1?` · أو ${jackName(grpOf(A1))}`:''),jack:g})}out.push(L)});st.lines=out});return steps}
 /* ---------- circuit equivalence (engine/match.js): figures are compared by circuit, never by node numbers ---------- */
 const TRAYLAB={};(def.tray||[]).forEach(([t,l])=>TRAYLAB[t]=l);
 const MATCH=ENGINE.matcher({PARTS,polar:t=>POLAR(t),leadDef:k=>LEADDEF[k],label:t=>TRAYLAB[t]||(PARTS[t]&&PARTS[t].lab)||t,
