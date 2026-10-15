@@ -212,3 +212,4 @@ Updated after every finished item (commit + push each time).
 - Batch 7 item 3: EE312 Exp 4, 7, 9, 10 in sub-steps (Table 7.1 / Exp 9 rows captured by «سجّل لي» that sets each row), all doable by do-it-for-me; engine: «وصّل لي» counts each bench lead for one figure terminal only (alt keys on a shared net).
 - Batch 7 item 3: EE205 Exp 1, 2, 3 in sub-steps (Fluke / GoldStar rotary switch, Thandar COARSE / FINE, YEW dials, Metrix keys by «اضبط لي»), all doable by do-it-for-me, Exam full marks.
 - Batch 7 item 3: EE205 Exp 6, 7, 8 in sub-steps (Exp 7 instructor check as a sub-step, the Exp 8 sweeps by «سجّل لي»), all doable by do-it-for-me, Exam full marks.
+- Batch 7 item 3: EE312 Exp 5 (A1 in the lab's power-wiring order), Exp 6 and 8 (PC: parts, wires, dialogs and runs played by the do-it buttons) in sub-steps; every experiment of both labs now in sub-steps doable by do-it-for-me.
