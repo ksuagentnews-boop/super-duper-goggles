@@ -1,16 +1,17 @@
 /* The Digilent breadboard of EE312 Exp 5 (lab slides 14–33, docs/ee312/slides/exp5-slides-481.pdf), as a panel geometry for
    board.js (def.board = 'breadboard'): green base, four binding posts on the left — from the top ⏚ (black), Vc (red),
-   Vb (yellow), Va (blue) — two long vertical power rails beside them (each one connected along its whole length), then
-   terminal blocks: a pair of horizontal rail rows (− blue, + red; each row connected along its length) above, between and
+   Vb (teal-blue), Va (yellow), the lab board's colours (slide 14 is a stock photo with Vb / Va swapped) — two long vertical
+   rails beside them (each one connected along its whole length; in the lab both carry ground), then three breadboards
+   stacked: a pair of horizontal rail rows (− blue, + red; each row connected along its length) above, between and
    below the blocks, and in each block columns of 5 holes connected internally (rows J…F above the centre channel,
    E…A below it). A DIP-8 straddles the channel: pins 8…5 in row F, pins 1…4 in row E.
    Nodes (one per connected group): 0–3 posts · 4–5 vertical rails · 6… rail rows (top to bottom) · then the 5-hole strips:
    strip(block, half, col) = S0 + (block·2 + half)·C + col, half 0 = upper (J…F, hole 0 = J … 4 = F), 1 = lower (E…A,
    hole 0 = E … 4 = A). The drawing is larger than the real board (hole pitch Q units) so a finger can reach each hole. */
 ENGINE.breadboard=function(opt={}){
-const Q=opt.q||12,C=opt.cols||30,BLOCKS=opt.blocks||2;
+const Q=opt.q||12,C=opt.cols||30,BLOCKS=opt.blocks||3;
 const X0=126;                                         // x of column 1
-const POSTS=[['⏚','#1d1d1d','#000'],['Vc','#d42a20','#6d140d'],['Vb','#e9c21c','#7a6510'],['Va','#2a62c9','#163a7a']];
+const POSTS=[['⏚','#1d1d1d','#000'],['Vc','#d42a20','#6d140d'],['Vb','#1f8fa6','#0d4a57'],['Va','#e9c21c','#7a6510']];
 const nodes=[];const add=(kind,name,holes,extra)=>{nodes.push(Object.assign({kind,name,holes},extra||{}));return nodes.length-1};
 /* rows, top to bottom */
 let y=22;const railRows=[],blockY=[];

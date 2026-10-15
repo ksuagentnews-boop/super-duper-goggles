@@ -13,9 +13,10 @@ export async function run(page, vp, ok) {
   const toVd = async (c, target) => { for (let i = 0; i < 14; i++) { const vd = await page.evaluate(c => BENCH.sim.RT.S.sc.ch[c].vd, c); if (Math.abs(vd - target) < 1e-9) return; await H.key(`s:V${c + 1}${vd < target ? '+' : '-'}`); } };
   const toTd = async target => { for (let i = 0; i < 20; i++) { const td = await page.evaluate(() => BENCH.sim.RT.S.sc.td); if (Math.abs(td - target) < 1e-12) return; await H.key(`s:H${td > target ? '-' : '+'}`); } };
   /* breadboard geometry from the page — a layout of its own, not the figures' reference one (Batch 6 item 1): the µA741 at
-     columns 5–8 (the reference has 12–15), Vc to the RIGHT vertical rail and Va to the LEFT one (the reference: the other way) */
+     columns 5–8 (the reference has 12–15), Vb (+15 V) to the RIGHT vertical rail and Va (−15 V) to the LEFT one, ground on a horizontal rail (the reference: ground on
+     the vertical rails, ±15 V on the bottom breadboard's rails) */
   const B = await page.evaluate(() => { const BB = BENCH.sim.RT.layout.BB, st = (b, h, c) => BB.strip(b, h, c - 1);
-    return { GND: BB.post('⏚'), VC: BB.post('Vc'), VA: BB.post('Va'), VRL: BB.vrail(1), VRR: BB.vrail(0), GR: BB.rail(2),
+    return { GND: BB.post('⏚'), VC: BB.post('Vb'), VA: BB.post('Va'), VRL: BB.vrail(1), VRR: BB.vrail(0), GR: BB.rail(2),
       P7: st(0, 0, 6), P6: st(0, 0, 7), P2: st(0, 1, 6), P3: st(0, 1, 7), P4: st(0, 1, 8), VO: st(0, 1, 11), X: st(0, 1, 14), Y: st(0, 1, 9), U: st(0, 0, 5) }; });
   const hole = (n, h) => page.evaluate(([n, h]) => BENCH.sim.RT.layout.holeP(n, h), [n, h]);
   /* ground rail hole of a breadboard column (rails skip every 6th column) */
@@ -24,18 +25,24 @@ export async function run(page, vp, ok) {
   const part = async (t, a, b) => { await H.bag(t); await tapHole(...a); await tapHole(...b); };
   const jumper = async (a, b) => { await H.bag('W'); await tapHole(...a); await tapHole(...b); await H.bag('W'); };
   const stub = async (n, h) => { await H.bag('JP'); await tapHole(n, h); };
-  const del = async (a, b) => { const p = await hole(...a), q = await hole(...b); await H.tap((p.x + q.x) / 2, (p.y + q.y) / 2 - 2.5); await H.key('tb:del'); };
+  /* a tap selects the part, then delete (on a crowded phone board a hook's cable can lie over a tiny part: then select it directly) */
+  const del = async (a, b) => { const p = await hole(...a), q = await hole(...b); const x = (p.x + q.x) / 2, y = (p.y + q.y) / 2 - 2.5; await H.tap(x, y);
+    if (!(await page.$('[data-k="tb:del"]'))) await page.evaluate(([a, b]) => { const R = BENCH.sim.RT, pr = R.S.parts.find(p => p.a === a[0] && p.ha === a[1] && p.b === b[0] && p.hb === b[1]); if (pr) { R.S.sel = pr.id; BENCH.sim.render(); } }, [a, b]);
+    await H.key('tb:del'); };
   /* a lead: its plug into the instrument, then its board end: a banana on a post, a hook on the newest free standing jumper of that group */
   const lead = async (k, n) => { await H.toOv(); await H.plugJack(k);
     const to = await page.evaluate(([k, n]) => { const R = BENCH.sim.RT, L = R.layout, d = L.BB.nodes[n];
       if (d.kind === 'post') return L.nodeC(n); const used = new Set(); R.S.pl.forEach(P => P.clips.forEach(c => { if (typeof c.bh === 'string') used.add(c.bh); }));
       const w = R.S.wires.filter(w => w.b == null && w.a === n && !used.has('j' + w.id)).pop(); return w ? L.stubTip(w.id) : null; }, [k, n]);
     const from = await page.evaluate(k => BENCH.sim.RT.lead.leadPos(k), k); await H.drag(from, { x: to.x, y: to.y + 2 }); };
+  /* a banana end stacked on another lead's plug in its jack (the blue lead from L + to R −, slide 21) */
+  const stackOn = async (k, g) => { await H.toOv(); await H.plugJack(k); const from = await page.evaluate(k => BENCH.sim.RT.lead.leadPos(k), k), to = await page.evaluate(g => BENCH.sim.RT.lead.jackAt(g), g); await H.drag(from, to); };
   const net = (k, n) => page.evaluate(([k, n]) => BENCH.sim.RT.leadNet(k) === BENCH.sim.RT.netOf(n), [k, n]);
 
   // ---- Procedure A · 1. Fig. 5.4a: ±15 V on the posts (slide 21), jumpers to the rails, the IC, R1 and R2 (slides 22–23)
   await H.focus('board');
-  await lead('Rp', B.VC); await lead('Lm', B.VA); await lead('Lp', B.GND); await lead('Rm', B.GND);
+  await lead('Rp', B.VC); await lead('Lm', B.VA); await lead('Lp', B.GND); await stackOn('Rm', 'Lp');
+  ok(await page.evaluate(() => { const R = BENCH.sim.RT; return R.leadNet('Rm') != null && R.leadNet('Rm') === R.leadNet('Lp'); }), 'the blue lead stacked on the L + plug: R − on ground (slide 21)');
   await H.focus('board'); await jumper([B.VC, 1], [B.VRL, 2]); await jumper([B.VA, 1], [B.VRR, 2]); await jumper([B.GND, 2], [B.GR, gr(1)]);
   ok(await net('Rp', B.VRL) && !(await done(1)), 'banana leads on the posts, jumpers to the rails (no IC yet: not Fig. 5.4a)');
   await H.focus('board'); await H.bag('OA741');

@@ -5,7 +5,8 @@
    Built as in the lab slides (docs/ee312/slides/exp5-slides-481.pdf, slides 14–35; the instructor's corrections on slides
    34–35 win over the manual: CH1 200 mV/div, CH2 1 V/div, 500 µs/div, CH3 2 V/div): the Digilent breadboard
    (engine/breadboard.js) with the µA741 (DIP-8) across the centre channel, parts and thin jumpers hole to hole; the two
-   EL302RD units at 15 V each (slides 19–20), in series for ±15 V (R + → Vc, L − → Va, L + and R − → ⏚, slide 21), jumpers
+   EL302RD units at 15 V each (slides 19–20), in series for ±15 V (R + → Vb dark red, L − → Va green, L + → ⏚ orange, R − on
+   L + by the blue lead, slide 21), jumpers
    to the rails and the IC (pin 7 = +15 V, pin 4 = −15 V); generator and scope through BNC → mini-grabber leads hooked on
    the bare end of a standing jumper (or on a part's leg).
    Steps = the manual's numbered steps. Build steps are checked by circuit equivalence against the figures below (their
@@ -18,11 +19,18 @@
    generator is part of the figure from step 2 (the manual connects it there); the scope channels from step 3. */
 EXP_DEFS['ee312/exp5']=(()=>{const H=ENGINE.sheet;
 /* the figures' reference wiring on the breadboard (slides 21–23, 31): node ids from the same geometry engine/board.js uses */
-const BB=ENGINE.breadboard({}),st=(h,c)=>BB.strip(0,h,c-1);   /* column numbers as printed (1…30), block 1 */
-const B={GND:BB.post('⏚'),VC:BB.post('Vc'),VA:BB.post('Va'),VRL:BB.vrail(0),VRR:BB.vrail(1),GR:BB.rail(2),
+/* the lab's power wiring (slides 21, 23, 26, 31; owner, 15 Oct): orange ⏚ lead → ⏚ post, dark red (+15 V) → Vb, green (−15 V)
+   → Va, the blue lead stacked from left + to right −; ⏚ → black jumper → the two vertical rails (ground only); Vb / Va →
+   jumpers to the + / − rails of the bottom breadboard, linked with jumpers up to the rails around the middle breadboard where
+   the µA741 sits: + rail above it → pin 7, − rail below it → pin 4, the + row below it is the ground row */
+const BB=ENGINE.breadboard({}),st=(h,c)=>BB.strip(1,h,c-1);   /* column numbers as printed (1…30), middle breadboard */
+const B={GND:BB.post('⏚'),VB:BB.post('Vb'),VA:BB.post('Va'),VRL:BB.vrail(0),VRR:BB.vrail(1),GR:BB.rail(5),
+  PB:BB.rail(7),NB:BB.rail(6),PU:BB.rail(3),NU:BB.rail(4),
   P7:st(0,13),P6:st(0,14),P2:st(1,13),P3:st(1,14),P4:st(1,15),VO:st(1,19),X:st(1,21),Y:st(1,17)};
-const SUP=[{lead:'Rp',at:B.VC},{lead:'Lm',at:B.VA},{lead:'Lp',at:B.GND},{lead:'Rm',at:B.GND},{wire:[B.VC,B.VRL]},{wire:[B.VA,B.VRR]},{wire:[B.GND,B.GR]},
-  {ic:'OA741',pins:{'2':B.P2,'3':B.P3,'4':B.P4,'6':B.P6,'7':B.P7}},{wire:[B.VRL,B.P7]},{wire:[B.VRR,B.P4]}];
+const SUP=[{lead:'Lp',at:B.GND},{lead:'Rm',at:B.GND,via:'Lp'},{lead:'Rp',at:B.VB},{lead:'Lm',at:B.VA},
+  {wire:[B.GND,B.VRL],col:'black'},{wire:[B.VRL,B.VRR],col:'black'},{wire:[B.VB,B.PB],col:'red'},{wire:[B.VA,B.NB],col:'yellow'},
+  {wire:[B.PB,B.PU],col:'red'},{wire:[B.NB,B.NU],col:'yellow'},{wire:[B.VRL,B.GR],col:'black'},
+  {ic:'OA741',pins:{'2':B.P2,'3':B.P3,'4':B.P4,'6':B.P6,'7':B.P7}},{wire:[B.PU,B.P7],col:'red'},{wire:[B.NU,B.P4],col:'yellow'}];
 const AMP=r2=>[...SUP,{part:['R1k',B.P2,B.GR]},{part:[r2,B.P6,B.P2]}];
 const CMP=[...SUP,{wire:[B.P2,B.GR]},{part:['R1k',B.P6,B.VO]},{part:['D4001',B.VO,B.X],pol:true},{part:['Z36',B.GR,B.X],pol:true},{part:['D4001',B.Y,B.VO],pol:true},{part:['D4001',B.GR,B.Y],pol:true}];
 const GEN=[{stub:B.P3,n:1},{stub:B.GR,n:1},{lead:'gr',at:B.P3},{lead:'gb',at:B.GR}];
@@ -63,7 +71,7 @@ sheet:`<div class="paper" id="paper">
 <div class="hint" style="text-align:center">Fig. 5.4 · (a) non-inverting amplifier, R<sub>1</sub> = 1 kΩ, R<sub>2</sub> = 10 kΩ then 100 kΩ · (b) comparator: 1 kΩ, D1, D3, D4 = 1N4001, D2 = Zener 1N4729A (3.6 V)</div>
 <div class="check manual-only" id="live"></div>
 <div class="manual-only">
-<p class="exam-note">⚠️ ±15 V: R + على Vc، و L − على Va، و L + و R − على ⏚ (البريدبورد)، و Vc → pin 7، و Va → pin 4. شغّل المصدر قبل الجنريتر، وطفّ الجنريتر قبل المصدر.</p>
+<p class="exam-note">⚠️ ±15 V: R + على Vb، و L − على Va، و L + على ⏚، و R − فوق plug الـ L + (السلك الأزرق)؛ +15 V → pin 7، و −15 V → pin 4. شغّل المصدر قبل الجنريتر، وطفّ الجنريتر قبل المصدر.</p>
 <div data-proc="A">${H.cap('f55','Fig. 5.5')}
 <table class="tbl"><caption>Figure 5.5 (R<sub>2</sub> = 10 kΩ)</caption><tr><th>v<sub>I(pp)</sub></th><td>${H.num('a_vi','0.01')} V</td><th>G</th><td>${H.num('a_g','0.01')}</td></tr>
 <tr><th>v<sub>O(pp)</sub></th><td>${H.num('a_vo','0.01')} V</td><th></th><td></td></tr>
@@ -79,6 +87,8 @@ ${plq}
 </div></div>`,
 params:()=>({}),
 board:'breadboard',
+/* the supply leads of the lab's table (slide 21) */
+leadCol:{Lm:'green',Lp:'orange',Rm:'blue',Rp:'darkred'},
 instruments:[
   {type:'gen',prev:{wave:'Square',freq:500,amp:2,off:0.2}},
   {type:'psu',prev:d=>{d.u[0].v=5;d.u[0].ilim=0.05;d.u[1].v=12;d.u[1].ilim=0.5}},
@@ -159,8 +169,9 @@ setup(RT){
     steps:[
       /* Procedure A (manual p. 40–41), steps 1–14, with the instructor's corrections (slides 34–35) */
       {dev:'board',build:'5.4a',t:'Procedure A · 1. ركّب الدائرة Fig. 5.4a، وابدأ بـ R<sub>2</sub> = 10 kΩ.',
-        acts:['اضبط كل وحدة من الـ EL302RD على 15.00 V وتأكد منها بالـ MT3805 (slides 19–20).','الوحدتين على التوالي = ±15 V (slide 21): R + على Vc، و L − على Va، و L + و R − على ⏚، وسلك jumper من كل post للـ rail حقه.',
-          'الـ µA741 عبر القناة، و Vc → pin 7 و Va → pin 4، و R<sub>1</sub> = 1 kΩ من pin 2 للأرضي، و R<sub>2</sub> من pin 6 لـ pin 2 (slides 22–23).']},
+        acts:['اضبط كل وحدة من الـ EL302RD على 15.00 V وتأكد منها بالـ MT3805 (slides 19–20).','الوحدتين على التوالي = ±15 V (slide 21): السلك الأخضر من L − لـ Va، والبرتقالي من L + لـ ⏚، والأزرق من L + لـ R −، والأحمر الغامق من R + لـ Vb.',
+          'jumpers (slides 23، 31): ⏚ → الـ rails العمودية (أرضي بس)، و Vb → الـ + rail و Va → الـ − rail تحت آخر بريدبورد، وبعدها jumpers بين الـ rails لين البريدبورد اللي فيه الـ µA741.',
+          'الـ µA741 عبر القناة، و +15 V → pin 7 و −15 V → pin 4، و R<sub>1</sub> = 1 kΩ من pin 2 للأرضي، و R<sub>2</sub> من pin 6 لـ pin 2 (slides 22–23).']},
       {dev:'gen',build:'5.4a-gen',t:'2. بالـ waveform generator، طبّق sinusoid تردده 1 kHz و 400 mVpp على الـ noninverting terminal (pin 3) للـ op amp.',
         acts:['الـ hook الأحمر على طرف jumper واقف في عمود pin 3، والأسود على jumper في الأرضي.','شغّل الجنريتر: Sine، و F1 ← 1 ← F2 (kHz)، و F2 ← 400 ← F1 (mVpp)، و Offset = 0 (slide 24).'],ok:s=>s.sig&&s.f1k},
       {dev:'scope',build:'5.4a-sc',t:'3. شغّل الإسكوب وانتظر ثواني، واضغط Default وبعدها Autoset. اعرض v<sub>I</sub>(t) على CH1 و v<sub>O</sub>(t) على CH2.',ok:s=>s.pwr&&ST.auto&&s.chs},
