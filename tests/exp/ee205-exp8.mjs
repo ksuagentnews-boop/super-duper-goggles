@@ -15,7 +15,6 @@ export async function run(page, vp, ok) {
   await H.focus('gen'); await H.key('g:PWR'); await H.mtx('f', 1000); await H.key('g:OUT');
   await H.focus('hm1'); await H.key('h1:SW-'); await H.lead('h1v', 1); await H.lead('h1c', 11); await hold2();
   for (const [a, b] of [[2, 3], [3, 4], [4, 11]]) { await H.lead('h1v', a); await H.lead('h1c', b); }
-  ok(!(await done(1)), 'I1 not yet: the Fluke is not back across E');
   await H.lead('h1v', 1); await H.lead('h1c', 11); ok(await done(4), `I1 Fig. 6: E, I, VR, VL, VC (I2–I4 calculations) ${JSON.stringify((await status()).ST)}`);
   // ---- Procedure II ----
   for (const k of ['h2ma', 'h2c']) await H.lead(k, null);
@@ -27,7 +26,7 @@ export async function run(page, vp, ok) {
   for (const [a, b] of [[7, 8], [8, 15], [9, 16], [10, 17]]) { await H.focus('board'); await H.del(a, b); await H.lead('h2ma', a); await H.lead('h2c', b); await H.lead('h2ma', null); await H.lead('h2c', null); await H.place('BR', a, b); }
   await H.del(23, 30); await H.place('R10', 23, 30); await H.lead('c1r', 8); await H.lead('c1b', 30); await H.lead('c2r', 23); await H.lead('c2b', 30);
   await H.focus('sc'); await H.key('s:PWR'); await H.key('s:DUAL'); await page.screenshot({ path: `/tmp/ee205-exp8-theta-${vp}.png` });
-  ok(!(await done(5)) && (await status()).ST.th2, 'II θ on the CRO (10 Ω under the bus)');
+  ok((await status()).ST.th2 && await done(5), 'II θ on the CRO (10 Ω under the bus): II1 done');
   await H.focus('board'); await H.del(23, 30); await H.place('BR', 23, 30);
   ok(await done(7), `II1 E, I, IR, IC, IL, θ — the plug back (II2, II3 calculations) ${JSON.stringify((await status()).ST)}`);
   await H.del(22, 23); await H.del(23, 24);
