@@ -7,7 +7,8 @@
    Instruments: the variable ac supply (60 Hz, instructor check before power: «المشرف يتأكد من التوصيل», Manual / Exam only),
    four Fluke 77 (M1 V1, M2 V2, M3 VT, M4 ammeter).
    Figures in the lab's rectangle layout: the supply on the left (8 / 22), M1 across it, the ammeter M4 along the top (8 → 9),
-   the U-core at node 10 (coil 1 = 10–17 down the middle, coil 2 = A 11 – B 18 on the right), returns along the bottom row.
+   the U-core at node 10 (coil 1 = 10–17 down the middle, coil 2 = A 11 – B 18 on the right; Fig. 7b: U-core at node 17,
+   coil 2 down the right side), returns along the bottom row.
    Assumptions: the U-core and its coils go on the board in step I.1 (the manual measures Rdc there); a separate instructor
    check step follows the first Fig. 7 build (each later power-on asks for the check from the step card); Fig. 7b = Fig. 7
    with coil 2 on the source (step I.7 "Repeat for coil 2"); Fig. 9 has no ammeter (as drawn); Fig. 10b = the opposing
@@ -49,7 +50,7 @@ const SRC=[{lead:'acL',at:8},{lead:'acN',at:22},{lead:'h1v',at:8},{lead:'h1c',at
 const BOT=[{wire:[17,24]},{wire:[24,23]},{wire:[23,22]}],F='labs/ee205/fig/';
 const figs={
   '7':{img:F+'e7-fig7.png',cap:'Fig. 7 · coil 1 on the 60 Hz source (A in series, V across the source)',lines:[UCX,...SRC,...AMM,{wire:[9,10]},...BOT]},
-  '7b':{img:F+'e7-fig7.png',cap:'Fig. 7 · repeated for coil 2 (A → B)',lines:[UCX,...SRC,{lead:'h4ma',at:8},{lead:'h4c',at:1},{wire:[1,2]},{wire:[2,3]},{wire:[3,4]},{wire:[4,11]},{wire:[18,25]},{wire:[25,24]},{wire:[24,23]},{wire:[23,22]}]},
+  '7b':{img:F+'e7-fig7.png',cap:'Fig. 7 · repeated for coil 2 (A → B)',lines:[{ic:'UC',pins:{P1:17,A:18,P2:24,B:25}},...SRC,...AMM,{wire:[9,10]},{wire:[10,11]},{wire:[11,18]},{wire:[25,32]},{wire:[32,31]},{wire:[31,30]},{wire:[30,29]},{wire:[29,22]}]},
   '8':{img:F+'e7-fig8.png',cap:'Fig. 8 · V<sub>2</sub> on coil 2',lines:[UCX,...SRC,...AMM,{wire:[9,10]},...BOT,{lead:'h2v',at:11},{lead:'h2c',at:18}]},
   '9':{img:F+'e7-fig9.png',cap:'Fig. 9 · B joined to coil 1, V<sub>T</sub> across 1 and A',lines:[UCX,...SRC,{wire:[8,9]},{wire:[9,10]},...BOT,{wire:[17,18]},{lead:'h2v',at:11},{lead:'h2c',at:18},{lead:'h3v',at:10},{lead:'h3c',at:11}]},
   '10':{img:F+'e7-fig10.png',cap:'Fig. 10 · series aiding (2 joined to B)',lines:[UCX,...SRC,...AMM,{wire:[9,10]},{wire:[17,18]},{wire:[11,12]},{wire:[12,19]},{wire:[19,26]},{wire:[26,25]},{wire:[25,24]},{wire:[24,23]},{wire:[23,22]}]},
