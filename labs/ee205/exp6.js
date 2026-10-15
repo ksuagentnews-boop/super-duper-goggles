@@ -105,29 +105,61 @@ setup(RT){
     const fd=Math.sqrt(1/(L*C)-Math.pow((600+RL+RS)/(2*L),2))/(2*Math.PI);g.add(G.near(v('fd'),fd,fd*0.1),'ringing frequency',`≈ ${fd.toFixed(0)} Hz (ωd = √(1/LC − α²))`);
     g.add(s('obs')==='a','observation');
     g.show($('result'))});
+  /* "do it for me" helpers (Batch 7 item 3): the Metrix value by its digit cursor and knob, the decade box digit by digit */
+  const mtx=async(A,p,target)=>{const g=RT.S.gen;if(!g.pwr)return;await A.press('g:'+{f:'FREQ',a:'AMPL',o:'OFFSET'}[p]);
+    for(let i=0;i<400;i++){const cur={f:g.freq,a:g.amp,o:g.off}[p],diff=target-cur;if(Math.abs(diff)<1e-9*Math.max(1,Math.abs(target)))return;
+      const lim={f:[-1,6],a:[-3,1],o:[-3,0]}[p];let d=Math.max(lim[0],Math.min(lim[1],Math.floor(Math.log10(Math.abs(diff))+1e-9)));
+      if(p==='f'&&cur+Math.sign(diff)*Math.pow(10,d)<0.1)d--;
+      if(g.dig[p]!==d){await A.tap(g.dig[p]<d?'g:CL':'g:CR',60);continue}await A.tap(diff>0?'g:KN+':'g:KN-',60)}};
+  const boxTo=async(A,v)=>{const d=RT.S.yew1.d;await A.focus('yew1');for(let j=0;j<6;j++){const t=Math.floor(v/Math.pow(10,j))%10;for(let q=0;q<12&&d[j]!==t;q++)await A.tap(`y1:D${j}${d[j]<t?'+':'-'}`,90)}};
+  const G0=()=>RT.S.gen,CH=()=>sc().ch[0];
+  /* the square wave of both procedures: 0 → +10 V at 200 Hz (AMPL 10 Vpp, OFFSET 5 V) */
+  const genSubs=()=>[
+    {k:'set',dev:'gen',t:'شغّل الـ generator واختر Square.',ok:()=>G0().pwr&&G0().wave==='Square',do:async A=>{if(!G0().pwr)await A.press('g:PWR');if(G0().wave!=='Square')await A.press('g:Square')},hint:'زر POWER ثم زر الـ square ⊓⊔'},
+    {k:'set',dev:'gen',t:'AMPL = 10 Vpp.',ok:()=>Math.abs(G0().amp-10)<0.011,do:A=>mtx(A,'a',10),hint:'اضغط AMPL ولف الـ knob (◀ ▶ يختار الخانة) لين 10.00 Vpp'},
+    {k:'set',dev:'gen',t:'OFFSET = 5 V (الموجة من 0 V لـ +10 V).',ok:()=>Math.abs(G0().off-5)<0.006,do:A=>mtx(A,'o',5),hint:'اضغط OFFSET ولف الـ knob لين +5.000 V'},
+    {k:'set',dev:'gen',t:'FREQ حوالي 200 Hz.',ok:()=>G0().freq>=100&&G0().freq<=500,do:A=>mtx(A,'f',200),hint:'اضغط FREQ ولف الـ knob لين 200 Hz'},
+    {k:'set',dev:'gen',t:'OUTPUT ON.',ok:s=>s.sq,do:async A=>{if(!G0().out)await A.press('g:OUT')},hint:'زر OUTPUT (يولّع الـ LED)'}];
   return {status,
     steps:[
-      /* Procedure I (manual p. 50), steps 1–5 */
-      {dev:'board',build:'9',t:'Procedure I · 1. وصّل الدائرة Fig. 9، واضبط الـ square wave يتنقّل بين 0 V و +10 V بتردد حوالي 200 Hz، وحط الـ decade resistance box على 10 kΩ. R<sub>s</sub> (المقاومة الداخلية للـ generator) تنضاف لـ R في الحساب.',
-        acts:['وصّل Fig. 9: الـ box هو R، و C = 0.047 µF، و CH I على المكثف.','الـ generator: Square، FREQ ≈ 200 Hz، AMPL = 10 Vpp و OFFSET = 5 V (من 0 لـ +10 V)، و OUTPUT ON.','الـ decade box على 10 kΩ (×10K على 1 والباقي صفر).'],ok:s=>s.r10k&&s.sq},
-      {dev:'sc',t:'2. اعرض جهد المكثف على الـ oscilloscope. اختر time base يبين الموجة كاملة (حافة الطلوع والـ steady state). عدّل تردد الـ square wave إذا احتجت. سجّل v<sub>c</sub>(t) عند ست أوقات مختلفة في Table 1، وقِس الـ time constant واكتبه في Table 2.',
-        acts:['CH I على DC، 2 V/div، و VAR على CAL، ونزّل خط الصفر بـ Y-POS I لأسفل الشاشة.','TIME/DIV مثلاً 0.2 ms/div، والـ slope على + و LEVEL قريب من 0 V عشان يبدأ الخط من بداية الشحن.','τ = الوقت لين v<sub>c</sub> = 6.32 V.'],ok:s=>ST.charge,
-        rec:[...tRec('c',true),{to:'tce',label:'τ (charging)',unit:'ms',dec:3,val:()=>{const t=ST.charge?tauOf(true):null;return t==null?null:t*1e3}}]},
-      {dev:'sc',t:'3. اعرض موجة التفريغ (discharging) لجهد المكثف على الـ oscilloscope، وعدّل التردد بحيث يبين جزء التناقص كامل لـ v<sub>c</sub>(t). قِس t و v<sub>c</sub>(t) عند ست أوقات في جزء التناقص وسجّلها في Table 1، وقِس الـ time constant واكتبه في Table 2.',
-        acts:['حوّل الـ slope على − وارفع LEVEL قريب من 10 V عشان يبدأ الخط من بداية التفريغ.','τ = الوقت لين v<sub>c</sub> = 3.68 V.'],ok:s=>ST.dis,
-        rec:[...tRec('d',false),{to:'tde',label:'τ (discharging)',unit:'ms',dec:3,val:()=>{const t=ST.dis?tauOf(false):null;return t==null?null:t*1e3}}]},
-      {dev:'sc',t:'4. للحالتين (2) و (3) قارن القيم النظرية لـ v<sub>c</sub>(t) و τ مع المقاسة، وكمّل Table 1 و Table 2.',ok:s=>ST.dis},
-      {dev:'sc',t:'5. من موجة v<sub>c</sub>(t) في خطوة (2) و (3) للشحن والتفريغ، طلّع موجة v<sub>R</sub>(t) و i<sub>c</sub>(t) لـ R = 10 kΩ.',ok:s=>ST.dis,
-        rec:[{to:'vr0',label:'v<sub>R</sub>(0<sup>+</sup>) = E − v<sub>c</sub>(0)',unit:'V',dec:2,val:()=>{const v=vcAt(0,true);return v==null?null:10-v}},
-          {to:'ic0',label:'i<sub>c</sub>(0<sup>+</sup>) charging',unit:'mA',dec:3,val:()=>{const v=vcAt(0,true);return v==null?null:(10-v)/(10000+RS)*1e3}},
-          {to:'id0',label:'i<sub>c</sub>(0<sup>+</sup>) discharging',unit:'mA',dec:3,val:()=>{const v=vcAt(0,false);return v==null?null:-v/(10000+RS)*1e3}}]},
+      /* Procedure I (manual p. 50), steps 1–5; every step split into its sub-steps (Batch 7 item 3) */
+      {dev:'board',build:'9',t:'Procedure I · 1. وصّل الدائرة Fig. 9، واضبط الـ square wave يتنقّل بين 0 V و +10 V بتردد حوالي 200 Hz، وحط الـ decade resistance box على 10 kΩ. R<sub>s</sub> (المقاومة الداخلية للـ generator) تنضاف لـ R في الحساب.',subs:[
+        {k:'build',fig:'9',t:'وصّل الدائرة <bdi dir="ltr">Fig. 9</bdi>: الـ box هو R، و C = 0.047 µF، و CH I على المكثف.'},
+        ...genSubs(),
+        {k:'set',dev:'yew1',t:'الـ decade box على 10 kΩ (قرص ×10K على الرقم 1 والباقي صفر).',ok:s=>s.r10k,do:A=>boxTo(A,10000),hint:s=>`الـ box الحين ${s.box} Ω: خلّ قرص ×10K على الرقم 1 وكل الباقي صفر`}]},
+      {dev:'sc',t:'2. اعرض جهد المكثف على الـ oscilloscope. اختر time base يبين الموجة كاملة (حافة الطلوع والـ steady state). عدّل تردد الـ square wave إذا احتجت. سجّل v<sub>c</sub>(t) عند ست أوقات مختلفة في Table 1، وقِس الـ time constant واكتبه في Table 2.',subs:[
+        {k:'set',dev:'sc',t:'شغّل الـ Hameg (POWER).',ok:()=>sc().pwr,do:A=>A.press('s:PWR')},
+        {k:'set',dev:'sc',t:'CH I على DC.',ok:()=>CH().cpl==='DC',do:A=>A.until('s:AC1',()=>CH().cpl==='DC',3),hint:'مفتاح AC / DC تحت CH I'},
+        {k:'set',dev:'sc',t:'VOLTS/DIV لـ CH I على 2 V/div، و VAR على CAL.',ok:()=>CH().vd>=1.25&&CH().vd<=5&&!CH().var,do:async A=>{await A.until('s:VV1+',()=>!CH().var,12);await A.until(CH().vd<2?'s:V1-':'s:V1+',()=>CH().vd===2,12)},hint:'لف VOLTS/DIV لـ CH I لين 2 V/div'},
+        {k:'set',dev:'sc',t:'TIME/DIV على 0.2 ms/div.',ok:()=>sc().td>=1e-4&&sc().td<=1e-3&&!sc().tvar&&!sc().xmag,do:A=>A.until(sc().td<2e-4?'s:TD-':'s:TD+',()=>Math.abs(sc().td-2e-4)<1e-9,20),hint:'لف TIME/DIV لين 0.2 ms/div'},
+        {k:'set',dev:'sc',t:'نزّل خط الصفر بـ Y-POS I لأسفل الشاشة عشان تبين الموجة من 0 V لـ 10 V.',ok:()=>CH().pos<=-1&&CH().pos>=-4,do:A=>A.until(CH().pos>-2.6?'s:Y1-':'s:Y1+',()=>Math.abs(CH().pos+2.6)<0.05,40),hint:'لف Y-POS I لين يصير خط الصفر قريب من أسفل الشاشة'},
+        {k:'set',dev:'sc',t:'الـ slope على + و LEVEL قريب من 0 V عشان يبدأ الخط من بداية الشحن.',ok:()=>!!ST.charge,do:async A=>{if(sc().trig.slope!=='+')await A.press('s:SLP');await A.until(sc().trig.level>-2.2?'s:LV-':'s:LV+',()=>!!ST.charge,45)},hint:'زر SLOPE على +، ولف LEVEL لليسار لين يبدأ الخط من بداية الطلعة'},
+        {k:'rec',t:'سجّل v<sub>c</sub> عند ست أوقات من بداية الشحن، و τ (الوقت لين v<sub>c</sub> = 6.32 V).',ok:()=>!!ST.charge,rec:[...tRec('c',true),{to:'tce',label:'τ (charging)',unit:'ms',dec:3,val:()=>{const t=ST.charge?tauOf(true):null;return t==null?null:t*1e3}}]}]},
+      {dev:'sc',t:'3. اعرض موجة التفريغ (discharging) لجهد المكثف على الـ oscilloscope، وعدّل التردد بحيث يبين جزء التناقص كامل لـ v<sub>c</sub>(t). قِس t و v<sub>c</sub>(t) عند ست أوقات في جزء التناقص وسجّلها في Table 1، وقِس الـ time constant واكتبه في Table 2.',subs:[
+        {k:'set',dev:'sc',t:'حوّل الـ slope على −.',ok:()=>sc().trig.slope==='-',do:A=>A.press('s:SLP')},
+        {k:'set',dev:'sc',t:'ارفع LEVEL قريب من 10 V عشان يبدأ الخط من بداية التفريغ.',ok:()=>!!ST.dis,do:A=>A.until(sc().trig.level<2.2?'s:LV+':'s:LV-',()=>!!ST.dis,45),hint:'لف LEVEL لليمين لين يبدأ الخط من بداية النزلة'},
+        {k:'rec',t:'سجّل v<sub>c</sub> عند ست أوقات من بداية التفريغ، و τ (الوقت لين v<sub>c</sub> = 3.68 V).',ok:()=>!!ST.dis,rec:[...tRec('d',false),{to:'tde',label:'τ (discharging)',unit:'ms',dec:3,val:()=>{const t=ST.dis?tauOf(false):null;return t==null?null:t*1e3}}]}]},
+      {dev:'sc',t:'4. للحالتين (2) و (3) قارن القيم النظرية لـ v<sub>c</sub>(t) و τ مع المقاسة، وكمّل Table 1 و Table 2.',subs:[
+        {k:'set',t:'احسب v<sub>c</sub> النظرية و τ = (R + R<sub>s</sub>)C وقارنها بالمقاسة (حساب في الـ sheet).',ok:()=>!!ST.dis}]},
+      {dev:'sc',t:'5. من موجة v<sub>c</sub>(t) في خطوة (2) و (3) للشحن والتفريغ، طلّع موجة v<sub>R</sub>(t) و i<sub>c</sub>(t) لـ R = 10 kΩ.',subs:[
+        {k:'rec',t:'سجّل v<sub>R</sub> = E − v<sub>c</sub> و i<sub>c</sub> = v<sub>R</sub>/R لحظة بداية الشحن ولحظة بداية التفريغ.',ok:()=>!!ST.dis,
+          rec:[{to:'vr0',label:'v<sub>R</sub>(0<sup>+</sup>) = E − v<sub>c</sub>(0)',unit:'V',dec:2,val:()=>{const v=vcAt(0,true);return v==null?null:10-v}},
+            {to:'ic0',label:'i<sub>c</sub>(0<sup>+</sup>) charging',unit:'mA',dec:3,val:()=>{const v=vcAt(0,true);return v==null?null:(10-v)/(10000+RS)*1e3}},
+            {to:'id0',label:'i<sub>c</sub>(0<sup>+</sup>) discharging',unit:'mA',dec:3,val:()=>{const v=vcAt(0,false);return v==null?null:-v/(10000+RS)*1e3}}]}]},
       /* Procedure II (manual p. 52), steps 1 and 3 */
-      {dev:'board',build:'10',t:'Procedure II · 1. وصّل الدائرة Fig. 10، واضبط الـ square wave بين 0 V و +10 V بتردد حوالي 200 Hz، وحط الـ decade resistance box على قيمة مناسبة مثل 600 Ω، و C = 0.047 µF، عشان تطلع under damped response. R<sub>s</sub> تنضاف لـ R في الحساب.',
-        acts:['وصّل Fig. 10: الـ coil 17.5 mH بين الـ box والمكثف، و CH I على المكثف.','الـ generator نفس الـ square wave (0 → +10 V، 200 Hz)، و OUTPUT ON.','الـ decade box على 600 Ω: تشوف overshoot و ringing.'],ok:s=>ST.under!=null},
-      {dev:'yew1',t:'3. اعرض جهد المكثف على الـ oscilloscope واختر time base يبين الموجة كاملة. ارفع R لين يختفي الـ overshoot بالضبط: هذي الـ critical resistance (R<sub>c</sub> = 2√(L/C)). ارفع R أكثر عشان تطلع over damped response. ارسم الثلاث منحنيات وسجّل ملاحظاتك.',
-        acts:['ارفع R شوي شوي (مثلاً 50 Ω كل مرة) لين يختفي الـ overshoot.','ارفع R أكثر (الضعف أو أكثر): الطلعة أبطأ وبدون overshoot.'],ok:s=>ST.over!=null,
-        rec:[{scope:'cu',label:'Under damped'},{to:'fd',label:'Ringing frequency',unit:'Hz',dec:0,val:()=>{const b=box();return b>=400&&b<=800?ring():null},none:'رجّع الـ box على 600 Ω عشان تقيس تردد الـ ringing'},
-          {to:'rcm',label:'R<sub>c</sub> (box)',unit:'Ω',dec:0,val:()=>ST.rc},{scope:'cc',label:'Critically damped'},{scope:'co',label:'Over damped'}]}
+      {dev:'board',build:'10',t:'Procedure II · 1. وصّل الدائرة Fig. 10، واضبط الـ square wave بين 0 V و +10 V بتردد حوالي 200 Hz، وحط الـ decade resistance box على قيمة مناسبة مثل 600 Ω، و C = 0.047 µF، عشان تطلع under damped response. R<sub>s</sub> تنضاف لـ R في الحساب.',subs:[
+        {k:'build',fig:'10',t:'وصّل الدائرة <bdi dir="ltr">Fig. 10</bdi>: الـ coil 17.5 mH بين الـ box والمكثف، و CH I على المكثف.'},
+        ...genSubs(),
+        {k:'set',dev:'yew1',t:'الـ decade box على 600 Ω (قرص ×100 على الرقم 6 والباقي صفر).',ok:s=>s.box===600,do:A=>boxTo(A,600),hint:s=>`الـ box الحين ${s.box} Ω: خلّ قرص ×100 على الرقم 6 وكل الباقي صفر`},
+        {k:'measure',dev:'sc',t:'اعرض جهد المكثف على الـ Hameg (slope + و LEVEL تحت): تشوف overshoot و ringing (under damped).',ok:()=>ST.under!=null,
+          do:async A=>{if(!sc().pwr)await A.press('s:PWR');if(sc().trig.slope!=='+')await A.press('s:SLP');await A.until('s:LV-',()=>sc().trig.level<=-2.2,45)},hint:'شغّل الـ Hameg، و R على 600 Ω'}]},
+      {dev:'yew1',t:'3. اعرض جهد المكثف على الـ oscilloscope واختر time base يبين الموجة كاملة. ارفع R لين يختفي الـ overshoot بالضبط: هذي الـ critical resistance (R<sub>c</sub> = 2√(L/C)). ارفع R أكثر عشان تطلع over damped response. ارسم الثلاث منحنيات وسجّل ملاحظاتك.',subs:[
+        {k:'rec',t:'سجّل منحنى الـ under damped (R = 600 Ω) وتردد الـ ringing.',ok:()=>ST.under!=null,rec:[{scope:'cu',label:'Under damped'},{to:'fd',label:'Ringing frequency',unit:'Hz',dec:0,val:()=>{const b=box();return b>=400&&b<=800?ring():null},none:'رجّع الـ box على 600 Ω عشان تقيس تردد الـ ringing'}]},
+        {k:'set',dev:'yew1',t:'ارفع R شوي شوي (مثلاً 50 Ω كل مرة) لين يختفي الـ overshoot بالضبط.',ok:()=>ST.rc!=null,
+          do:async A=>{for(let r=Math.max(700,Math.ceil(box()/50)*50);r<=1600&&ST.rc==null;r+=50){await boxTo(A,r);A.st()}},hint:s=>`الـ box الحين ${s.box} Ω${s.os!=null?` والـ overshoot ${(s.os*100).toFixed(1)} %`:''}: ارفعه 50 Ω كل مرة`},
+        {k:'rec',t:'سجّل R<sub>c</sub> (قيمة الـ box) ومنحنى الـ critically damped.',ok:()=>ST.rc!=null,rec:[{to:'rcm',label:'R<sub>c</sub> (box)',unit:'Ω',dec:0,val:()=>ST.rc},{scope:'cc',label:'Critically damped'}]},
+        {k:'set',dev:'yew1',t:'ارفع R أكثر (الضعف أو أكثر، مثلاً 3 kΩ): الطلعة أبطأ وبدون overshoot (over damped).',ok:()=>ST.over!=null,do:A=>boxTo(A,3000),hint:'خلّ الـ box على 3 kΩ أو أكثر'},
+        {k:'rec',t:'سجّل منحنى الـ over damped.',ok:()=>ST.over!=null,rec:[{scope:'co',label:'Over damped'}]}]}
     ],
     onReset(){ST={};$('result').innerHTML=''}};
 }};})();

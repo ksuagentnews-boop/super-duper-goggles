@@ -10,7 +10,9 @@
    Assumptions: the lab transformer gives 6.4 V rms per half (VSM ≈ 9 V); the Zener (not named) is the 1N4733A
    used in Exp 2/3; the instructor inspects the circuit once, before the first plug-in (the manual's caution, in the
    "Assemble" step); Fig. 4.2 without the scope cables is the "Assemble" step, the cables are step 1 (the manual's own
-   step); PLQ 5 uses the table number the student enters (TN) and f = 60 Hz as in Appendix H. */
+   step); PLQ 5 uses the table number the student enters (TN) and f = 60 Hz as in Appendix H.
+   Batch 7 item 3: every step split into its sub-steps, each with its own "do it for me" (scope keys and knobs, the
+   transformer's plug, D2's bridging plug pulled out and put back on the student's own layout). */
 EXP_DEFS['ee312/exp4']=(()=>{const H=ENGINE.sheet;
 /* Appendix D rectifier diodes (part, VRRM, IF(avg)) */
 const APPD=[['1N4001',50,1],['1N4002',100,1],['1N4003',200,1],['1N4004',400,1],['1S310',50,0.5],['1S311',100,0.5],['ERA3804',400,0.5],['1N5391',50,1.5],['1N5392',100,1.5],['1N5393',200,1.5],['BY296',100,2],['BY297',200,2],['BYV27-50',50,2],['BYV27-100',100,2],['1N5400',50,3],['1N5401',100,3],['1N5402',200,3],['1N4719',50,3],['1N4720',100,3],['1N4721',200,3],['MUR405',50,4],['MUR410',100,4],['MUR420',200,4],['1N3879',50,6],['1N3880',100,6],['1N3881',200,6],['1N3882',300,6],['MUR805',50,8],['MUR810',100,8],['1N1200',100,12],['1N1202',200,12],['1N1204',400,12]];
@@ -45,6 +47,8 @@ const FW=rl=>[...XF,...RECT,{wire:[11,12]},{part:[rl,12,19]}];
 const REG=rl=>[...XF,...RECT,{part:['C470',11,18],pol:true},{part:['R100',11,12]},{wire:[12,13]},{wire:[19,20]},{part:['Z',19,12],pol:true},{part:[rl,13,20]}];
 const F42='labs/ee312/fig/fig4-2.png',F43='labs/ee312/fig/fig4-3.png';
 const figs={'4.2':{img:F42,cap:'Fig. 4.2 · R<sub>L</sub> = 4.7 kΩ, no capacitor',lines:FW('R47')},
+  '4.2c1':{img:F42,cap:'Fig. 4.2 · CH1 on v<sub>S</sub>',lines:[...FW('R47'),...CH1]},
+  '4.2-hw':{img:F42,cap:'Fig. 4.2 · the bridging plug between D2 and the transformer out',lines:[...XF,...RECT.filter(l=>!(l.wire&&l.wire[0]===22&&l.wire[1]===23)),{wire:[11,12]},{part:['R47',12,19]},...CH1,...CH2]},
   '4.2s':{img:F42,cap:'Fig. 4.2 · CH1 on v<sub>S</sub>, CH2 on v<sub>O</sub>',lines:[...FW('R47'),...CH1,...CH2]},
   '4.2-C10':{img:F42,cap:'Fig. 4.2 · C = 10 µF across R<sub>L</sub>',lines:[...FW('R47'),{part:['C10',11,18],pol:true},...CH1,...CH2]},
   '4.2-C470':{img:F42,cap:'Fig. 4.2 · C = 470 µF',lines:[...FW('R47'),{part:['C470',11,18],pol:true},...CH1,...CH2]},
@@ -130,43 +134,114 @@ setup(RT){
     g.add(best.filter(x=>x[1]===minV).some(x=>x[0]===G.s('q5e')),'PLQ 5e diode',`ratings just above ${VRRM} V / ${IF.toFixed(2)} A: ${best.filter(x=>x[1]===minV).map(x=>x[0]).join(' or ')}`);
     g.show($('result'))});
   const RIP={unit:'mV',dec:1,none:'خلّ CH2 على AC وعلى v<sub>O</sub>، والدائرة مثل المطلوب، والمحوّل موصول'};
+  /* "do it for me" helpers (Batch 7 item 3): the scope's keys and knobs, the transformer's plug, D2's bridging plug */
+  const SC=()=>RT.S.sc;
+  const vTo=async(A,c,v)=>{for(let q=0;q<24&&SC().ch[c].vd!==v;q++)await A.press(`s:V${c+1}${SC().ch[c].vd<v?'+':'-'}`)};
+  const cycles=()=>10*SC().td*60;
+  const chMenu=async(A,c)=>{if(SC().menu!=='ch'+(c+1))await A.press('s:CH'+(c+1))};
+  const cplTo=async(A,c,x)=>{await chMenu(A,c);await A.until('s:B0',()=>SC().ch[c].cpl===x,3)};
+  const plugTo=async(A,on)=>{if(RT.S.xf.plugged!==on)await A.press('x:PLUG')};
+  /* step 11: the bridging plug (or wire) that brings D2's anode to transformer terminal C is pulled out on the student's own
+     layout (the one whose removal leaves Fig. 4.2 with D2 open), then put back */
+  let PULLED=null;
+  const pullD2=async A=>{const S=RT.S,hw=()=>RT.match({...RT.figs['4.2-hw']}).ok;
+    for(const [arr,x] of [...S.parts.filter(p=>RT.PARTS[p.type]&&RT.PARTS[p.type].t==='BR').map(p=>[S.parts,p]),...S.wires.map(w=>[S.wires,w])]){const i=arr.indexOf(x);arr.splice(i,1);RT.dirty=true;
+      if(hw()){PULLED={arr,x};RT.render();A.st();await A.wait(900);return}arr.splice(i,0,x);RT.dirty=true}
+    await A.build('4.2-hw')};
+  const putD2=async A=>{if(PULLED&&!PULLED.arr.includes(PULLED.x)){PULLED.arr.push(PULLED.x);RT.dirty=true;RT.render();PULLED=null}else await A.build('4.2s')};
   return {status:()=>status(),
     steps:[
-      /* Procedure A (manual p. 31–32): the "Assemble" paragraph with its caution, then steps 1–19 */
-      {dev:'board',build:'4.2',t:'Procedure A · وصّل الدائرة Fig. 4.2 بـ R<sub>L</sub> = 4.7 kΩ، وفي البداية بدون مكثف. ⚠ لا توصّل المحوّل بالكهرباء قبل ما يشيك المعيد على دائرتك.',
-        acts:['وصّل الدائرة Fig. 4.2 (بدون مكثف).','اضغط Ask instructor to check في المحوّل.'],ok:s=>s.xfok},
-      {dev:'board',build:'4.2s',t:'1. وصّل مدخل الدائرة (v<sub>S</sub>) بـ CH1 بـ coaxial cable، ووصّل مخرج الدائرة (v<sub>O</sub>) بـ CH2 بكيبل ثاني، مثل ما في الرسمة.'},
-      {dev:'scope',t:'2. شغّل الإسكوب، انتظر شوي، واضغط Default وبعدها Autoset.',ok:s=>s.pwr&&ST.auto},
-      {dev:'xf',t:'3. وصّل المحوّل بفيش الكهرباء (Plug in).',ok:s=>s.plug&&s.cfg==='fw'&&s.ch1&&s.gnd},
-      {dev:'scope',t:'4. لو CH2 مو شغّال، اضغط زر CH2 عشان تشغّله.',ok:s=>s.ch&&s.plug},
-      {dev:'scope',t:'5. اضغط POSITION للقناتين عشان صفر الـ input والـ output يصير على خط الوسط.',ok:s=>s.ch&&s.pos0&&s.plug},
-      {dev:'scope',t:'6. بـ SCALE حق CH1 و CH2 خلّ كل وحدة 5 V/div.',ok:s=>s.v5&&s.plug},
-      {dev:'scope',t:'7. لو احتجت، غيّر SCALE حق الـ Horizontal (time/div) عشان يطلع لك عدد مناسب من الدورات.',ok:s=>s.cyc&&s.plug},
-      {dev:'scope',t:'8. اضغط Measure ← Add Measurement ← V/I، وبالـ VARIABLE اختر Pk-Pk أو Max واضغط Select.',ok:s=>s.meas1},
-      {dev:'scope',t:'9. فعّل Source 1 واختر CH2 بالـ VARIABLE واضغط Select، وبعدها V/I واختر Pk-Pk أو Max واضغط Select. اضغط Menu OFF مرتين.',ok:s=>s.meas},
-      {dev:'scope',t:'10. سجّل موجات v<sub>S</sub>(t) و v<sub>O</sub>(t) في Fig. 4.4.',ok:s=>!!CAPS.f44,rec:[{scope:'f44',label:'Fig. 4.4'}]},
-      {dev:'board',t:'11. لاحظ وش يصير لما تفصل الـ bridging plug اللي بين D2 والمحوّل. بعدها رجّع الـ bridging plug عشان يرجع D2 للدائرة.',ok:s=>ST.hw&&s.cfg==='fw'},
-      {dev:'scope',t:'12. عشان تطلع الـ voltage transfer characteristic، حط الإسكوب على XY: اضغط Acquire، واختر XY من القائمة اللي تحت، وبعدها Triggered XY من اليمين. اضغط POSITION للقناتين عشان الـ VTC يبدأ من (0, 0).',ok:s=>ST.xy},
-      {dev:'scope',t:'13. سجّل الـ VTC اللي على الشاشة في Fig. 4.5.',ok:s=>!!CAPS.f45,rec:[{scope:'f45',label:'Fig. 4.5'}]},
-      {dev:'scope',t:'14. طفّ الـ XY باختيار OFF (YT) من القائمة اليمين.',ok:s=>ST.yt},
-      {dev:'board',build:'4.2-C10',t:'15. وصّل مكثف electrolytic 10 µF بالتوازي مع R<sub>L</sub>: الطرف المكتوب عليه علامة السالب يروح للأرضي. سجّل v<sub>S</sub>(t) و v<sub>O</sub>(t) في Fig. 4.6.',ok:s=>!!CAPS.f46,rec:[{scope:'f46',label:'Fig. 4.6'}]},
-      {dev:'board',build:'4.2-C470',t:'16. بدّل مكثف الـ 10 µF بمكثف 470 µF. سجّل v<sub>S</sub>(t) و v<sub>O</sub>(t) في Fig. 4.7.',ok:s=>!!CAPS.f47,rec:[{scope:'f47',label:'Fig. 4.7'}]},
-      {dev:'scope',t:'17. اضغط CH2 وغيّر الـ Coupling (أول زر يسار تحت) إلى AC، واضغط Autoset. سجّل الـ ripple V<sub>r(pp)</sub> في Table 4.1.',ok:s=>ST.acA,rec:[{to:'r1',val:rip('c470'),...RIP,label:'V<sub>r(pp)</sub> · 4.7 kΩ'}]},
-      {dev:'board',build:'4.2-R270',t:'18. افصل مقاومة الـ 4.7 kΩ ووصّل مكانها 270 Ω. سجّل V<sub>r(pp)</sub> في Table 4.1.',ok:s=>ST.r270,rec:[{to:'r2',val:rip('c470b'),...RIP,label:'V<sub>r(pp)</sub> · 270 Ω'}]},
-      {dev:'scope',t:'19. احسب التغيّر في الـ ripple ΔV<sub>r(pp)</sub> وسجّله في Table 4.1.',ok:()=>true,rec:[{to:'r3',val:diff('r1','r2'),unit:'mV',dec:1,label:'ΔV<sub>r(pp)</sub>',none:'سجّل V<sub>r(pp)</sub> في خطوة 17 و 18 أول'}]},
-      /* Procedure B (manual p. 33): steps 1–12 */
-      {dev:'xf',t:'Procedure B · 1. افصل المحوّل من فيش الكهرباء.',ok:s=>ST.unplugA},
-      {dev:'board',build:'4.3',t:'2. أضف الـ voltage regulator للدائرة الأصلية، وانقل R<sub>L</sub> لمكانه الجديد بالتوازي مع D<sub>Z</sub> (Fig. 4.3). في البداية استخدم الـ 4.7 kΩ لـ R<sub>L</sub>.'},
-      {dev:'board',build:'4.3s',t:'3. انقل طرفي الـ coaxial cable حق CH2 على R<sub>L</sub> في مكانه الجديد.'},
-      {dev:'xf',t:'4. رجّع وصّل المحوّل بفيش الكهرباء.',ok:s=>s.plug&&s.cfg==='reg47'},
-      {dev:'scope',t:'5. رجّع الـ Coupling حق CH2 إلى DC. اضغط Autoset، وبعدها اضغط POSITION حق CH2.',ok:s=>ST.dcB},
-      {dev:'scope',t:'6. سجّل v<sub>S</sub>(t) و v<sub>O</sub>(t) في Fig. 4.8.',ok:s=>!!CAPS.f48,rec:[{scope:'f48',label:'Fig. 4.8'}]},
-      {dev:'scope',t:'7. غيّر الـ Coupling حق CH2 إلى AC، واضغط Autoset.',ok:s=>ST.acB},
-      {dev:'scope',t:'8. سجّل الـ ripple V<sub>r(pp)</sub> في Table 4.1.',ok:s=>ST.acB,rec:[{to:'r4',val:rip('reg47'),...RIP,label:'V<sub>r(pp)</sub> · 4.7 kΩ'}]},
-      {dev:'board',build:'4.3-R270',t:'9. افصل مقاومة الـ 4.7 kΩ ووصّل مكانها الـ 270 Ω. سجّل V<sub>r(pp)</sub> في Table 4.1.',ok:s=>ST.reg270,rec:[{to:'r5',val:rip('reg270'),...RIP,label:'V<sub>r(pp)</sub> · 270 Ω'}]},
-      {dev:'scope',t:'10. احسب التغيّر في الـ ripple ΔV<sub>r(pp)</sub> وسجّله في Table 4.1.',ok:()=>true,rec:[{to:'r6',val:diff('r4','r5'),unit:'mV',dec:1,label:'ΔV<sub>r(pp)</sub>',none:'سجّل V<sub>r(pp)</sub> في خطوة 8 و 9 أول'}]},
-      {dev:'scope',t:'11. قارن هذا التغيّر بالتغيّر اللي حسبته في آخر خطوة من Procedure A.',ok:()=>true},
-      {dev:'xf',t:'12. افصل المحوّل من الكهرباء، وطفّ الإسكوب، وبعدها فكّ كل القطع والكيابل ورجّعها مكانها.',ok:s=>ST.end}
+      /* Procedure A (manual p. 32–33): the "Assemble" paragraph with its caution, then steps 1–19; each split into its sub-steps */
+      {dev:'board',build:'4.2',t:'Procedure A · وصّل الدائرة Fig. 4.2 بـ R<sub>L</sub> = 4.7 kΩ، وفي البداية بدون مكثف. ⚠ لا توصّل المحوّل بالكهرباء قبل ما يشيك المعيد على دائرتك.',subs:[
+        {k:'build',fig:'4.2',t:'وصّل الدائرة <bdi dir="ltr">Fig. 4.2</bdi>: R<sub>L</sub> = 4.7 kΩ، بدون مكثف.'},
+        {k:'set',dev:'xf',t:'اضغط Ask instructor to check في المحوّل عشان المعيد يشيك على الدائرة.',ok:s=>s.xfok,do:A=>A.press('x:CHECK'),hint:'زر Ask instructor to check تحت المحوّل'}]},
+      {dev:'board',build:'4.2s',t:'1. وصّل مدخل الدائرة (v<sub>S</sub>) بـ CH1 بـ coaxial cable، ووصّل مخرج الدائرة (v<sub>O</sub>) بـ CH2 بكيبل ثاني، مثل ما في الرسمة.',subs:[
+        {k:'connect',fig:'4.2c1',t:'وصّل CH1 على v<sub>S</sub>: الأحمر على طرف A والأسود على الـ center tap B.'},
+        {k:'connect',fig:'4.2s',t:'وصّل CH2 على v<sub>O</sub>: الأحمر على R<sub>L</sub> من جهة الكاثودات والأسود على الأرضي.'}]},
+      {dev:'scope',t:'2. شغّل الإسكوب، انتظر شوي، واضغط Default وبعدها Autoset.',subs:[
+        {k:'set',dev:'scope',t:'شغّل الإسكوب (زر POWER).',ok:s=>s.pwr,do:async A=>{if(!SC().pwr)await A.press('s:PWR')},hint:'زر POWER تحت يسار الإسكوب'},
+        {k:'set',dev:'scope',t:'اضغط Default.',ok:()=>!!ST.def,do:A=>A.press('s:Default'),hint:'زر Default فوق يمين الإسكوب'},
+        {k:'set',dev:'scope',t:'اضغط Autoset.',ok:()=>!!ST.auto,do:A=>A.press('s:Autoset'),hint:'زر Autoset فوق يمين الإسكوب'}]},
+      {dev:'xf',t:'3. وصّل المحوّل بفيش الكهرباء (Plug in).',subs:[
+        {k:'set',dev:'xf',t:'اضغط Plug in في المحوّل.',ok:s=>s.plug&&s.cfg==='fw'&&s.ch1&&s.gnd,do:A=>plugTo(A,true),hint:'زر Plug in تحت المحوّل؛ لازم الدائرة و CH1 و CH2 مثل Fig. 4.2'}]},
+      {dev:'scope',t:'4. لو CH2 مو شغّال، اضغط زر CH2 عشان تشغّله.',subs:[
+        {k:'set',dev:'scope',t:'شغّل CH2 (زر CH2).',ok:s=>s.ch&&s.plug,do:async A=>{if(!SC().ch[1].on)await A.press('s:CH2')},hint:'زر CH2 الأزرق جنب SCALE حقه'}]},
+      {dev:'scope',t:'5. اضغط POSITION للقناتين عشان صفر الـ input والـ output يصير على خط الوسط.',subs:[
+        {k:'set',dev:'scope',t:'اضغط POSITION حق CH1.',ok:()=>SC().ch[0].pos===0,do:A=>A.press('s:P1Pc'),hint:'اضغط على مقبض POSITION حق CH1'},
+        {k:'set',dev:'scope',t:'اضغط POSITION حق CH2.',ok:s=>s.pos0&&s.plug,do:A=>A.press('s:P2Pc'),hint:'اضغط على مقبض POSITION حق CH2'}]},
+      {dev:'scope',t:'6. بـ SCALE حق CH1 و CH2 خلّ كل وحدة 5 V/div.',subs:[
+        {k:'set',dev:'scope',t:'SCALE حق CH1 على 5 V/div.',ok:()=>SC().ch[0].vd===5,do:A=>vTo(A,0,5),hint:'لف SCALE حق CH1 لين تقرا 5 V/div'},
+        {k:'set',dev:'scope',t:'SCALE حق CH2 على 5 V/div.',ok:s=>s.v5&&s.plug,do:A=>vTo(A,1,5),hint:'لف SCALE حق CH2 لين تقرا 5 V/div'}]},
+      {dev:'scope',t:'7. لو احتجت، غيّر SCALE حق الـ Horizontal (time/div) عشان يطلع لك عدد مناسب من الدورات.',subs:[
+        {k:'set',dev:'scope',t:'SCALE حق الـ Horizontal: بين 1 و 10 دورات على الشاشة.',ok:s=>s.cyc&&s.plug,do:async A=>{for(let q=0;q<20&&cycles()<1;q++)await A.press('s:H+');for(let q=0;q<20&&cycles()>10;q++)await A.press('s:H-')},hint:'لف SCALE حق الـ Horizontal: كل 16.7 ms دورة وحدة (60 Hz)'}]},
+      {dev:'scope',t:'8. اضغط Measure ← Add Measurement ← V/I، وبالـ VARIABLE اختر Pk-Pk أو Max واضغط Select.',subs:[
+        {k:'set',dev:'scope',t:'اضغط Measure.',ok:s=>SC().menu==='measure'||s.meas1,do:A=>A.press('s:Measure'),hint:'زر Measure فوق الإسكوب'},
+        {k:'set',dev:'scope',t:'اختر Add Measurement من القائمة اللي تحت، وبعدها V/I.',ok:s=>SC().list&&SC().list.kind==='vi'||s.meas1,do:async A=>{if(SC().menu!=='measure')await A.press('s:Measure');if(SC().side!=='add')await A.press('s:B0');await A.press('s:S0')},hint:'أول زر تحت الشاشة (Add Measurement) وبعدها أول زر يمين (V/I)'},
+        {k:'set',dev:'scope',t:'بالـ VARIABLE اختر Pk-Pk واضغط Select.',ok:s=>s.meas1,do:async A=>{if(!(SC().list&&SC().list.kind==='vi')){if(SC().menu!=='measure')await A.press('s:Measure');if(SC().side!=='add')await A.press('s:B0');await A.press('s:S0')}await A.until('s:VAR-',()=>SC().list&&SC().list.idx===0,20);await A.press('s:SEL')},hint:'لف VARIABLE لين Pk-Pk واضغط Select'}]},
+      {dev:'scope',t:'9. فعّل Source 1 واختر CH2 بالـ VARIABLE واضغط Select، وبعدها V/I واختر Pk-Pk أو Max واضغط Select. اضغط Menu OFF مرتين.',subs:[
+        {k:'set',dev:'scope',t:'Source 1 ← بالـ VARIABLE اختر CH2 واضغط Select.',ok:s=>SC().msrc===1||s.meas,do:async A=>{if(SC().menu!=='measure')await A.press('s:Measure');if(SC().side!=='add')await A.press('s:B0');await A.press('s:S3');await A.until('s:VAR+',()=>SC().list&&SC().list.idx===1,8);await A.press('s:SEL')},hint:'زر Source 1 يمين الشاشة، لف VARIABLE لين CH2 واضغط Select'},
+        {k:'set',dev:'scope',t:'V/I ← بالـ VARIABLE اختر Pk-Pk واضغط Select.',ok:s=>s.meas,do:async A=>{if(SC().menu!=='measure')await A.press('s:Measure');if(SC().side!=='add')await A.press('s:B0');await A.press('s:S0');await A.until('s:VAR-',()=>SC().list&&SC().list.idx===0,20);await A.press('s:SEL')},hint:'زر V/I يمين الشاشة، اختر Pk-Pk واضغط Select'},
+        {k:'set',dev:'scope',t:'اضغط Menu OFF مرتين.',ok:s=>s.meas&&!SC().list&&!SC().side,do:A=>A.until('s:MOFF',()=>!SC().list&&!SC().side,3),hint:'زر Menu OFF تحت يمين الشاشة'}]},
+      {dev:'scope',t:'10. سجّل موجات v<sub>S</sub>(t) و v<sub>O</sub>(t) في Fig. 4.4.',subs:[
+        {k:'rec',t:'سجّل الشاشة في <bdi dir="ltr">Fig. 4.4</bdi>.',ok:()=>!!CAPS.f44,rec:[{scope:'f44',label:'Fig. 4.4'}]}]},
+      {dev:'board',t:'11. لاحظ وش يصير لما تفصل الـ bridging plug اللي بين D2 والمحوّل. بعدها رجّع الـ bridging plug عشان يرجع D2 للدائرة.',subs:[
+        {k:'set',dev:'board',t:'افصل الـ bridging plug اللي بين D2 والمحوّل (طرف C) ولاحظ v<sub>O</sub>: صار half-wave.',ok:()=>!!ST.hw,do:pullD2,hint:'شيل الـ bridging plug اللي يوصّل أنود D2 بطرف C حق المحوّل'},
+        {k:'set',dev:'board',t:'رجّع الـ bridging plug عشان يرجع D2 للدائرة.',ok:s=>ST.hw&&s.cfg==='fw',do:putD2,hint:'رجّع الـ bridging plug بين أنود D2 وطرف C'}]},
+      {dev:'scope',t:'12. عشان تطلع الـ voltage transfer characteristic، حط الإسكوب على XY: اضغط Acquire، واختر XY من القائمة اللي تحت، وبعدها Triggered XY من اليمين. اضغط POSITION للقناتين عشان الـ VTC يبدأ من (0, 0).',subs:[
+        {k:'set',dev:'scope',t:'اضغط Acquire.',ok:()=>SC().menu==='acquire'||SC().xy,do:A=>A.press('s:Acquire'),hint:'زر Acquire فوق الإسكوب'},
+        {k:'set',dev:'scope',t:'اختر XY من القائمة اللي تحت.',ok:()=>SC().side==='xy'||SC().xy,do:async A=>{if(SC().menu!=='acquire')await A.press('s:Acquire');await A.press('s:B1')},hint:'ثاني زر تحت الشاشة (XY)'},
+        {k:'set',dev:'scope',t:'اختر Triggered XY من اليمين.',ok:()=>SC().xy,do:async A=>{if(SC().menu!=='acquire')await A.press('s:Acquire');if(SC().side!=='xy')await A.press('s:B1');await A.press('s:S1')},hint:'ثاني زر يمين الشاشة (Triggered XY)'},
+        {k:'set',dev:'scope',t:'اضغط POSITION حق CH1 و CH2: الـ VTC يبدأ من (0, 0).',ok:()=>!!ST.xy,do:async A=>{await A.press('s:P1Pc');await A.press('s:P2Pc')},hint:'اضغط مقبض POSITION حق كل قناة'}]},
+      {dev:'scope',t:'13. سجّل الـ VTC اللي على الشاشة في Fig. 4.5.',subs:[
+        {k:'rec',t:'سجّل الشاشة في <bdi dir="ltr">Fig. 4.5</bdi>.',ok:()=>!!CAPS.f45,rec:[{scope:'f45',label:'Fig. 4.5'}]}]},
+      {dev:'scope',t:'14. طفّ الـ XY باختيار OFF (YT) من القائمة اليمين.',subs:[
+        {k:'set',dev:'scope',t:'اختر OFF (YT) من القائمة اليمين.',ok:()=>!!ST.yt,do:async A=>{if(SC().menu!=='acquire')await A.press('s:Acquire');if(SC().side!=='xy')await A.press('s:B1');await A.press('s:S0')},hint:'Acquire ← XY ← أول زر يمين الشاشة OFF (YT)'}]},
+      {dev:'board',build:'4.2-C10',t:'15. وصّل مكثف electrolytic 10 µF بالتوازي مع R<sub>L</sub>: الطرف المكتوب عليه علامة السالب يروح للأرضي. سجّل v<sub>S</sub>(t) و v<sub>O</sub>(t) في Fig. 4.6.',subs:[
+        {k:'build',fig:'4.2-C10',t:'وصّل C = 10 µF بالتوازي مع R<sub>L</sub>، السالب على الأرضي.'},
+        {k:'rec',t:'سجّل الشاشة في <bdi dir="ltr">Fig. 4.6</bdi>.',ok:()=>!!CAPS.f46,rec:[{scope:'f46',label:'Fig. 4.6'}]}]},
+      {dev:'board',build:'4.2-C470',t:'16. بدّل مكثف الـ 10 µF بمكثف 470 µF. سجّل v<sub>S</sub>(t) و v<sub>O</sub>(t) في Fig. 4.7.',subs:[
+        {k:'build',fig:'4.2-C470',t:'بدّل الـ 10 µF بـ C = 470 µF، السالب على الأرضي.'},
+        {k:'rec',t:'سجّل الشاشة في <bdi dir="ltr">Fig. 4.7</bdi>.',ok:()=>!!CAPS.f47,rec:[{scope:'f47',label:'Fig. 4.7'}]}]},
+      {dev:'scope',t:'17. اضغط CH2 وغيّر الـ Coupling (أول زر يسار تحت) إلى AC، واضغط Autoset. سجّل الـ ripple V<sub>r(pp)</sub> في Table 4.1.',subs:[
+        {k:'set',dev:'scope',t:'اضغط CH2.',ok:()=>SC().menu==='ch2'||SC().ch[1].cpl==='AC',do:A=>chMenu(A,1),hint:'زر CH2 الأزرق'},
+        {k:'set',dev:'scope',t:'Coupling (أول زر يسار تحت الشاشة) على AC.',ok:s=>s.cpl2==='AC',do:A=>cplTo(A,1,'AC'),hint:'اضغط أول زر تحت الشاشة لين يصير Coupling AC'},
+        {k:'set',dev:'scope',t:'اضغط Autoset.',ok:()=>!!ST.acA,do:A=>A.press('s:Autoset'),hint:'زر Autoset، والدائرة بـ C = 470 µF و R<sub>L</sub> = 4.7 kΩ'},
+        {k:'rec',t:'سجّل V<sub>r(pp)</sub> (Pk-Pk حق CH2) في Table 4.1.',ok:()=>!!ST.acA,rec:[{to:'r1',val:rip('c470'),...RIP,label:'V<sub>r(pp)</sub> · 4.7 kΩ'}]}]},
+      {dev:'board',build:'4.2-R270',t:'18. افصل مقاومة الـ 4.7 kΩ ووصّل مكانها 270 Ω. سجّل V<sub>r(pp)</sub> في Table 4.1.',subs:[
+        {k:'build',fig:'4.2-R270',t:'بدّل R<sub>L</sub> = 4.7 kΩ بـ 270 Ω.'},
+        {k:'rec',t:'سجّل V<sub>r(pp)</sub> في Table 4.1.',ok:()=>!!ST.r270,rec:[{to:'r2',val:rip('c470b'),...RIP,label:'V<sub>r(pp)</sub> · 270 Ω'}]}]},
+      {dev:'scope',t:'19. احسب التغيّر في الـ ripple ΔV<sub>r(pp)</sub> وسجّله في Table 4.1.',subs:[
+        {k:'rec',t:'سجّل ΔV<sub>r(pp)</sub> = V<sub>r(pp)</sub>(270 Ω) − V<sub>r(pp)</sub>(4.7 kΩ).',ok:()=>true,rec:[{to:'r3',val:diff('r1','r2'),unit:'mV',dec:1,label:'ΔV<sub>r(pp)</sub>',none:'سجّل V<sub>r(pp)</sub> في خطوة 17 و 18 أول'}]}]},
+      /* Procedure B (manual p. 34): steps 1–12 */
+      {dev:'xf',t:'Procedure B · 1. افصل المحوّل من فيش الكهرباء.',subs:[
+        {k:'set',dev:'xf',t:'اضغط Plug in عشان تفصل المحوّل.',ok:()=>!!ST.unplugA,do:A=>plugTo(A,false),hint:'زر Plug in الأخضر تحت المحوّل'}]},
+      {dev:'board',build:'4.3',t:'2. أضف الـ voltage regulator للدائرة الأصلية، وانقل R<sub>L</sub> لمكانه الجديد بالتوازي مع D<sub>Z</sub> (Fig. 4.3). في البداية استخدم الـ 4.7 kΩ لـ R<sub>L</sub>.',subs:[
+        {k:'build',fig:'4.3',t:'وصّل الدائرة <bdi dir="ltr">Fig. 4.3</bdi>: R<sub>S</sub> = 100 Ω، D<sub>Z</sub> = 1N4733A، و R<sub>L</sub> = 4.7 kΩ بالتوازي مع D<sub>Z</sub>.'}]},
+      {dev:'board',build:'4.3s',t:'3. انقل طرفي الـ coaxial cable حق CH2 على R<sub>L</sub> في مكانه الجديد.',subs:[
+        {k:'connect',fig:'4.3s',t:'انقل CH2: الأحمر على R<sub>L</sub> (فوق D<sub>Z</sub>) والأسود على الأرضي.'}]},
+      {dev:'xf',t:'4. رجّع وصّل المحوّل بفيش الكهرباء.',subs:[
+        {k:'set',dev:'xf',t:'اضغط Plug in في المحوّل.',ok:s=>s.plug&&s.cfg==='reg47',do:A=>plugTo(A,true),hint:'زر Plug in تحت المحوّل؛ لازم الدائرة و CH2 مثل Fig. 4.3'}]},
+      {dev:'scope',t:'5. رجّع الـ Coupling حق CH2 إلى DC. اضغط Autoset، وبعدها اضغط POSITION حق CH2.',subs:[
+        {k:'set',dev:'scope',t:'CH2 ← Coupling على DC.',ok:s=>s.cpl2==='DC',do:A=>cplTo(A,1,'DC'),hint:'اضغط CH2 وبعدها أول زر تحت الشاشة لين يصير DC'},
+        {k:'set',dev:'scope',t:'اضغط Autoset.',ok:()=>!!ST.dcB,do:A=>A.press('s:Autoset'),hint:'زر Autoset'},
+        {k:'set',dev:'scope',t:'اضغط POSITION حق CH2.',ok:()=>!!ST.dcB&&SC().ch[1].pos===0,do:A=>A.press('s:P2Pc'),hint:'اضغط مقبض POSITION حق CH2'}]},
+      {dev:'scope',t:'6. سجّل v<sub>S</sub>(t) و v<sub>O</sub>(t) في Fig. 4.8.',subs:[
+        {k:'rec',t:'سجّل الشاشة في <bdi dir="ltr">Fig. 4.8</bdi>.',ok:()=>!!CAPS.f48,rec:[{scope:'f48',label:'Fig. 4.8'}]}]},
+      {dev:'scope',t:'7. غيّر الـ Coupling حق CH2 إلى AC، واضغط Autoset.',subs:[
+        {k:'set',dev:'scope',t:'CH2 ← Coupling على AC.',ok:s=>s.cpl2==='AC',do:A=>cplTo(A,1,'AC'),hint:'اضغط CH2 وبعدها أول زر تحت الشاشة لين يصير AC'},
+        {k:'set',dev:'scope',t:'اضغط Autoset.',ok:()=>!!ST.acB,do:A=>A.press('s:Autoset'),hint:'زر Autoset'}]},
+      {dev:'scope',t:'8. سجّل الـ ripple V<sub>r(pp)</sub> في Table 4.1.',subs:[
+        {k:'rec',t:'سجّل V<sub>r(pp)</sub> (Pk-Pk حق CH2) في Table 4.1.',ok:()=>!!ST.acB,rec:[{to:'r4',val:rip('reg47'),...RIP,label:'V<sub>r(pp)</sub> · 4.7 kΩ'}]}]},
+      {dev:'board',build:'4.3-R270',t:'9. افصل مقاومة الـ 4.7 kΩ ووصّل مكانها الـ 270 Ω. سجّل V<sub>r(pp)</sub> في Table 4.1.',subs:[
+        {k:'build',fig:'4.3-R270',t:'بدّل R<sub>L</sub> = 4.7 kΩ بـ 270 Ω.'},
+        {k:'rec',t:'سجّل V<sub>r(pp)</sub> في Table 4.1.',ok:()=>!!ST.reg270,rec:[{to:'r5',val:rip('reg270'),...RIP,label:'V<sub>r(pp)</sub> · 270 Ω'}]}]},
+      {dev:'scope',t:'10. احسب التغيّر في الـ ripple ΔV<sub>r(pp)</sub> وسجّله في Table 4.1.',subs:[
+        {k:'rec',t:'سجّل ΔV<sub>r(pp)</sub> = V<sub>r(pp)</sub>(270 Ω) − V<sub>r(pp)</sub>(4.7 kΩ).',ok:()=>true,rec:[{to:'r6',val:diff('r4','r5'),unit:'mV',dec:1,label:'ΔV<sub>r(pp)</sub>',none:'سجّل V<sub>r(pp)</sub> في خطوة 8 و 9 أول'}]}]},
+      {dev:'scope',t:'11. قارن هذا التغيّر بالتغيّر اللي حسبته في آخر خطوة من Procedure A.',subs:[
+        {k:'set',t:'قارن ΔV<sub>r(pp)</sub> هنا بـ ΔV<sub>r(pp)</sub> حق Procedure A في Table 4.1.',ok:()=>true,do:async A=>{}}]},
+      {dev:'xf',t:'12. افصل المحوّل من الكهرباء، وطفّ الإسكوب، وبعدها فكّ كل القطع والكيابل ورجّعها مكانها.',subs:[
+        {k:'set',dev:'xf',t:'افصل المحوّل (Plug in).',ok:()=>!!ST.reg270&&!RT.S.xf.plugged,do:A=>plugTo(A,false),hint:'زر Plug in الأخضر تحت المحوّل'},
+        {k:'set',dev:'scope',t:'طفّ الإسكوب (زر POWER).',ok:()=>!!ST.end,do:async A=>{if(SC().pwr)await A.press('s:PWR')},hint:'زر POWER تحت يسار الإسكوب'}]}
     ],
-    onReset(){ST={};['f44','f45','f46','f47','f48'].forEach(id=>{$(id).textContent=id.replace(/f4(\d)/,'Fig. 4.$1');delete CAPS[id]});$('result').innerHTML=''}};
+    onReset(){ST={};PULLED=null;['f44','f45','f46','f47','f48'].forEach(id=>{$(id).textContent=id.replace(/f4(\d)/,'Fig. 4.$1');delete CAPS[id]});$('result').innerHTML=''}};
 }};})();

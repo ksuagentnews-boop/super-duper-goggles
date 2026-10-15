@@ -126,24 +126,63 @@ setup(RT){
     g.proc('B');g.add(G.near(v('q5v'),V2,0.03),'PLQ 5 VDQ',`≈ ${isFinite(V2)?V2.toFixed(3):'?'} V`);g.add(G.near(v('q5i'),(10.7-V2),0.1),'PLQ 5 IDQ',`= (10.7 − VDQ)/1 kΩ ≈ ${(10.7-V2).toFixed(2)} mA`);
     g.add(G.s('q5c')==='a','PLQ 5 comparison');
     g.show($('result'))});
+  /* "do it for me" helpers: the supply unit wired into the circuit, its voltage by COARSE then FINE (as in Exp 1) */
+  const UI=()=>{const L=loop();return L?L.u:RT.leadNet('Rp')!=null&&RT.leadNet('Lp')==null?1:0},U=()=>UI()?'R':'L';
+  const knobTo=async(A,u,get,t,tol)=>{let fineOnly=false;for(let i=0;i<500;i++){const x=get();if(x==null)return;const e=x-t;if(Math.abs(e)<=tol)return;
+      const k='p:'+u+(fineOnly?'VF':'VC')+(e<0?'+':'-');await A.tap(k,fineOnly?35:90);
+      if(!fineOnly){const y=get();if(y==null)return;if(Math.abs(y-t)>=Math.abs(e)||Math.sign(y-t)!==Math.sign(e)&&Math.abs(y-t)>tol){if(Math.abs(y-t)>=Math.abs(e))await A.tap('p:'+u+'VC'+(e<0?'-':'+'),90);fineOnly=true}}}};
+  const volts=(A,v)=>{const u=UI();return knobTo(A,u?'R':'L',()=>RT.S.psu.u[u].v,v,0.004)};
+  /* a sweep recording: each value of the list set on the supply (its row is read by the two meters), then captured */
+  const sweep=(t,b,list)=>async A=>{for(const v of list){if(ST[key(t,b,v)+'_vd']!=null&&ST[key(t,b,v)+'_vrs']!=null)continue;await volts(A,v);await A.wait(120);A.st()}
+    for(let q=0;q<list.length*2;q++)A.capture()};
+  /* the two meters of Fig. 2.3: DMM 1 on R_S, DMM 2 on the diode (either meter may take either place) */
+  const mAt=(a,b)=>a==null||b==null?null:RT.meters().find(m=>m.hi===a&&m.lo===b||m.hi===b&&m.lo===a);
+  const mOK=m=>!!m&&m.D.pwr&&m.D.fn==='DCV'&&m.D.jack==='HI';
+  const mSet=w=>async A=>{const L=loop();if(!L)return;const m=w==='rs'?mAt(L.rsT,L.X):mAt(L.X,L.K);if(!m)return;const p=m.key==='dmm2'?'m2':'m';if(!m.D.pwr)await A.press(p+':PWR');if(m.D.fn!=='DCV')await A.press(p+':DCV')};
+  const unitOn=on=>s=>!!s.L&&s.L.on===on,dcKey=A=>A.press('p:'+U()+'ON');
   return {status,
     steps:[
-      /* Procedure A (manual p. 18), steps 1–6 */
-      {dev:'board',build:'2.3a',t:'Procedure A · 1. وصّل الدائرة Fig. 2.3a، في البداية بالـ rectifier diode.'},
-      {dev:'psu',t:'2. شغّل الـ dc supply بمفتاح ∼ POWER.',acts:['بالـ CURRENT خلّ حد التيار 0.05 A.','بالـ COARSE و FINE خلّ الجهد V<sub>BB</sub> = 25 V.','شغّل مفتاح الـ dc ⎓ ON.'],
-        ok:s=>s.L&&!s.L.fwd&&s.L.on&&Math.abs(s.L.U.v-25)<0.006&&s.L.U.ilim<=0.0501},
-      {dev:'dmm',t:'3. بالـ DMM قِس V<sub>D</sub> و V<sub>RS</sub> وسجّلهم في Table 2.2 (3 خانات عشرية). لاحظ إن V<sub>RS</sub> بالـ V = I<sub>D</sub> بالـ mA.',
-        ok:s=>s.has('D4001','R',25),rec:recRow('D4001','R',25)},
-      {dev:'board',build:'2.3a-Z',t:'4. بدّل الـ rectifier diode بـ Zener diode، وسجّل V<sub>D</sub> و V<sub>RS</sub> في الجدول.',ok:s=>s.has('Z4733','R',25),rec:recRow('Z4733','R',25)},
-      {dev:'psu',t:'5. كرّر الخطوات اللي فوق لباقي قيم V<sub>BB</sub> في الجدول (20، 15، 10، 7، 5، 4، 3 V).',ok:s=>ST._revAll,rec:recRows('R',REV.slice(1))},
-      {dev:'psu',t:'6. طفّ مفتاح الـ dc في الـ power supply.',ok:s=>ST.offA||ST._fwdAll},
+      /* Procedure A (manual p. 18), steps 1–6; every step split into its sub-steps (Batch 7 item 3) */
+      {dev:'board',build:'2.3a',t:'Procedure A · 1. وصّل الدائرة Fig. 2.3a، في البداية بالـ rectifier diode.',subs:[
+        {k:'build',fig:'2.3a',t:'وصّل الدائرة <bdi dir="ltr">Fig. 2.3a</bdi>: R<sub>S</sub> = 1 kΩ والـ 1N4001، DMM 1 على R<sub>S</sub> و DMM 2 على الدايود.'}]},
+      {dev:'psu',t:'2. شغّل الـ dc supply بمفتاح ∼ POWER.',subs:[
+        {k:'set',dev:'psu',t:'شغّل مفتاح ∼ POWER.',ok:()=>RT.S.psu.pwr,do:A=>A.press('p:PWR'),hint:'مفتاح ∼ POWER تحت يسار الـ supply'},
+        {k:'set',dev:'psu',t:'بالـ CURRENT خلّ حد التيار 0.05 A.',ok:s=>!!s.L&&s.L.U.ilim<=0.0501,do:A=>A.until('p:'+U()+'I-',s=>!!s.L&&s.L.U.ilim<=0.0501,80),hint:'لف CURRENT لليسار لين 0.05 A'},
+        {k:'set',dev:'psu',t:'بالـ COARSE و FINE خلّ الجهد V<sub>BB</sub> = 25 V.',ok:s=>!!s.L&&!s.L.fwd&&Math.abs(s.L.U.v-25)<0.006,do:A=>volts(A,25),hint:'لف COARSE لين قريب من 25 V، وكمّل بالـ FINE'},
+        {k:'set',dev:'psu',t:'شغّل مفتاح الـ dc ⎓ ON.',ok:s=>!!s.L&&!s.L.fwd&&s.L.on&&Math.abs(s.L.U.v-25)<0.006&&s.L.U.ilim<=0.0501,do:dcKey,hint:'مفتاح ⎓ ON تحت شاشة الوحدة اللي في الدائرة'}]},
+      {dev:'dmm',t:'3. بالـ DMM قِس V<sub>D</sub> و V<sub>RS</sub> وسجّلهم في Table 2.2 (3 خانات عشرية). لاحظ إن V<sub>RS</sub> بالـ V = I<sub>D</sub> بالـ mA.',subs:[
+        {k:'measure',t:'الـ DMM اللي على R<sub>S</sub>: شغّله (POWER) واختر DCV عشان تقرا V<sub>RS</sub>.',ok:s=>!!s.L&&mOK(mAt(s.L.rsT,s.L.X)),do:mSet('rs'),hint:'الـ DMM اللي على R<sub>S</sub> (Fig. 2.3a): زر POWER وبعدها DCV'},
+        {k:'measure',t:'الـ DMM اللي على الدايود: شغّله (POWER) واختر DCV عشان تقرا V<sub>D</sub>.',ok:s=>!!s.L&&mOK(mAt(s.L.X,s.L.K)),do:mSet('d'),hint:'الـ DMM اللي على الدايود: زر POWER وبعدها DCV'},
+        {k:'rec',t:'سجّل V<sub>D</sub> و V<sub>RS</sub> للـ 1N4001 عند V<sub>BB</sub> = 25 V.',ok:s=>s.has('D4001','R',25),rec:recRow('D4001','R',25)}]},
+      {dev:'board',build:'2.3a-Z',t:'4. بدّل الـ rectifier diode بـ Zener diode، وسجّل V<sub>D</sub> و V<sub>RS</sub> في الجدول.',subs:[
+        {k:'build',fig:'2.3a-Z',t:'بدّل الـ 1N4001 بالـ Zener 1N4733A (<bdi dir="ltr">Fig. 2.3a</bdi>).'},
+        {k:'rec',t:'سجّل V<sub>D</sub> و V<sub>RS</sub> للـ Zener عند V<sub>BB</sub> = 25 V.',ok:s=>s.has('Z4733','R',25),rec:recRow('Z4733','R',25)}]},
+      {dev:'psu',t:'5. كرّر الخطوات اللي فوق لباقي قيم V<sub>BB</sub> في الجدول (20، 15، 10، 7، 5، 4، 3 V).',subs:[
+        {k:'rec',dev:'psu',t:'والـ Zener في الدائرة: اضبط V<sub>BB</sub> على كل قيمة (20، 15، 10، 7، 5، 4، 3 V) وسجّل V<sub>D</sub> و V<sub>RS</sub>.',ok:s=>s.revZ,rec:REV.slice(1).flatMap(v=>recRow('Z4733','R',v)),do:sweep('Z4733','R',REV.slice(1)),
+          hint:'لف COARSE و FINE لين V<sub>BB</sub> توصل القيمة اللي في الجدول، وسجّل القراءتين'},
+        {k:'build',fig:'2.3a',t:'رجّع الـ 1N4001 مكان الـ Zener (<bdi dir="ltr">Fig. 2.3a</bdi>).'},
+        {k:'rec',dev:'psu',t:'والـ 1N4001 في الدائرة: اضبط V<sub>BB</sub> على كل قيمة (20، 15، 10، 7، 5، 4، 3 V) وسجّل V<sub>D</sub> و V<sub>RS</sub>.',ok:s=>s.revR,rec:REV.slice(1).flatMap(v=>recRow('D4001','R',v)),do:sweep('D4001','R',REV.slice(1)),
+          hint:'لف COARSE و FINE لين V<sub>BB</sub> توصل القيمة اللي في الجدول، وسجّل القراءتين'}]},
+      {dev:'psu',t:'6. طفّ مفتاح الـ dc في الـ power supply.',subs:[
+        {k:'set',dev:'psu',t:'طفّ مفتاح الـ dc ⎓ ON.',ok:()=>!!(ST.offA||ST._fwdAll),do:dcKey}]},
       /* Procedure B (manual p. 18), steps 1–5 */
-      {dev:'board',build:'2.3b',t:'Procedure B · 1. غيّر توصيل المصدر بس عشان تصير الدائرة Fig. 2.3b.'},
-      {dev:'psu',t:'2. بمقابض الـ VOLTAGE في الـ dc power supply خلّ الجهد 0.3 V.',ok:s=>s.L&&s.L.fwd&&Math.abs(s.L.U.v-0.3)<0.006},
-      {dev:'psu',t:'3. شغّل مفتاح الـ dc. سجّل قراءات الملتيميتر للمقاومة والدايود في Table 2.2.',ok:s=>s.has('D4001','F',0.3),rec:recRow('D4001','F',0.3)},
-      {dev:'board',build:'2.3b-Z',t:'4. بدّل الـ rectifier diode بـ Zener diode وقِس وسجّل V<sub>RS</sub> و V<sub>D</sub>. كرّر الخطوات اللي فوق لباقي قيم V<sub>FF</sub> في الجدول.',
-        ok:s=>ST._fwdAll,rec:[...recRow('Z4733','F',0.3),...recRows('F',FWD.slice(1))]},
-      {dev:'psu',t:'5. طفّ الـ dc supply، وفكّ القطع، ورتّب طاولتك.',ok:s=>ST.offB}
+      {dev:'board',build:'2.3b',t:'Procedure B · 1. غيّر توصيل المصدر بس عشان تصير الدائرة Fig. 2.3b.',subs:[
+        {k:'build',fig:'2.3b',t:'اعكس طرفي المصدر (<bdi dir="ltr">Fig. 2.3b</bdi>): الـ + على R<sub>S</sub>، والـ 1N4001 forward.'}]},
+      {dev:'psu',t:'2. بمقابض الـ VOLTAGE في الـ dc power supply خلّ الجهد 0.3 V.',subs:[
+        {k:'set',dev:'psu',t:'بالـ COARSE و FINE خلّ V<sub>FF</sub> = 0.3 V.',ok:s=>!!s.L&&s.L.fwd&&Math.abs(s.L.U.v-0.3)<0.006,do:A=>volts(A,0.3),hint:'لف COARSE لليسار لين قريب من 0.3 V، وكمّل بالـ FINE'}]},
+      {dev:'psu',t:'3. شغّل مفتاح الـ dc. سجّل قراءات الملتيميتر للمقاومة والدايود في Table 2.2.',subs:[
+        {k:'set',dev:'psu',t:'شغّل مفتاح الـ dc ⎓ ON.',ok:s=>!!s.L&&s.L.fwd&&s.L.on,do:dcKey},
+        {k:'rec',t:'سجّل V<sub>D</sub> و V<sub>RS</sub> للـ 1N4001 عند V<sub>FF</sub> = 0.3 V.',ok:s=>s.has('D4001','F',0.3),rec:recRow('D4001','F',0.3)}]},
+      {dev:'board',build:'2.3b-Z',t:'4. بدّل الـ rectifier diode بـ Zener diode وقِس وسجّل V<sub>RS</sub> و V<sub>D</sub>. كرّر الخطوات اللي فوق لباقي قيم V<sub>FF</sub> في الجدول.',subs:[
+        {k:'build',fig:'2.3b-Z',t:'بدّل الـ 1N4001 بالـ Zener 1N4733A (<bdi dir="ltr">Fig. 2.3b</bdi>).'},
+        {k:'rec',t:'سجّل V<sub>D</sub> و V<sub>RS</sub> للـ Zener عند V<sub>FF</sub> = 0.3 V.',ok:s=>s.has('Z4733','F',0.3),rec:recRow('Z4733','F',0.3)},
+        {k:'rec',dev:'psu',t:'والـ Zener في الدائرة: اضبط V<sub>FF</sub> على كل قيمة (0.4، 0.5، 0.55، 0.6، 0.65، 0.75، 1.7، 10.7، 20.7 V) وسجّل V<sub>D</sub> و V<sub>RS</sub>.',ok:s=>s.fwdZ,rec:FWD.slice(1).flatMap(v=>recRow('Z4733','F',v)),do:sweep('Z4733','F',FWD.slice(1)),
+          hint:'لف COARSE و FINE لين V<sub>FF</sub> توصل القيمة اللي في الجدول، وسجّل القراءتين'},
+        {k:'build',fig:'2.3b',t:'رجّع الـ 1N4001 مكان الـ Zener (<bdi dir="ltr">Fig. 2.3b</bdi>).'},
+        {k:'rec',dev:'psu',t:'والـ 1N4001 في الدائرة: اضبط V<sub>FF</sub> على كل قيمة (0.4، 0.5، 0.55، 0.6، 0.65، 0.75، 1.7، 10.7، 20.7 V) وسجّل V<sub>D</sub> و V<sub>RS</sub>.',ok:s=>s.fwdR,rec:FWD.slice(1).flatMap(v=>recRow('D4001','F',v)),do:sweep('D4001','F',FWD.slice(1)),
+          hint:'لف COARSE و FINE لين V<sub>FF</sub> توصل القيمة اللي في الجدول، وسجّل القراءتين'}]},
+      {dev:'psu',t:'5. طفّ الـ dc supply، وفكّ القطع، ورتّب طاولتك.',subs:[
+        {k:'set',dev:'psu',t:'طفّ مفتاح الـ dc ⎓ ON.',ok:()=>!!ST.offB,do:dcKey}]}
     ],
 
     onReset(){ST={};$('result').innerHTML='';$('ivplot').innerHTML=''}};
