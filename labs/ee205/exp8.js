@@ -120,7 +120,7 @@ setup(RT){
     const b9=g!=null&&gb===-1?branches(['R5k','L438','C01']):null;
     if(b9&&b9.B.every(b=>b.bot===-1&&b.top===b9.T)&&b9.T!==g&&K.ammOn(g,b9.T)&&st.v2){const f=K.gen().f;if(sine(f)&&F4.includes(f)){const i=ACI(g,b9.T);if(i!=null)ST['p'+f]=i}}
     st.ST=ST;return st}
-  $('submit').addEventListener('click',()=>{const g=G.grader(),v=G.v;const rd=(k,sc=1,u='')=>[ST[k]!=null&&G.near(v(k),ST[k]*sc,Math.abs(ST[k]*sc)*0.003+0.011),ST[k]!=null?`${(ST[k]*sc).toFixed(sc>1?2:3)} ${u}`:'measure it'];
+  $('submit').addEventListener('click',()=>{const g=G.grader(),v=G.v;const rd=(k,sc=1,u='',id=k)=>[ST[k]!=null&&G.near(v(id),ST[k]*sc,Math.abs(ST[k]*sc)*0.003+0.011),ST[k]!=null?`${(ST[k]*sc).toFixed(sc>1?2:3)} ${u}`:'measure it'];
     g.proc('I');[['e1','E','V'],['vr1','VR','V'],['vl1','VL','V'],['vc1','VC','V']].forEach(([k,t,u])=>g.add(...rd(k,1,u).slice(0,1),t,rd(k,1,u)[1]));g.add(...rd('i1',1e3,'mA').slice(0,1),'I',rd('i1',1e3,'mA')[1]);
     g.add(G.near(v('z1'),v('e1')/v('i1')*1e3,0.5),'Z = E/I');g.add(G.near(v('th1'),T.th1,2),'θ',`≈ ${T.th1.toFixed(1)}° (inductive above f0 = 555 Hz)`);
     g.add(G.near(v('p1'),Math.pow(v('i1')/1e3,2)*100*1e3,0.05)||G.near(v('p1'),Math.pow(v('i1')/1e3,2)*117.6*1e3,0.05),'P = I²R');g.add(G.near(v('pf1'),Math.cos(T.th1*Math.PI/180),0.02),'PF',`cos θ ≈ ${Math.cos(T.th1*Math.PI/180).toFixed(3)}`);
@@ -135,7 +135,7 @@ setup(RT){
     g.add(G.near(v('bs'),v('f2s')-v('f1s'),2),'B = f2 − f1');g.add(G.near(v('qs'),v('fos')/v('bs'),0.2),'Qo = fos / B');
     g.add(G.near(v('fost'),T.fos,40),'fos theoretical',`1/(2π√LC) = ${T.fos.toFixed(0)} Hz`);g.add(G.near(v('bst'),T.bs,40)||G.near(v('bst'),100/(2*Math.PI*0.0175),20),'B theoretical',`R/(2πL) ≈ ${T.bs.toFixed(0)} Hz (R + RL)`);
     g.add(G.near(v('f1st'),v('fost')-v('bst')/2,30),'f1 theoretical');g.add(G.near(v('f2st'),v('fost')+v('bst')/2,30),'f2 theoretical');g.add(G.near(v('qst'),v('fost')/v('bst'),0.3),'Qo theoretical');
-    g.proc('IV');F4.forEach(f=>{g.add(rd('p'+f,1e3,'mA')[0],`Table 2 · ${fk(f)} I`,rd('p'+f,1e3,'mA')[1]);g.add(G.near(v('qz'+f),2/(v('q'+f)/1e3),2/(v('q'+f)/1e3)*0.01+1),`Table 2 · ${fk(f)} Z`,'V / I')});
+    g.proc('IV');F4.forEach(f=>{g.add(rd('p'+f,1e3,'mA','q'+f)[0],`Table 2 · ${fk(f)} I`,rd('p'+f,1e3,'mA')[1]);g.add(G.near(v('qz'+f),2/(v('q'+f)/1e3),2/(v('q'+f)/1e3)*0.01+1),`Table 2 · ${fk(f)} Z`,'V / I')});
     const pp=peak('p',F4);g.add(pp!=null&&Math.abs(v('fop')-pp)<=200,'fop measured',`near ${pp} Hz (largest Z)`);g.add(Math.abs(v('f1p')-T.f1p)<=200,'f1 measured',`≈ ${T.f1p.toFixed(0)} Hz (Z = Zmax/√2)`);g.add(Math.abs(v('f2p')-T.f2p)<=200,'f2 measured',`≈ ${T.f2p.toFixed(0)} Hz`);
     g.add(G.near(v('bp'),v('f2p')-v('f1p'),2),'B = f2 − f1');g.add(G.near(v('qp'),v('fop')/v('bp'),0.3),'Qo = fop / B');
     g.add(G.near(v('fopt'),T.fop,40),'fop theoretical',`1/(2π√LC) = ${T.fop.toFixed(0)} Hz`);g.add(G.near(v('bpt'),T.bp,40)||G.near(v('bpt'),1/(2*Math.PI*5000*0.1e-6),15),'B theoretical',`1/(2πRC) ≈ ${T.bp.toFixed(0)} Hz`);
