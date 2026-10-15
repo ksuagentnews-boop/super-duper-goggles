@@ -294,8 +294,9 @@ function render(){const s=S();VW=sch.clientWidth||600;VH=sch.clientHeight||400;
   if(s.dlg){const key=JSON.stringify(s.dlg);if(dlgEl.dataset.key!==key){dlgEl.dataset.key=key;dlgEl.hidden=false;dlgEl.innerHTML=`<div class="pc-dbox">${dlgHTML(s.dlg)}</div>`;const i=dlgEl.querySelector('input,textarea');if(i&&!matchMedia('(pointer:coarse)').matches)setTimeout(()=>i.focus(),0)}}
   else if(dlgEl.dataset.key){dlgEl.dataset.key='';dlgEl.hidden=true;dlgEl.innerHTML=''}
   layoutCard()}
-/* the step card lifts the app only when it floats over the stage (bottom); docked in the right-hand panel (Batch 7) it takes no height */
-function layoutCard(){const c=BENCH.el.card;const h=BENCH.guided()&&!c.hidden&&!c.classList.contains('in-panel')?c.offsetHeight+16:8;app.style.bottom=h+'px'}
+/* Batch 7: the step card is a right-hand column — docked in the panel it takes nothing from the app; floating in the stage
+   (#stepCard.in-stage, phones) the app keeps clear of it on the right */
+function layoutCard(){const c=BENCH.el.card;const st=BENCH.guided()&&!c.hidden&&c.classList.contains('in-stage');app.style.bottom='';app.style.right=st?(c.offsetWidth+16)+'px':''}
 /* ---------- schematic pointer input ---------- */
 function hit(e){const t=document.elementFromPoint(e.clientX,e.clientY);if(!t)return {};const c=t.closest('[data-comp]'),w=t.closest('[data-wire]'),l=t.closest('[data-label]'),d=t.closest('[data-dir]');
   return {comp:c&&+c.dataset.comp,wire:w&&+w.dataset.wire,label:l&&+l.dataset.label,dir:d&&+d.dataset.dir}}

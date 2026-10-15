@@ -242,7 +242,7 @@ D4 0 n 1N4148
         {k:'set',dev:'comp',t:'V1 = 15 V و V2 = 15 V للـ ±15 V.',ok:()=>!!ST.newC&&comps('V').filter(c=>dcIs(c,15)).length>=2,
           do:async A=>{await PC.place(A,C64.filter(d=>d.name==='V1'||d.name==='V2'));for(const n of ['V1','V2'])await PC.value(A,n,{dc:15})}},
         {k:'set',dev:'comp',t:'مصدر الدخل Vin (V3).',ok:()=>!!ST.newC&&comps('V').length>=3,do:A=>PC.place(A,ofT(C64,'V'))},
-        {k:'set',dev:'R',t:'R1 = 1 kΩ (اكتب 1000).',ok:()=>!!ST.newC&&comps('R').some(c=>val(c,1000)),do:async A=>{await PC.place(A,ofT(C64,'R'));await PC.value(A,'R1',{val:'1000'})}},
+        {k:'set',dev:'R',t:'R1 = 1 kΩ.',ok:()=>!!ST.newC&&comps('R').some(c=>val(c,1000)),do:async A=>{await PC.place(A,ofT(C64,'R'));await PC.value(A,'R1',{val:'1000'})}},
         {k:'set',dev:'D',t:'D1–D4 = 1N4148.',ok:()=>!!ST.newC&&comps('D').filter(d=>d.model==='1N4148').length>=4,do:async A=>{await PC.place(A,ofT(C64,'D'));for(const d of comps('D'))await PC.value(A,d.name,{model:'1N4148'})}},
         {k:'set',dev:'GND',t:'الـ circuit ground (GND).',ok:()=>!!ST.newC&&comps('GND').length>=1,do:A=>PC.place(A,GN64)}]},
       {dev:'label',t:'3. وصّل كل القطع، وسمّ الـ nodes: <b>in</b> و <b>IC_out</b> و <b>out</b>.',subs:[

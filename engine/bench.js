@@ -319,6 +319,8 @@ const BENCH={
   figFor(i){const S=this.sim.steps;for(let j=i;j>=0;j--){const L=this.subsOf(S[j]);const f=[...L].reverse().find(x=>x.fig);if(f)return f.fig;if(S[j].build)return S[j].build;if(j<i&&S[j].proc!==S[i].proc)break}return null},
   /* «تلميح» for a sub-step: what is wrong with the circuit (and where), or what that sub-step still wants */
   hintFor(i,j){const S=this.sim.steps,s=S[i],RT=this.sim.RT;this.helpers.hint++;const L=this.subsOf(s);if(j==null){j=this.subState(s).cur;if(j<0)j=0}const x=L[j]||{};const st=this.sim.status();
+    /* the sub-step's own hint first (what this sub-step still wants); without one, what is wrong with the circuit */
+    if(x.hint&&!x.legacy){const m=typeof x.hint==='function'?x.hint(st):x.hint;if(m){this.say('💡 '+m);const d=x.dev||s.dev;if(d&&d!=='board'&&this.view!==d)this.focus(d);return}}
     const f=x.fig||this.figFor(i);
     if(f&&RT&&RT.hint){const h=RT.hint(f);if(h){this.say('💡 '+h.msg);this.showSpot(h.at);return}}
     const m=typeof x.hint==='function'?x.hint(st):x.hint||(x.legacy?(typeof s.hint==='function'?s.hint(st):s.hint):null);
