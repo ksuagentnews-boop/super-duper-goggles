@@ -141,37 +141,106 @@ setup(RT){
     g.add(G.near(v('zm'),v('e3')/v('i3')*1e3,0.5),'ZT = E/I');g.add(G.near(v('zc'),CAL.zc,1),'ZT calculated',`≈ ${CAL.zc.toFixed(1)} Ω`);
     g.add(G.near(v('p3'),Math.pow(v('i3')/1e3,2)*(100+v('rl'))*1e3,0.05),'P = I²(R+RL)');g.add(G.near(v('pf'),(100+v('rl'))/v('zc'),0.005),'PF = (R+RL)/ZT',`≈ ${CAL.pf.toFixed(3)}`);
     g.show($('result'))});
-  const calc=t=>({dev:'board',t,ok:()=>true});
+  const calc=t=>({dev:'board',t,subs:[{k:'set',t:'احسبها واكتبها في الـ sheet.',ok:()=>true}]});
+  /* "do it for me" helpers (Batch 7 item 3): the supply (COARSE then FINE), the Metrix (parameter key, cursor digit, wheel),
+     the Fluke's rotary switch; set-ups for the Fluke on the generator, across a part of Fig. 3 and the scope on Fig. 3 */
+  const U=()=>RT.leadNet('Rp')!=null&&RT.leadNet('Lp')==null?'R':'L';
+  const unit=()=>RT.S.psu.u[U()==='L'?0:1];
+  const volts=async(A,E)=>{const u=U();if(!RT.S.psu.pwr)await A.press('p:PWR');for(let i=0;i<80&&Math.abs(unit().v-E)>=0.5;i++)await A.tap('p:'+u+'VC'+(unit().v<E?'+':'-'),90);
+    for(let i=0;i<300&&Math.abs(unit().v-E)>0.004;i++)await A.tap('p:'+u+'VF'+(unit().v<E?'+':'-'),35)};
+  const psuOn=async(A,E)=>{await volts(A,E);if(!unit().on)await A.press('p:'+U()+'ON')};
+  const meterTo=(A,n,pos)=>A.until(`h${n}:SW${RT.S['hm'+n].pos<pos?'+':'-'}`,()=>RT.S['hm'+n].pos===pos,12);
+  const mtx=async(A,p,target)=>{if(!RT.S.gen.pwr)await A.press('g:PWR');await A.press('g:'+{f:'FREQ',a:'AMPL',o:'OFFSET'}[p]);
+    for(let i=0;i<400;i++){const g=RT.S.gen,cur={f:g.freq,a:g.amp,o:g.off}[p],diff=target-cur;if(Math.abs(diff)<1e-9*Math.max(1,Math.abs(target)))return;
+      const lim={f:[-1,6],a:[-3,1],o:[-3,0]}[p];let d=Math.max(lim[0],Math.min(lim[1],Math.floor(Math.log10(Math.abs(diff))+1e-9)));if(p==='f'&&cur+Math.sign(diff)*Math.pow(10,d)<0.1)d--;
+      if(g.dig[p]!==d){await A.tap(g.dig[p]<d?'g:CL':'g:CR',40);continue}await A.tap(diff>0?'g:KN+':'g:KN-',40)}};
+  const genSine=async(A,f,a)=>{if(!RT.S.gen.pwr)await A.press('g:PWR');if(RT.S.gen.wave!=='Sine')await A.press('g:Sine');if(f!=null)await mtx(A,'f',f);if(a!=null)await mtx(A,'a',a);
+    if(RT.S.gen.off!==0)await mtx(A,'o',0);if(!RT.S.gen.out)await A.press('g:OUT')};
+  const vdTo=(A,c,v)=>A.until(`s:V${c+1}${sc().ch[c].vd>v?'+':'-'}`,()=>sc().ch[c].vd===v,12);
+  const modeII=async A=>{if(sc().dual)await A.press('s:DUAL');if(sc().add)await A.press('s:ADD');if(sc().xy)await A.press('s:XY');if(!sc().ch2sel)await A.press('s:CH12')};
+  const fq=f=>f>=1000?f/1000+' kHz':f+' Hz';
+  const FVD={lines:[...L2,{lead:'h1v',at:11},{lead:'h1c',at:25}]};
+  const FVD2={lines:[{lead:'gr',at:11},{wire:[11,12]},{lead:'c2r',at:12},{lead:'gb',at:25},{wire:[25,26]},{lead:'c2b',at:26},{lead:'h1v',at:11},{lead:'h1c',at:25}]};
+  const L3n=L3.filter(l=>!(l.lead&&/^h1/.test(l.lead))),FM=(a,b)=>({lines:[...L3n,{lead:'h1v',at:a},{lead:'h1c',at:b}]});
+  const FSC={lines:[...L3,{lead:'c1r',at:10},{lead:'c1b',at:17},{lead:'c2r',at:9},{lead:'c2b',at:22}]};
   return {status,
     steps:[
-      /* Procedure I (manual pp. 19–21), steps 1–8 */
-      {dev:'sc',t:'Procedure I · 1. شغّل الـ oscilloscope وشوف وظيفة مفاتيح التحكم هذي:',acts:['a) Focus','b) Intensity','c) Horizontal position و vertical position'],ok:s=>ST.knobs},
-      {dev:'board',build:'1',t:'2. وصّل الدائرة Fig. 1.',acts:['a) حدّد خط الصفر على الشاشة (GD تحت CH I، والخط على الوسط بـ Y-POS I).','b) خلّ مفتاح channel-1 على dc mode.','c) غيّر جهد الـ supply لين تاخذ القيم اللي في الجدول (1، 2، 5، 10 V)، وعبّي الجدول: vertical deflection (div) × V/div (VAR على CAL).'],
-        ok:s=>ST.zero&&[1,2,5,10].every(v=>ST['dc'+v]!=null),rec:[1,2,5,10].map(v=>({to:'dc'+v,val:()=>ST['dc'+v],unit:'V',dec:2,label:`DC ${v} V`}))},
-      {dev:'psu',t:'3. طفّ الـ dc voltage supply وخلّ الدائرة موصولة.',ok:s=>s.supOff&&s.fig1&&ST.dc10!=null},
-      {dev:'board',build:'2',t:'4. حوّل الـ display mode switch على channel 2 ووصّل الدائرة Fig. 2. استخدم الـ function generator كمصدر AC.',ok:s=>s.mode==='II'},
-      {dev:'sc',t:'5. خلّ مدخل channel 2 على ac mode. اعرض إشارة sinusoidal على الـ oscilloscope واحسب ترددها ومقدارها:',acts:['شغّل الـ generator: Sine، FREQ = 1 kHz، AMPL = 4 Vpp، OFFSET = 0، و OUTPUT ON.','CH II على AC، واضبط VOLTS/DIV و TIME/DIV لين تشوف موجة أو موجتين كاملة.','V<sub>m</sub> = vertical deflection × V/div، و T = horizontal deflection × time/div.'],
-        ok:s=>!!ST.sine,rec:[{to:'vm',val:()=>ST.sine?ST.sine.vm:null,unit:'V',dec:2,label:'V<sub>m</sub>'},{to:'tp',val:()=>ST.sine?ST.sine.T:null,unit:'ms',dec:3,label:'T'}]},
+      /* Procedure I (manual pp. 19–21), steps 1–8; every step split into its sub-steps (Batch 7 item 3) */
+      {dev:'sc',t:'Procedure I · 1. شغّل الـ oscilloscope وشوف وظيفة مفاتيح التحكم هذي: a) Focus · b) Intensity · c) Horizontal position و vertical position.',subs:[
+        {k:'set',dev:'sc',t:'شغّل الـ oscilloscope (POWER).',ok:()=>sc().pwr,do:async A=>{if(!sc().pwr)await A.press('s:PWR')}},
+        {k:'set',dev:'sc',t:'a) Focus: لفّه وشوف الخط كيف يصير أوضح أو أعرض.',ok:()=>!!ST.foc,do:A=>A.press('s:FOC-',3),hint:'لف قرص FOCUS'},
+        {k:'set',dev:'sc',t:'b) Intensity: لفّه وشوف إضاءة الخط.',ok:()=>!!ST.int,do:A=>A.press('s:INT-',2),hint:'لف قرص INTENS.'},
+        {k:'set',dev:'sc',t:'c) Horizontal position و vertical position: حرّك الخط ورجّعه للوسط.',ok:()=>!!ST.pos,do:async A=>{await A.press('s:Y1+',2);await A.press('s:Y1-',2)},hint:'لف Y-POS I أو X-POS'}]},
+      {dev:'board',build:'1',t:'2. وصّل الدائرة Fig. 1.',subs:[
+        {k:'build',fig:'1'},
+        {k:'set',dev:'sc',t:'a) حدّد خط الصفر على الشاشة: اضغط GD تحت CH I، والخط على الوسط بـ Y-POS I.',ok:()=>!!ST.zero,do:A=>A.until('s:GD1',()=>!!ST.zero,2),hint:'اضغط GD تحت CH I'},
+        {k:'set',dev:'sc',t:'b) خلّ مفتاح channel-1 على dc mode (GD و AC محرّرة).',ok:s=>s.ch1dc,do:async A=>{if(sc().ch[0].cpl==='GND')await A.press('s:GD1');if(sc().ch[0].cpl==='AC')await A.press('s:AC1')},hint:'حرّر GD و AC تحت CH I'},
+        {k:'set',dev:'psu',t:'شغّل الـ dc supply (POWER).',ok:()=>RT.S.psu.pwr,do:A=>A.press('p:PWR')},
+        ...[1,2,5,10].flatMap(v=>[
+          {k:'set',dev:'psu',t:`c) خلّ الـ supply على ${v} V والـ OUTPUT على ON، و VOLTS/DIV لين يبان الخط داخل الشاشة (VAR على CAL).`,ok:()=>ST['dc'+v]!=null,
+            do:async A=>{await psuOn(A,v);for(let i=0;i<12&&Math.abs(v/sc().ch[0].vd)>4.05;i++)await A.press('s:V1-')},hint:`الـ supply على ${v} V والـ OUTPUT على ON، و VOLTS/DIV كبير كفاية عشان الخط يبان`},
+          {k:'rec',t:`سجّل الجهد اللي تقراه من الشاشة (deflection × V/div) لـ ${v} V.`,ok:()=>ST['dc'+v]!=null,rec:[{to:'dc'+v,val:()=>ST['dc'+v],unit:'V',dec:2,label:`DC ${v} V`}]}])]},
+      {dev:'psu',t:'3. طفّ الـ dc voltage supply وخلّ الدائرة موصولة.',subs:[
+        {k:'set',dev:'psu',t:'حوّل الـ OUTPUT على OFF.',ok:s=>s.supOff&&s.fig1,do:async A=>{if(unit().on)await A.press('p:'+U()+'ON')}}]},
+      {dev:'board',build:'2',t:'4. حوّل الـ display mode switch على channel 2 ووصّل الدائرة Fig. 2. استخدم الـ function generator كمصدر AC.',subs:[
+        {k:'set',dev:'sc',t:'حوّل الـ display على channel 2 (CH I/II).',ok:s=>s.mode==='II',do:modeII,hint:'اضغط CH I/II (وحرّر DUAL و ADD)'},
+        {k:'build',fig:'2'}]},
+      {dev:'sc',t:'5. خلّ مدخل channel 2 على ac mode. اعرض إشارة sinusoidal على الـ oscilloscope واحسب ترددها ومقدارها.',subs:[
+        {k:'set',dev:'gen',t:'شغّل الـ generator (POWER).',ok:()=>RT.S.gen.pwr,do:A=>A.press('g:PWR')},
+        {k:'set',dev:'gen',t:'اختر Sine.',ok:()=>RT.S.gen.wave==='Sine',do:A=>A.press('g:Sine')},
+        {k:'set',dev:'gen',t:'FREQ = 1 kHz.',ok:()=>RT.S.gen.freq===1000,do:A=>mtx(A,'f',1000),hint:'اضغط FREQ، واختر الخانة بالأسهم، ولف العجلة لين 1 kHz'},
+        {k:'set',dev:'gen',t:'AMPL = 4 Vpp، و OFFSET = 0 V.',ok:()=>Math.abs(RT.S.gen.amp-4)<0.001&&RT.S.gen.off===0,do:async A=>{await mtx(A,'a',4);if(RT.S.gen.off!==0)await mtx(A,'o',0)},hint:'اضغط AMPL ولف العجلة لين 4 Vpp'},
+        {k:'set',dev:'gen',t:'OUTPUT ON.',ok:s=>s.sine14,do:A=>genSine(A,1000,4)},
+        {k:'set',dev:'sc',t:'CH II على AC.',ok:s=>s.ch2ac,do:async A=>{if(sc().ch[1].cpl==='GND')await A.press('s:GD2');if(sc().ch[1].cpl==='DC')await A.press('s:AC2')},hint:'اضغط AC تحت CH II'},
+        {k:'set',dev:'sc',t:'اضبط VOLTS/DIV و TIME/DIV لين تشوف موجة أو موجتين كاملة (مثلاً 1 V/div و 0.2 ms/div).',ok:()=>!!ST.sine,
+          do:async A=>{await vdTo(A,1,1);await A.until('s:TD+',()=>sc().td<=2e-4+1e-12,12)},hint:'الموجة كلها داخل الشاشة: VOLTS/DIV على 1 V/div، و TIME/DIV على 0.2 ms/div، والـ display على CH II'},
+        {k:'rec',t:'سجّل V<sub>m</sub> = vertical deflection × V/div، و T = horizontal deflection × time/div.',ok:()=>!!ST.sine,rec:[{to:'vm',val:()=>ST.sine?ST.sine.vm:null,unit:'V',dec:2,label:'V<sub>m</sub>'},{to:'tp',val:()=>ST.sine?ST.sine.T:null,unit:'ms',dec:3,label:'T'}]}]},
       calc('6. احسب تردد الإشارة f = 1/T، و الـ V<sub>rms</sub>.'),
-      {dev:'hm1',t:'7. استخدم الـ multimeter (ac voltage mode) وقِس الـ V<sub>rms</sub> للإشارة. كيف تقارن هالقيمة بالمحسوبة في (6)؟',acts:['حط الـ Fluke على V~، و VΩ على L (مخرج الـ generator) و COM على N.'],ok:s=>ST.vrd!=null,
-        rec:[{to:'vd',val:()=>ST.vrd,unit:'V',dec:3,label:'V<sub>rms</sub> (DMM)'}]},
-      {dev:'sc',t:'8. رجّع الـ dc supply على ON لدائرة Fig. 1، ووصّله على channel 1 وحوّل الـ display mode على DUAL (الإشارتين مع بعض على الشاشة). بعدين حوّل على ADD (مجموع channel 1 و 2). كيف تقارن الإشارة بمجموع 10 V dc والإشارة اللي في (5)؟ وكم الـ V<sub>rms</sub> للإشارة الجديدة؟',
-        acts:['شغّل الـ supply على 10 V (CH I على DC).','اضغط DUAL.','حرّر DUAL واضغط ADD (DUAL و ADD مع بعض = CHOP).'],ok:s=>ST.add},
+      {dev:'hm1',t:'7. استخدم الـ multimeter (ac voltage mode) وقِس الـ V<sub>rms</sub> للإشارة. كيف تقارن هالقيمة بالمحسوبة في (6)؟',subs:[
+        {k:'set',dev:'hm1',t:'حوّل الـ Fluke على V~.',ok:s=>s.fl.pwr&&s.fl.fn==='ACV',do:A=>meterTo(A,1,1),hint:'لف قرص الـ Fluke على V~'},
+        {k:'measure',dev:'hm1',t:'VΩ على L (مخرج الـ generator) و COM على N.',ok:()=>ST.vrd!=null,do:A=>A.build(FVD),hint:'طرف VΩ على الأحمر حق الـ generator، و COM على الأسود'},
+        {k:'rec',t:'سجّل V<sub>rms</sub> من الـ DMM.',ok:()=>ST.vrd!=null,rec:[{to:'vd',val:()=>ST.vrd,unit:'V',dec:3,label:'V<sub>rms</sub> (DMM)'}]}]},
+      {dev:'sc',t:'8. رجّع الـ dc supply على ON لدائرة Fig. 1، ووصّله على channel 1 وحوّل الـ display mode على DUAL (الإشارتين مع بعض على الشاشة). بعدين حوّل على ADD (مجموع channel 1 و 2). كيف تقارن الإشارة بمجموع 10 V dc والإشارة اللي في (5)؟ وكم الـ V<sub>rms</sub> للإشارة الجديدة؟',subs:[
+        {k:'set',dev:'psu',t:'شغّل الـ supply على 10 V (CH I على DC).',ok:s=>s.dc10on,do:async A=>{await psuOn(A,10);if(sc().ch[0].cpl==='GND')await A.press('s:GD1');if(sc().ch[0].cpl==='AC')await A.press('s:AC1')},hint:'الـ supply على 10 V والـ OUTPUT على ON، و CH I على DC'},
+        {k:'set',dev:'sc',t:'اضغط DUAL.',ok:()=>!!ST.dual,do:async A=>{if(sc().add)await A.press('s:ADD');if(!sc().dual)await A.press('s:DUAL')}},
+        {k:'set',dev:'sc',t:'حرّر DUAL واضغط ADD (DUAL و ADD مع بعض = CHOP).',ok:()=>!!ST.add,do:async A=>{if(sc().dual)await A.press('s:DUAL');if(!sc().add)await A.press('s:ADD')}}]},
       /* Procedure II (manual p. 21), steps 1–4 */
-      {dev:'gen',t:'Procedure II · 1. استخدم الـ function generator وطلّع sinusoidal voltage بـ 10 V (peak to peak).',acts:['Sine، AMPL = 10 Vpp، OFFSET = 0، FREQ = 100 Hz، OUTPUT ON.'],ok:s=>s.s10},
-      {dev:'sc',t:'2. استخدم الـ oscilloscope وقِس الـ peak to peak (10 V). RMS = 5/√2 = 3.535 V.',acts:['الإشارة على CH II، و VOLTS/DIV على 2 V (5 divisions).'],ok:s=>ST.pp10},
-      {dev:'hm1',t:'3. استخدم الـ digital multimeter وقِس الـ RMS.',acts:['الـ Fluke على V~ على مخرج الـ generator.'],ok:s=>FQ.some(f=>ST['d'+f]!=null)},
-      {dev:'gen',t:'4. زِد التردد (وخلّ الـ peak to peak ثابت) وسجّل الـ RMS في الجدول:',acts:FQ.map(f=>`${f} Hz`),ok:s=>FQ.every(f=>ST['d'+f]!=null),
-        rec:FQ.map(f=>({to:'d'+f,val:()=>ST['d'+f],unit:'V',dec:3,label:`${f} Hz`}))},
+      {dev:'gen',t:'Procedure II · 1. استخدم الـ function generator وطلّع sinusoidal voltage بـ 10 V (peak to peak).',subs:[
+        {k:'set',dev:'gen',t:'AMPL = 10 Vpp.',ok:()=>Math.abs(RT.S.gen.amp-10)<0.001,do:A=>mtx(A,'a',10)},
+        {k:'set',dev:'gen',t:'FREQ = 100 Hz.',ok:()=>RT.S.gen.freq===100,do:A=>mtx(A,'f',100)},
+        {k:'set',dev:'gen',t:'Sine، OFFSET = 0 V، و OUTPUT ON.',ok:s=>s.s10,do:A=>genSine(A)}]},
+      {dev:'sc',t:'2. استخدم الـ oscilloscope وقِس الـ peak to peak (10 V). RMS = 5/√2 = 3.535 V.',subs:[
+        {k:'set',dev:'sc',t:'الإشارة على CH II، و VOLTS/DIV على 2 V/div (5 divisions).',ok:()=>!!ST.pp10,do:async A=>{await modeII(A);await vdTo(A,1,2)},hint:'الـ display على CH II، و VOLTS/DIV على 2 V/div'}]},
+      {dev:'hm1',t:'3. استخدم الـ digital multimeter وقِس الـ RMS.',subs:[
+        {k:'measure',dev:'hm1',t:'الـ Fluke على V~ على مخرج الـ generator.',ok:()=>FQ.some(f=>ST['d'+f]!=null),
+          do:async A=>{if(RT.S.hm1.pos!==1)await meterTo(A,1,1);if(K.across('ACV',RT.leadNet('gr'),-1,false)==null)await A.build(FVD2)},hint:'الـ Fluke على V~: VΩ على الأحمر حق الـ generator و COM على الأسود'}]},
+      {dev:'gen',t:'4. زِد التردد (وخلّ الـ peak to peak ثابت) وسجّل الـ RMS في الجدول.',subs:FQ.flatMap(f=>[
+        {k:'set',dev:'gen',t:`FREQ = ${fq(f)}.`,ok:()=>ST['d'+f]!=null,do:A=>mtx(A,'f',f),hint:`اضغط FREQ ولف العجلة لين ${fq(f)}`},
+        {k:'rec',t:`سجّل الـ RMS عند ${fq(f)}.`,ok:()=>ST['d'+f]!=null,rec:[{to:'d'+f,val:()=>ST['d'+f],unit:'V',dec:3,label:fq(f)}]}])},
       /* Procedure III (manual p. 22), steps 1–9 */
-      {dev:'hm1',t:'Procedure III · 1. قِس مقاومة الـ coil، R<sub>L</sub>.',acts:['حط الـ coil (17.5 mH) لحاله على اللوحة، والـ Fluke على Ω عليه.'],ok:s=>ST.rl!=null,rec:[{to:'rl',val:()=>ST.rl,unit:'Ω',dec:1,label:'R<sub>L</sub>'}]},
-      {dev:'board',build:'3',t:'2. وصّل الدائرة Fig. 3، وقِس E و V<sub>L</sub> و V<sub>R</sub> بالـ multimeter. ملاحظة: القيم المقاسة هي قيم الـ rms.',
-        acts:['اضبط e(t) = 10 sin(2π·10³t): Sine، 1 kHz، AMPL = 20 Vpp، و OUTPUT ON.','الـ Fluke على V~: E (c–b)، و V<sub>L</sub> (c–a)، و V<sub>R</sub> (a–b).'],
-        ok:s=>s.e20&&ST.e3!=null&&ST.vl3!=null&&ST.vr3!=null,rec:[['e3','E'],['vl3','V<sub>L</sub>'],['vr3','V<sub>R</sub>']].map(([k,l])=>({to:k,val:()=>ST[k],unit:'V',dec:3,label:l}))},
-      {dev:'sc',t:'3. اعرض V<sub>R</sub> و E على الـ oscilloscope. ارسم الموجات.',acts:['CH I على a (V<sub>R</sub>)، و CH II على c (E)، والأرضي على b.','حوّل على DUAL.'],ok:s=>ST.dual3,rec:[{scope:'w3',label:'V<sub>R</sub> و E'}]},
-      {dev:'sc',t:'4. قِس الـ phase angle θ، ووضّح أي موجة تسبق. ليش؟',acts:['من الإزاحة بين الموجتين على DUAL.','أو اضغط XY: الـ Lissajous، و θ = sin⁻¹(L<sub>1</sub>/L<sub>2</sub>) (Fig. 3-c).'],ok:s=>ST.xy,rec:[{scope:'w4',label:'Lissajous'}]},
-      {dev:'board',t:'5. شيل توصيلة الـ oscilloscope وقِس التيار I اللي يمشي في الدائرة.',acts:['الـ Fluke على A~: شيل الـ plug اللي بين الـ generator و c، وحط الأميتر مكانه (المدخل 300mA على جهة الـ generator، COM على c).'],ok:s=>ST.i3!=null,
-        rec:[{to:'i3',val:()=>ST.i3!=null?ST.i3*1e3:null,unit:'mA',dec:2,label:'I'}]},
+      {dev:'hm1',t:'Procedure III · 1. قِس مقاومة الـ coil، R<sub>L</sub>.',subs:[
+        {k:'set',dev:'hm1',t:'حوّل الـ Fluke على Ω.',ok:s=>s.fl.pwr&&s.fl.fn==='OHM',do:A=>meterTo(A,1,4),hint:'لف قرص الـ Fluke على Ω'},
+        {k:'measure',dev:'hm1',t:'حط الـ coil (17.5 mH) لحاله على اللوحة، والـ Fluke عليه.',ok:()=>ST.rl!=null,do:A=>A.build(OHML),hint:'الـ coil لحاله، وطرفي الـ Fluke (VΩ و COM) على رجليه'},
+        {k:'rec',t:'سجّل R<sub>L</sub>.',ok:()=>ST.rl!=null,rec:[{to:'rl',val:()=>ST.rl,unit:'Ω',dec:1,label:'R<sub>L</sub>'}]}]},
+      {dev:'board',build:'3',t:'2. وصّل الدائرة Fig. 3، وقِس E و V<sub>L</sub> و V<sub>R</sub> بالـ multimeter. ملاحظة: القيم المقاسة هي قيم الـ rms.',subs:[
+        {k:'build',fig:'3'},
+        {k:'set',dev:'gen',t:'اضبط e(t) = 10 sin(2π·10³t): Sine، 1 kHz، AMPL = 20 Vpp، OFFSET = 0 V، و OUTPUT ON.',ok:s=>s.e20,do:A=>genSine(A,1000,20),hint:'Sine، FREQ = 1 kHz، AMPL = 20 Vpp، والـ OUTPUT على ON'},
+        {k:'set',dev:'hm1',t:'حوّل الـ Fluke على V~.',ok:s=>s.fl.pwr&&s.fl.fn==='ACV',do:A=>meterTo(A,1,1)},
+        ...[['e3','E','c–b',9,22],['vl3','V<sub>L</sub>','c–a',9,10],['vr3','V<sub>R</sub>','a–b',10,17]].flatMap(([k,l,ab,a,b])=>[
+          {k:'measure',dev:'hm1',t:`${l}: الـ Fluke بين ${ab}.`,ok:()=>ST[k]!=null,do:A=>A.connect(FM(a,b)),hint:`طرف VΩ على ${ab[0]} و COM على ${ab[2]}`},
+          {k:'rec',t:`سجّل ${l}.`,ok:()=>ST[k]!=null,rec:[{to:k,val:()=>ST[k],unit:'V',dec:3,label:l}]}])]},
+      {dev:'sc',t:'3. اعرض V<sub>R</sub> و E على الـ oscilloscope. ارسم الموجات.',subs:[
+        {k:'connect',t:'CH I على a (V<sub>R</sub>)، و CH II على c (E)، والأرضي على b.',ok:s=>!!s.scope3,do:A=>A.connect(FSC),hint:'الأحمر حق CH I على a، والأحمر حق CH II على c، والأسود على b'},
+        {k:'set',dev:'sc',t:'حوّل على DUAL.',ok:()=>!!ST.dual3,do:async A=>{if(sc().xy)await A.press('s:XY');if(sc().add)await A.press('s:ADD');if(!sc().dual)await A.press('s:DUAL')}},
+        {k:'rec',t:'سجّل الموجتين.',ok:()=>!!ST.dual3,rec:[{scope:'w3',label:'V<sub>R</sub> و E'}]}]},
+      {dev:'sc',t:'4. قِس الـ phase angle θ، ووضّح أي موجة تسبق. ليش؟ (من الإزاحة بين الموجتين على DUAL، أو من الـ Lissajous: θ = sin⁻¹(L<sub>1</sub>/L<sub>2</sub>)، Fig. 3-c)',subs:[
+        {k:'set',dev:'sc',t:'اضغط XY: الـ Lissajous.',ok:()=>!!ST.xy,do:async A=>{if(!sc().xy)await A.press('s:XY')}},
+        {k:'rec',t:'سجّل الـ Lissajous.',ok:()=>!!ST.xy,rec:[{scope:'w4',label:'Lissajous'}]}]},
+      {dev:'board',t:'5. شيل توصيلة الـ oscilloscope وقِس التيار I اللي يمشي في الدائرة.',subs:[
+        {k:'connect',t:'شيل توصيلة الـ oscilloscope (CH I و CH II) وأطراف الـ Fluke.',ok:s=>s.noScope,do:async A=>{const g=RT.lead.grpOf;RT.lead.unplug(['c1r','c2r','h1v','h1c'].map(g));RT.dirty=true;await A.wait(200)},hint:'اسحب الـ probes من CH I و CH II'},
+        {k:'set',dev:'hm1',t:'حوّل الـ Fluke على A~.',ok:s=>s.fl.pwr&&s.fl.fn==='ACI',do:A=>meterTo(A,1,7),hint:'لف قرص الـ Fluke على A~'},
+        {k:'measure',dev:'hm1',t:'شيل الـ plug اللي بين الـ generator و c، وحط الأميتر مكانه (المدخل 300 mA على جهة الـ generator، COM على c).',ok:()=>ST.i3!=null,do:A=>A.connect(figs.I),hint:'الأميتر على التوالي: مكان الـ plug بين الـ generator و c'},
+        {k:'rec',t:'سجّل I.',ok:()=>ST.i3!=null,rec:[{to:'i3',val:()=>ST.i3!=null?ST.i3*1e3:null,unit:'mA',dec:2,label:'I'}]}]},
       calc('6. احسب Z<sub>T</sub> من العلاقة Z<sub>T</sub> = E/I.'),
       calc('7. احسب Z<sub>T</sub> وارسم الـ impedance diagram اللي استخدمته في حسابك.'),
       calc('8. بالـ phasor analysis أثبت إن E = V<sub>R</sub> + V<sub>L</sub>.'),

@@ -130,34 +130,86 @@ setup(RT){
     g.add(e96(v('q4re'),re)&&e96(v('q4rc'),re),'PLQ 4 RE = RC',`VE = VCC/3 = 5 V → RE = 5 V / ${tn} mA ≈ ${re.toFixed(0)} Ω → E96 ${nearE96(re)} Ω`);
     g.add(i2d>=0.1*IE-1e-12&&i2d<=0.3*IE+1e-12&&e96(v('q4r2'),r2)&&e96(v('q4r1'),r1),'PLQ 4 R1, R2',`VB = 5.7 V: R2 = VB/IR2, R1 = (15 − VB)/IR2 → E96 ${isFinite(r2)?nearE96(r2):'?'} / ${isFinite(r1)?nearE96(r1):'?'} Ω`);
     g.show($('result'))});
+  /* "do it for me" helpers (Batch 7 item 3) */
+  const UK=u=>u?'R':'L',sc=()=>RT.S.sc,g=()=>RT.S.gen,near=(a,b,t)=>A(a-b)<t;
+  const knobTo=async(Ax,u,get,t,tol)=>{let fineOnly=false;for(let i=0;i<600;i++){const x=get();if(x==null)return;const e=x-t;if(A(e)<=tol)return;
+      const k='p:'+u+(fineOnly?'VF':'VC')+(e<0?'+':'-');await Ax.tap(k,fineOnly?35:90);
+      if(!fineOnly){const y=get();if(y==null)return;if(A(y-t)>=A(e)||Math.sign(y-t)!==Math.sign(e)&&A(y-t)>tol){if(A(y-t)>=A(e))await Ax.tap('p:'+u+'VC'+(e<0?'-':'+'),90);fineOnly=true}}}};
+  const unit=()=>{const c=circuit();return c?c.u:RT.leadNet('Rp')!=null&&RT.leadNet('Lp')==null?1:0};
+  const dmm1=async(Ax,fn)=>{if(!RT.S.dmm.pwr)await Ax.press('m:PWR');if(RT.S.dmm.fn!==fn)await Ax.press('m:'+fn)};
+  /* a resistor alone on the panel with DMM 1 across it */
+  const RF={};RS.forEach(t=>RF[t]={lines:[{part:[t,0,1]},{lead:'mh',at:0},{lead:'ml',at:1}]});
+  /* DMM 1 on two points of Fig. 10.1 (reference nodes: E 17, C 18, B 19, V_CC 11/12, ground 24/26) */
+  const MP={be:[19,17],bc:[19,18],ce:[18,17],r1:[12,19],r2:[19,26],rc:[11,18],re:[17,24]},MF={};
+  for(const k in MP)MF[k]={lines:[...DC,{lead:'mh',at:MP[k][0]},{lead:'ml',at:MP[k][1]}]};
+  /* the scope probes on Fig. 10.2: CH1 on v_i (after the generator), CH2 on v_o (after C_2), black clips on ground */
+  const F102=figs['10.2'].lines,FCH1={lines:[...F102,{lead:'c1r',at:20},{lead:'c1b',at:34}]},FCH2={lines:[...F102,{lead:'c2r',at:25},{lead:'c2b',at:34}]};
+  const genSet=async(Ax,fk,digits,uk)=>{if(!g().pwr)await Ax.press('g:PWR');if(g().edit)await Ax.press('g:F5');await Ax.press('g:'+fk);for(const ch of digits)await Ax.press('g:'+ch);await Ax.press('g:'+uk)};
+  const pkpk=k=>async Ax=>{if(!sc().pwr)await Ax.press('s:PWR');await Ax.press('s:Measure');await Ax.press('s:B0');await Ax.press('s:S3');
+    await Ax.until('s:VAR+',()=>!!sc().list&&sc().list.idx===k,8);await Ax.press('s:SEL');await Ax.press('s:S0');await Ax.until('s:VAR+',()=>!!sc().list&&sc().list.idx===0,20);await Ax.press('s:SEL');
+    for(let i=0;i<4&&sc().menu;i++)await Ax.press('s:MOFF')};
+  const shot=id=>async Ax=>{if(BENCH.mode==='manual')Ax.capture();else document.querySelector(`[data-cap="${id}"]`).click()};
+  const fitH=s=>s.kind!=='AC'?'الدائرة لازم تكون Fig. 10.2':!s.sig?'الجنريتر: Sine، 1 kHz، Offset = 0 mV و CH1 شغّال':!s.probes?'CH1 على v<sub>i</sub> و CH2 على v<sub>o</sub>':'اضغط Autoset عشان الموجتين تبان واضحة';
+  const VL={be:'V<sub>BE</sub> (الأحمر على B والأسود على E)',bc:'V<sub>BC</sub> (الأحمر على B والأسود على C)',ce:'V<sub>CE</sub> (الأحمر على C والأسود على E)',r1:'V<sub>R1</sub> (على R<sub>1</sub> = 47 kΩ)',r2:'V<sub>R2</sub> (على R<sub>2</sub> = 27 kΩ)',rc:'V<sub>RC</sub> (على R<sub>C</sub> = 5.6 kΩ)',re:'V<sub>RE</sub> (على R<sub>E</sub> = 4.7 kΩ)'};
+  const RL={R5k6:'R<sub>C</sub> = 5.6 kΩ',R4k7:'R<sub>E</sub> = 4.7 kΩ',R47k:'R<sub>1</sub> = 47 kΩ',R27k:'R<sub>2</sub> = 27 kΩ'};
   return {status,
     steps:[
-      /* Procedure A (manual p. 76), steps 1–4 */
-      {dev:'dmm',t:'Procedure A · 1. بالـ DMM قِس كل مقاومة (وهي لحالها) وسجّل قيمتها في Table 10.1.',acts:['الـ DMM على Ω، الطرفين على مقاومة لحالها على اللوحة (مو موصولة بشي ثاني).','R<sub>C</sub> = 5.6 kΩ، R<sub>E</sub> = 4.7 kΩ، R<sub>1</sub> = 47 kΩ، R<sub>2</sub> = 27 kΩ.'],
-        /* the DMM is not in a figure here: its leads (either meter) */lines:[{jack:'mh',altJack:'m2h'},{jack:'ml',altJack:'m2l'}],ok:s=>s.rAll,
-        rec:[['t_rc','R5k6','R<sub>C</sub>'],['t_re','R4k7','R<sub>E</sub>'],['t_r1','R47k','R<sub>1</sub>'],['t_r2','R27k','R<sub>2</sub>']].map(([to,k,label])=>({to,val:()=>ST.r[k]!=null?ST.r[k]/1e3:null,unit:'kΩ',dec:3,label,none:'قِس هذي المقاومة لحالها بالـ DMM على Ω أول'}))},
-      {dev:'board',build:'10.1',t:'2. وصّل الدائرة Fig. 10.1.',acts:['ركّب الدائرة مثل الشكل.','V<sub>CC</sub> = 12 V من الـ dc supply، وشغّل الـ dc.'],ok:s=>s.on},
-      {dev:'dmm',t:'3. بالـ DMM على قياس الجهد المستمر (DCV)، قِس وسجّل V<sub>BE</sub> و V<sub>BC</sub> و V<sub>CE</sub> و V<sub>R1</sub> و V<sub>R2</sub> و V<sub>RC</sub> و V<sub>RE</sub> على Fig. 10.3.',
-        acts:['تقدر تقسم القياسات بين الملتيميترين.','V<sub>BC</sub>: الأحمر على B والأسود على C.'],lines:[{jack:'mh',altJack:'m2h'},{jack:'ml',altJack:'m2l'},{jack:'m2h',altJack:'mh'},{jack:'m2l',altJack:'ml'}],ok:s=>s.vAll,
-        rec:[['be','V<sub>BE</sub>'],['bc','V<sub>BC</sub>'],['ce','V<sub>CE</sub>'],['r1','V<sub>R1</sub>'],['r2','V<sub>R2</sub>'],['rc','V<sub>RC</sub>'],['re','V<sub>RE</sub>']].map(([k,label])=>({to:'v_'+k,val:()=>ST.v[k]?(ST.v[k].lo+ST.v[k].hi)/2:null,unit:'V',dec:3,label,none:'قِس هذا الجهد بالـ DMM على DCV أول'}))},
-      {dev:'board',t:'4. بالقيم المقاسة للمقاومات والجهود، احسب I<sub>C</sub> و I<sub>E</sub> و I<sub>1</sub> و I<sub>2</sub> بقانون أوم، وبعدها احسب I<sub>B</sub> بقانون كيرشوف للتيار (KCL).',
-        ok:()=>['t_ic','t_ie','t_i1','t_i2','t_ib'].every(k=>isFinite(G.v(k))),
-        rec:[['t_ic','rc','t_rc','I<sub>C</sub> = V<sub>RC</sub>/R<sub>C</sub>'],['t_ie','re','t_re','I<sub>E</sub> = V<sub>RE</sub>/R<sub>E</sub>'],['t_i1','r1','t_r1','I<sub>R1</sub> = V<sub>R1</sub>/R<sub>1</sub>'],['t_i2','r2','t_r2','I<sub>R2</sub> = V<sub>R2</sub>/R<sub>2</sub>']]
-          .map(([to,vk,rk,label])=>({to,val:()=>{const x=G.v('v_'+vk)/G.v(rk);return isFinite(x)?x:null},unit:'mA',dec:4,label,none:'سجّل الجهد والمقاومة أول'}))
-          .concat([{to:'t_ib',val:()=>{const x=G.v('t_i1')-G.v('t_i2');return isFinite(x)?x:null},unit:'mA',dec:4,label:'I<sub>B</sub> = I<sub>R1</sub> − I<sub>R2</sub>'}])},
+      /* Procedure A (manual p. 76), steps 1–4; every step split into its sub-steps (Batch 7 item 3) */
+      {dev:'dmm',t:'Procedure A · 1. بالـ DMM قِس كل مقاومة (وهي لحالها) وسجّل قيمتها في Table 10.1.',subs:[
+        {k:'set',dev:'dmm',t:'شغّل الـ DMM (POWER) واختر Ω.',ok:()=>RT.meters().some(m=>m.D.pwr&&m.D.fn==='OHM'),do:Ax=>dmm1(Ax,'OHM'),hint:'زر POWER وبعدها زر Ω في صف الوظائف'},
+        ...RS.map(t=>({k:'measure',dev:'board',t:`حط ${RL[t]} لحالها على اللوحة وطرفي الـ DMM عليها.`,ok:()=>ST.r[t]!=null,do:async Ax=>{await dmm1(Ax,'OHM');await Ax.build(RF[t])},
+          hint:`${RL[t]} لحالها على nodes فاضية (ما فيه شي ثاني عليها)، والأحمر (HI) والأسود (COM) على طرفيها، والـ DMM على Ω`})),
+        {k:'rec',t:'سجّل الأربع قيم في Table 10.1.',ok:s=>s.rAll,
+          rec:[['t_rc','R5k6','R<sub>C</sub>'],['t_re','R4k7','R<sub>E</sub>'],['t_r1','R47k','R<sub>1</sub>'],['t_r2','R27k','R<sub>2</sub>']].map(([to,k,label])=>({to,val:()=>ST.r[k]!=null?ST.r[k]/1e3:null,unit:'kΩ',dec:3,label,none:'قِس هذي المقاومة لحالها بالـ DMM على Ω أول'}))}]},
+      {dev:'board',build:'10.1',t:'2. وصّل الدائرة Fig. 10.1.',subs:[
+        {k:'build',fig:'10.1',t:'وصّل الدائرة <bdi dir="ltr">Fig. 10.1</bdi>: R<sub>1</sub> = 47 kΩ، R<sub>2</sub> = 27 kΩ، R<sub>C</sub> = 5.6 kΩ، R<sub>E</sub> = 4.7 kΩ والـ BD137.'},
+        {k:'set',dev:'psu',t:'شغّل الـ dc supply بمفتاح ∼ POWER.',ok:()=>RT.S.psu.pwr,do:Ax=>Ax.press('p:PWR')},
+        {k:'set',dev:'psu',t:'بالـ COARSE و FINE خلّ V<sub>CC</sub> = 12 V.',ok:()=>near(RT.S.psu.u[unit()].v,12,0.006),do:Ax=>{const u=unit();return knobTo(Ax,UK(u),()=>RT.S.psu.u[u].v,12,0.004)},
+          hint:()=>`الجهد الحين ${RT.S.psu.u[unit()].v.toFixed(2)} V: لف COARSE لين قريب من 12 V، وكمّل بالـ FINE`},
+        {k:'set',dev:'psu',t:'شغّل مفتاح الـ dc ⎓ ON.',ok:s=>s.on,do:async Ax=>{const u=unit();if(!RT.S.psu.u[u].on)await Ax.press('p:'+UK(u)+'ON')}}]},
+      {dev:'dmm',t:'3. بالـ DMM على قياس الجهد المستمر (DCV)، قِس وسجّل V<sub>BE</sub> و V<sub>BC</sub> و V<sub>CE</sub> و V<sub>R1</sub> و V<sub>R2</sub> و V<sub>RC</sub> و V<sub>RE</sub> على Fig. 10.3.',subs:[
+        {k:'set',dev:'dmm',t:'الـ DMM على DCV (تقدر تقسم القياسات بين الملتيميترين).',ok:()=>RT.meters().some(m=>m.D.pwr&&m.D.fn==='DCV'),do:Ax=>dmm1(Ax,'DCV'),hint:'زر DCV في صف الوظائف'},
+        ...Object.keys(MP).map(k=>({k:'measure',dev:'board',t:`قِس ${VL[k]}.`,ok:()=>ST.v[k]!=null,do:async Ax=>{await dmm1(Ax,'DCV');await Ax.connect(MF[k])},
+          hint:s=>!s.on?'V<sub>CC</sub> = 12 V لازم يكون شغّال':`حط طرفي الـ DMM (على DCV) على ${VL[k]}`})),
+        {k:'rec',t:'سجّل السبع قيم على Fig. 10.3.',ok:s=>s.vAll,
+          rec:[['be','V<sub>BE</sub>'],['bc','V<sub>BC</sub>'],['ce','V<sub>CE</sub>'],['r1','V<sub>R1</sub>'],['r2','V<sub>R2</sub>'],['rc','V<sub>RC</sub>'],['re','V<sub>RE</sub>']].map(([k,label])=>({to:'v_'+k,val:()=>ST.v[k]?(ST.v[k].lo+ST.v[k].hi)/2:null,unit:'V',dec:3,label,none:'قِس هذا الجهد بالـ DMM على DCV أول'}))}]},
+      {dev:'board',t:'4. بالقيم المقاسة للمقاومات والجهود، احسب I<sub>C</sub> و I<sub>E</sub> و I<sub>1</sub> و I<sub>2</sub> بقانون أوم، وبعدها احسب I<sub>B</sub> بقانون كيرشوف للتيار (KCL).',subs:[
+        {k:'rec',t:'I<sub>C</sub> = V<sub>RC</sub>/R<sub>C</sub>، I<sub>E</sub> = V<sub>RE</sub>/R<sub>E</sub>، I<sub>R1</sub> = V<sub>R1</sub>/R<sub>1</sub>، I<sub>R2</sub> = V<sub>R2</sub>/R<sub>2</sub>، و I<sub>B</sub> = I<sub>R1</sub> − I<sub>R2</sub>: سجّلها في Table 10.1.',
+          ok:()=>['t_ic','t_ie','t_i1','t_i2','t_ib'].every(k=>isFinite(G.v(k))),
+          rec:[['t_ic','rc','t_rc','I<sub>C</sub> = V<sub>RC</sub>/R<sub>C</sub>'],['t_ie','re','t_re','I<sub>E</sub> = V<sub>RE</sub>/R<sub>E</sub>'],['t_i1','r1','t_r1','I<sub>R1</sub> = V<sub>R1</sub>/R<sub>1</sub>'],['t_i2','r2','t_r2','I<sub>R2</sub> = V<sub>R2</sub>/R<sub>2</sub>']]
+            .map(([to,vk,rk,label])=>({to,val:()=>{const x=G.v('v_'+vk)/G.v(rk);return isFinite(x)?x:null},unit:'mA',dec:4,label,none:'سجّل الجهد والمقاومة أول'}))
+            .concat([{to:'t_ib',val:()=>{const x=G.v('t_i1')-G.v('t_i2');return isFinite(x)?x:null},unit:'mA',dec:4,label:'I<sub>B</sub> = I<sub>R1</sub> − I<sub>R2</sub>'}])}]},
       /* Procedure B (manual p. 77), steps 1–7 */
-      {dev:'board',build:'10.2',t:'Procedure B · 1. وصّل الدائرة Fig. 10.2.',acts:['انتبه لقطبية المكثفات الكيميائية: الطرف + جهة الـ base والـ collector والـ emitter.']},
-      {dev:'scope',t:'2. شغّل الإسكوب، انتظر كم ثانية، اضغط Default وبعدها Autoset. اعرض v<sub>i</sub>(t) على CH1 و v<sub>O</sub>(t) على CH2.',
-        acts:['CH1 على v<sub>i</sub> (طرف GEN OUT)، و CH2 على v<sub>O</sub> (بعد C<sub>2</sub>)، والأسود للاثنين على الأرضي.','شغّل CH2.'],lines:[{jack:'c1r'},{jack:'c2r'}],ok:s=>ST.auto&&s.probes&&s.chs},
-      {dev:'gen',t:'3. من الـ signal generator طبّق على الدائرة إشارة sine بـ 20 mVp-p و 1 kHz.',ok:s=>s.kind==='AC'&&s.sig&&A(s.amp-0.02)<5e-4},
-      {dev:'scope',t:'4. أضف قياس Pk-Pk التلقائي لـ CH1 و CH2 في الإسكوب مثل ما تعلمت قبل.',ok:s=>s.meas},
-      {dev:'scope',t:'5. اعرض وسجّل الموجتين v<sub>i</sub>(t) و v<sub>O</sub>(t) على Fig. 10.4. كم فرق الطور بينهم؟',ok:s=>!!CAPS.f104&&!!G.s('ph'),
-        rec:[{scope:'f104',label:'Fig. 10.4'},{to:'ph',val:()=>phase(),txt:v=>v+'°',label:'Phase difference'}]},
-      {dev:'board',t:'6. احسب الكسب الفعلي A<sub>v</sub> = V<sub>o(pp)</sub>/V<sub>i(pp)</sub> والكسب النظري بدون حمل من المعادلة (10.5)، وسجّل الاثنين في Table 10.1.',
-        ok:()=>isFinite(G.v('t_avm'))&&isFinite(G.v('t_avt')),
-        rec:[{to:'t_avm',val:()=>{const p=(CAPS.f104||status()).pp;return p&&p[0]>0?-p[1]/p[0]:null},dec:1,label:'A<sub>v</sub> = V<sub>o(pp)</sub>/V<sub>i(pp)</sub>',none:'سجّل Fig. 10.4 أول'},
-          {to:'t_avt',val:()=>{const x=-G.v('t_ic')*G.v('t_rc')/0.0259;return isFinite(x)?x:null},dec:1,label:'A<sub>v</sub> = −I<sub>C</sub>R<sub>C</sub>/V<sub>T</sub>',none:'سجّل I<sub>C</sub> و R<sub>C</sub> أول'}]},
-      {dev:'gen',t:'7. ارفع V<sub>i(p-p)</sub> لـ 200 mV، وسجّل الموجتين v<sub>i</sub>(t) و v<sub>O</sub>(t) على Fig. 10.5.',ok:s=>!!CAPS.f105,rec:[{scope:'f105',label:'Fig. 10.5'}]}
+      {dev:'board',build:'10.2',t:'Procedure B · 1. وصّل الدائرة Fig. 10.2.',subs:[
+        {k:'build',fig:'10.2',t:'وصّل الدائرة <bdi dir="ltr">Fig. 10.2</bdi>: C<sub>1</sub> = C<sub>2</sub> = 2.2 µF و C<sub>E</sub> = 470 µF. انتبه لقطبية المكثفات الكيميائية: الطرف + جهة الـ base والـ collector والـ emitter.'}]},
+      {dev:'scope',t:'2. شغّل الإسكوب، انتظر كم ثانية، اضغط Default وبعدها Autoset. اعرض v<sub>i</sub>(t) على CH1 و v<sub>O</sub>(t) على CH2.',subs:[
+        {k:'set',dev:'scope',t:'شغّل الإسكوب (POWER) وانتظر كم ثانية.',ok:()=>sc().pwr,do:Ax=>Ax.press('s:PWR')},
+        {k:'set',dev:'scope',t:'اضغط Default.',ok:()=>!!ST.def,do:Ax=>Ax.press('s:Default')},
+        {k:'set',dev:'scope',t:'اضغط Autoset.',ok:()=>!!ST.auto,do:Ax=>Ax.press('s:Autoset')},
+        {k:'connect',fig:FCH1,t:'وصّل CH1 على v<sub>i</sub> (طرف GEN OUT)، والأسود على الأرضي.'},
+        {k:'connect',fig:FCH2,t:'وصّل CH2 على v<sub>O</sub> (بعد C<sub>2</sub>)، والأسود على الأرضي.'},
+        {k:'set',dev:'scope',t:'شغّل CH2.',ok:s=>!!s.chs,do:async Ax=>{if(!sc().ch[1].on)await Ax.press('s:CH2');if(!sc().ch[0].on)await Ax.press('s:CH1')}}]},
+      {dev:'gen',t:'3. من الـ signal generator طبّق على الدائرة إشارة sine بـ 20 mVp-p و 1 kHz.',subs:[
+        {k:'set',dev:'gen',t:'شغّل الجنريتر واختر Sine.',ok:()=>g().pwr&&g().wave==='Sine',do:async Ax=>{if(!g().pwr)await Ax.press('g:PWR');await Ax.press('g:Sine')}},
+        {k:'set',dev:'gen',t:'التردد (F1) = 1 kHz.',ok:()=>near(g().freq,1000,0.01),do:Ax=>genSet(Ax,'F1','1','F2')},
+        {k:'set',dev:'gen',t:'الـ Amplitude (F2) = 20 mVpp.',ok:()=>near(g().amp,0.02,5e-4),do:Ax=>genSet(Ax,'F2','20','F1')},
+        {k:'set',dev:'gen',t:'الـ Offset (F3) = 0 mV.',ok:()=>near(g().off,0,5e-4),do:Ax=>genSet(Ax,'F3','0','F1')},
+        {k:'set',dev:'gen',t:'شغّل مخرج CH1.',ok:s=>s.kind==='AC'&&s.sig&&near(s.amp,0.02,5e-4),do:async Ax=>{if(!g().out)await Ax.press('g:CH1')},hint:s=>s.kind!=='AC'?'الدائرة لازم تكون Fig. 10.2':'زر CH1 في منطقة المخارج'}]},
+      {dev:'scope',t:'4. أضف قياس Pk-Pk التلقائي لـ CH1 و CH2 في الإسكوب مثل ما تعلمت قبل.',subs:[
+        {k:'set',dev:'scope',t:'Measure → Add Measurement → Source1 = CH1 → V/I → Pk-Pk.',ok:()=>sc().meas.some(m=>m.src===0&&m.type==='Pk-Pk'),do:pkpk(0)},
+        {k:'set',dev:'scope',t:'نفس الشي لـ CH2: Source1 = CH2 → Pk-Pk.',ok:s=>!!s.meas,do:pkpk(1)}]},
+      {dev:'scope',t:'5. اعرض وسجّل الموجتين v<sub>i</sub>(t) و v<sub>O</sub>(t) على Fig. 10.4. كم فرق الطور بينهم؟',subs:[
+        {k:'set',dev:'scope',t:'اعرض الموجتين واضحة على الشاشة (Autoset).',ok:s=>s.kind==='AC'&&s.sig&&s.chs&&s.fit&&s.probe1,do:Ax=>Ax.press('s:Autoset'),hint:fitH},
+        {k:'rec',t:'سجّل الشاشة على Fig. 10.4.',ok:()=>!!CAPS.f104,do:shot('f104'),rec:[{scope:'f104',label:'Fig. 10.4'}]},
+        {k:'rec',t:'سجّل فرق الطور بين v<sub>i</sub> و v<sub>O</sub>.',ok:()=>!!G.s('ph'),rec:[{to:'ph',val:()=>phase(),txt:v=>v+'°',label:'Phase difference'}]}]},
+      {dev:'board',t:'6. احسب الكسب الفعلي A<sub>v</sub> = V<sub>o(pp)</sub>/V<sub>i(pp)</sub> والكسب النظري بدون حمل من المعادلة (10.5)، وسجّل الاثنين في Table 10.1.',subs:[
+        {k:'rec',t:'A<sub>v</sub> المقاس من قراءات Pk-Pk، و A<sub>v</sub> = −I<sub>C</sub>R<sub>C</sub>/V<sub>T</sub> النظري: سجّلهم في Table 10.1.',ok:()=>isFinite(G.v('t_avm'))&&isFinite(G.v('t_avt')),
+          rec:[{to:'t_avm',val:()=>{const p=(CAPS.f104||status()).pp;return p&&p[0]>0?-p[1]/p[0]:null},dec:1,label:'A<sub>v</sub> = V<sub>o(pp)</sub>/V<sub>i(pp)</sub>',none:'سجّل Fig. 10.4 أول'},
+            {to:'t_avt',val:()=>{const x=-G.v('t_ic')*G.v('t_rc')/0.0259;return isFinite(x)?x:null},dec:1,label:'A<sub>v</sub> = −I<sub>C</sub>R<sub>C</sub>/V<sub>T</sub>',none:'سجّل I<sub>C</sub> و R<sub>C</sub> أول'}]}]},
+      {dev:'gen',t:'7. ارفع V<sub>i(p-p)</sub> لـ 200 mV، وسجّل الموجتين v<sub>i</sub>(t) و v<sub>O</sub>(t) على Fig. 10.5.',subs:[
+        {k:'set',dev:'gen',t:'الـ Amplitude (F2) = 200 mVpp.',ok:s=>!!s.sig&&near(g().amp,0.2,5e-4),do:Ax=>genSet(Ax,'F2','200','F1')},
+        {k:'set',dev:'scope',t:'اعرض الموجتين واضحة على الشاشة (Autoset).',ok:s=>s.kind==='AC'&&s.sig&&near(s.amp,0.2,5e-4)&&s.chs&&s.fit&&s.probe1,do:Ax=>Ax.press('s:Autoset'),hint:fitH},
+        {k:'rec',t:'سجّل الشاشة على Fig. 10.5.',ok:()=>!!CAPS.f105,do:shot('f105'),rec:[{scope:'f105',label:'Fig. 10.5'}]}]}
     ],
     onReset(){for(const k in ST)delete ST[k];ST.r={};ST.v={};['f104','f105'].forEach(id=>{$(id).textContent=id==='f104'?'Fig. 10.4':'Fig. 10.5';delete CAPS[id]});$('result').innerHTML=''}};
 }};})();
