@@ -83,9 +83,10 @@ setup(RT){
       if(SS.L.slice(0,SS.cur+1).some(x=>x.chk))return true;for(let j=i-1;j>=0&&S[j].proc===s.proc;j--)if((S[j].subs||[]).some(x=>x.chk))return true;return false}catch(e){return false}}
   /* "do it for me" helpers: the matched Fig. 4's voltmeter (across the source) and ammeter (after the current coil), the
      Fluke's rotary switch turned to its position, the capacitor box's dials */
-  const vM=()=>{const M=RT.match('4');if(!M.ok)return null;const a=M.net(0),b=M.net(14);return RT.meters().find(m=>m.D.jack==='HI'&&(m.hi===a&&m.lo===b||m.hi===b&&m.lo===a))||null};
-  const aM=()=>{const M=RT.match('4');if(!M.ok)return null;return RT.meters().find(m=>m.D.jack==='A'&&m.hi===M.net(1)&&m.lo===M.net(2))||null};
-  const sw=async(A,m,pos)=>{if(!m)return;const p='h'+m.key.slice(2);const d=RT.S[m.key];await A.until(p+':SW'+(d.pos<pos?'+':'-'),()=>RT.S[m.key].pos===pos,8)};
+  const ln=(n,j)=>RT.leadNet('h'+n+j);
+  const vM=()=>{const M=RT.match('4');if(!M.ok)return null;const a=M.net(0),b=M.net(14);const n=[1,2].find(n=>ln(n,'ma')==null&&(ln(n,'v')===a&&ln(n,'c')===b||ln(n,'v')===b&&ln(n,'c')===a));return n?{n,D:RT.S['hm'+n]}:null};
+  const aM=()=>{const M=RT.match('4');if(!M.ok)return null;const n=[1,2].find(n=>ln(n,'ma')===M.net(1)&&ln(n,'c')===M.net(2));return n?{n,D:RT.S['hm'+n]}:null};
+  const sw=async(A,m,pos)=>{if(!m)return;const k='hm'+m.n,d=RT.S[k];if(d.pos===pos)return;await A.until('h'+m.n+':SW'+(d.pos<pos?'+':'-'),()=>RT.S[k].pos===pos,8)};
   const want=c=>[0,0,0,Math.round(c*10)%10,Math.floor(c+1e-9)];
   const setC=async(A,c)=>{const w=want(c);for(let j=0;j<5;j++){const d=RT.S.cb.d;if(d[j]!==w[j])await A.until('q:D'+j+(d[j]<w[j]?'+':'-'),()=>RT.S.cb.d[j]===w[j],12)}};
   const isC=c=>Math.abs(RT.inst.cb.value()-c)<1e-6;

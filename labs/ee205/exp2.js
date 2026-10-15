@@ -92,6 +92,7 @@ setup(RT){
     const b=r1===a?r2:r1;if(b!==-1||c==null||c===a||c===-1||RT.leadNet('gb')!==-1)return null;return {a,b,c}}
   function status(){const st={};const S=sc(),g=K.gen();st.pwr=S.pwr;st.fl=RT.S.hm1;
     st.knobs=S.pwr&&(S.focus!==RT.inst.sc.fresh().focus||S.intens!==RT.inst.sc.fresh().intens);if(st.knobs)ST.knobs=true;
+    {const F0=RT.inst.sc.fresh();if(S.pwr&&S.focus!==F0.focus)ST.foc=true;if(S.pwr&&S.intens!==F0.intens)ST.int=true;if(S.pwr&&(S.hpos!==0||S.ch[0].pos!==0||S.ch[1].pos!==0))ST.pos=true}
     /* Procedure I · Fig. 1 */
     const s=K.sup();st.sup=s;st.fig1=RT.match('1').ok;
     if(st.fig1&&S.ch[0].cpl==='GND'&&S.pwr)ST.zero=true;
@@ -106,6 +107,7 @@ setup(RT){
     if(st.fig2&&st.sine14){const v=K.across('ACV',gn,-1,false);if(v!=null&&ST.sine)ST.vrd=v}
     const md=RT.inst.sc.mode();st.mode=md;
     const fig1on=s&&probe(0)!=null&&probe(0)===s.P&&RT.leadNet('c1b')===s.M;
+    st.dc10on=!!(fig1on&&s.ok&&Math.abs(s.U.v-10)<0.006&&st.ch1dc);
     if(fig1on&&st.fig2&&s.ok&&Math.abs(s.U.v-10)<0.006&&st.sine14&&st.ch1dc){if(md==='DUAL')ST.dual=true;if(md==='ADD'&&ST.dual)ST.add=true}
     /* Procedure II: 10 Vpp sine, scope on it, DMM on ACV */
     const s10=g.on&&g.wave==='Sine'&&Math.abs(g.vpp-10)<0.001&&Math.abs(g.off)<1e-9;st.s10=s10;
