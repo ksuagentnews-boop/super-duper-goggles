@@ -24,8 +24,10 @@ export async function run(page, vp, ok) {
         if (b) { await page.touchscreen.tap(b[0], b[1]); await page.evaluate(() => BENCH.sim.RT.closePad()); } }
       await page.waitForTimeout(30); } };
   for (const [i, x] of [[1, 4], [2, 18], [3, 32]]) { await setR(i); await H.lead('h5v', x); await H.lead('h5c', 20); }
-  ok(await done(2), `I 2 rheostats at 100 Ω ${JSON.stringify(await status())}`);
-  await power(); ok(!(await page.evaluate(() => BENCH.sim.RT.S.x3.pwr)), 'I 3 the instructor refuses while M5 is not across a–n (Fig. 7)');
+  ok(await done(1) && !(await done(2)), 'I 2 the three rheostats set, step 2 waits for M5 back across a–n');
+  await H.lead('h5v', 4); await H.lead('h5c', 20); ok(await done(2), `I 2 rheostats at 100 Ω, M5 back across a–n ${JSON.stringify(await status())}`);
+  ok(await page.evaluate(() => !!document.querySelector('#stepCard #scChk')), 'I 3 the card shows «المشرف يتأكد من التوصيل»');
+  await H.lead('h5v', 32); await power(); ok(!(await page.evaluate(() => BENCH.sim.RT.S.x3.pwr)), 'I 3 the instructor refuses while M5 is not across a–n (Fig. 7)');
   await H.lead('h5v', 4); await H.lead('h5c', 20); await power(); ok(await done(3), 'I 3 M5 back across a–n, powered after the instructor check');
   for (const n of [1, 2, 3]) { await H.focus('hm' + n); await H.key(`h${n}:SW+`, 7); } ok(await done(4), `I 4 ammeters ${JSON.stringify((await status()).ST)}`);
   await H.focus('hm5'); await H.key('h5:SW-', 3); await H.focus('hm4'); await H.key('h4:SW-'); ok(await done(5), `I 5 voltmeters ${JSON.stringify((await status()).ST)}`);

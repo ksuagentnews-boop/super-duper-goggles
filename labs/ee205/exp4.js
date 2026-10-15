@@ -5,7 +5,8 @@
    the free nodes inside; the voltmeter and the wattmeter's voltage coil across the source. The build step ticks when the
    bench IS Fig. 4 (engine/match.js), whatever nodes are used; the readings follow the matched nets.
    Step 1 carries the manual's «Get the connection checked by the instructor and let him energize the circuit for you»
-   («المشرف يتأكد من التوصيل», Manual / Exam only).
+   («المشرف يتأكد من التوصيل», Manual / Exam only) as its own sub-step (chk:true): the card shows the button from that
+   sub-step on, not while the circuit is still being built. Every step is split into its sub-steps (Batch 7 item 3).
    Instruments: the wall socket (no ac supply on the table: the mains lead plugs into the wall), lamp, Metrix PX 120, two
    Fluke 77 (either may be the voltmeter or the ammeter on its 300 mA jack), BC05 box.
    Decisions: the lamp with its ballast is a linear R + L load: R = 263 Ω, L = 0.931 H (22 W, PF 0.60 lagging at 127 V,
@@ -73,18 +74,49 @@ setup(RT){
     const best=CL.filter(c=>ST[key(c)]).reduce((b,c)=>b==null||ST[key(c)].I<ST[key(b)].I?c:b,null);g.add(best!=null&&Math.abs(v('cbest')-best)<0.11,'C with the minimum current',best!=null?`${best} µF in your table`:'');
     g.show($('result'))});
   const rd=(c,f)=>{const r=ST[key(c)];return r?r[f]:null};
+  const recC=c=>{const k=key(c),lab=c?`C = ${c.toFixed(1)} µF`:'C not connected';return [{to:k+'v',val:()=>rd(c,'V'),unit:'V',dec:1,label:lab+' V'},{to:k+'i',val:()=>rd(c,'I'),unit:'A',dec:4,label:lab+' I'},{to:k+'p',val:()=>rd(c,'P'),unit:'W',dec:2,label:lab+' P'}]};
+  /* the instructor check (Batch 7 item 3): its button shows in the card from the sub-step that asks for it (chk:true) on —
+     not while the circuit is still being built before it */
+  const LKa=(RT.locks||[]).find(l=>l.key==='ac');
+  if(LKa){const real=LKa.isOk;LKa.isOk=()=>real()||!atChk()}
+  function atChk(){try{const S=BENCH.sim.steps,i=BENCH.cur(),s=S[i];if(!s)return false;const SS=BENCH.subState(s);
+      if(SS.L.slice(0,SS.cur+1).some(x=>x.chk))return true;for(let j=i-1;j>=0&&S[j].proc===s.proc;j--)if((S[j].subs||[]).some(x=>x.chk))return true;return false}catch(e){return false}}
+  /* "do it for me" helpers: the matched Fig. 4's voltmeter (across the source) and ammeter (after the current coil), the
+     Fluke's rotary switch turned to its position, the capacitor box's dials */
+  const ln=(n,j)=>RT.leadNet('h'+n+j);
+  const vM=()=>{const M=RT.match('4');if(!M.ok)return null;const a=M.net(0),b=M.net(14);const n=[1,2].find(n=>ln(n,'ma')==null&&(ln(n,'v')===a&&ln(n,'c')===b||ln(n,'v')===b&&ln(n,'c')===a));return n?{n,D:RT.S['hm'+n]}:null};
+  const aM=()=>{const M=RT.match('4');if(!M.ok)return null;const n=[1,2].find(n=>ln(n,'ma')===M.net(1)&&ln(n,'c')===M.net(2));return n?{n,D:RT.S['hm'+n]}:null};
+  const sw=async(A,m,pos)=>{if(!m)return;const k='hm'+m.n,d=RT.S[k];if(d.pos===pos)return;await A.until('h'+m.n+':SW'+(d.pos<pos?'+':'-'),()=>RT.S[k].pos===pos,8)};
+  const want=c=>[0,0,0,Math.round(c*10)%10,Math.floor(c+1e-9)];
+  const setC=async(A,c)=>{const w=want(c);for(let j=0;j<5;j++){const d=RT.S.cb.d;if(d[j]!==w[j])await A.until('q:D'+j+(d[j]<w[j]?'+':'-'),()=>RT.S.cb.d[j]===w[j],12)}};
+  const isC=c=>Math.abs(RT.inst.cb.value()-c)<1e-6;
+  const C4=CL.filter(c=>c>=2);
+  /* step 4: every C of the table set in turn and its three readings captured (Manual) */
+  const sweep=async(A,j)=>{for(const c of C4){if(!ST[key(c)]){await setC(A,c);A.st()}
+    const s=BENCH.sim.steps[BENCH.cur()],caps=s?BENCH.capsOf(s,j):[];const n=3*(C4.indexOf(c)+1);while(caps.length<n){const q=caps.length;A.capture();if(caps.length===q)break}}};
+  const chkT='اطلب من المشرف يتأكد من التوصيل: اضغط «المشرف يتأكد من التوصيل» في هذي البطاقة.';
   return {status,
     steps:[
-      {dev:'board',build:'4',t:'1. وصّل الدائرة مثل Fig. 4. «Get the connection checked by the instructor and let him energize the circuit for you»: المشرف يتأكد من التوصيل وبعدها تشغّلها.',
-        acts:['اضغط «المشرف يتأكد من التوصيل» في هذي البطاقة.','إذا التوصيل سليم ركّب فيش السلك في الفيش الجداري (اضغط على الفيش).','شغّل الـ PX 120، وحط الـ voltmeter على V~ والـ ammeter على A~.'],ok:s=>s.on},
-      {dev:'cb',t:'2. سجّل قراءة الـ voltmeter والـ ammeter والـ wattmeter قبل ما توصّل المكثف (كل أقراص الصندوق على 0).',ok:s=>!!ST[key(0)],
-        rec:[{to:'c0v',val:()=>rd(0,'V'),unit:'V',dec:1,label:'C not connected V'},{to:'c0i',val:()=>rd(0,'I'),unit:'A',dec:4,label:'C not connected I'},{to:'c0p',val:()=>rd(0,'P'),unit:'W',dec:2,label:'C not connected P'}]},
-      {dev:'cb',t:'3. وصّل المكثف على الخط بسعة 1 µF (قرص ×1µF على 1)، وسجّل قراءة الـ voltmeter والـ ammeter والـ wattmeter مرة ثانية.',ok:s=>!!ST[key(1)],
-        rec:[{to:'c1v',val:()=>rd(1,'V'),unit:'V',dec:1,label:'C = 1.0 µF V'},{to:'c1i',val:()=>rd(1,'I'),unit:'A',dec:4,label:'C = 1.0 µF I'},{to:'c1p',val:()=>rd(1,'P'),unit:'W',dec:2,label:'C = 1.0 µF P'}]},
-      {dev:'cb',t:'4. زِد قيمة المكثف خطوة خطوة (2.0 و 3.0 µF، وبعدين من 3.2 لـ 6.0 µF كل 0.2 µF) وسجّل القراءات لين توصل لنقطة يكون فيها التيار أقل شي.',ok:s=>s.done,
-        rec:[{to:'c2v',val:()=>rd(2.0,'V'),unit:'V',dec:1,label:'C = 2.0 µF V'},{to:'c2i',val:()=>rd(2.0,'I'),unit:'A',dec:4,label:'C = 2.0 µF I'},{to:'c2p',val:()=>rd(2.0,'P'),unit:'W',dec:2,label:'C = 2.0 µF P'},{to:'c3v',val:()=>rd(3.0,'V'),unit:'V',dec:1,label:'C = 3.0 µF V'},{to:'c3i',val:()=>rd(3.0,'I'),unit:'A',dec:4,label:'C = 3.0 µF I'},{to:'c3p',val:()=>rd(3.0,'P'),unit:'W',dec:2,label:'C = 3.0 µF P'},{to:'c3_2v',val:()=>rd(3.2,'V'),unit:'V',dec:1,label:'C = 3.2 µF V'},{to:'c3_2i',val:()=>rd(3.2,'I'),unit:'A',dec:4,label:'C = 3.2 µF I'},{to:'c3_2p',val:()=>rd(3.2,'P'),unit:'W',dec:2,label:'C = 3.2 µF P'},{to:'c3_4v',val:()=>rd(3.4,'V'),unit:'V',dec:1,label:'C = 3.4 µF V'},{to:'c3_4i',val:()=>rd(3.4,'I'),unit:'A',dec:4,label:'C = 3.4 µF I'},{to:'c3_4p',val:()=>rd(3.4,'P'),unit:'W',dec:2,label:'C = 3.4 µF P'},{to:'c3_6v',val:()=>rd(3.6,'V'),unit:'V',dec:1,label:'C = 3.6 µF V'},{to:'c3_6i',val:()=>rd(3.6,'I'),unit:'A',dec:4,label:'C = 3.6 µF I'},{to:'c3_6p',val:()=>rd(3.6,'P'),unit:'W',dec:2,label:'C = 3.6 µF P'},{to:'c3_8v',val:()=>rd(3.8,'V'),unit:'V',dec:1,label:'C = 3.8 µF V'},{to:'c3_8i',val:()=>rd(3.8,'I'),unit:'A',dec:4,label:'C = 3.8 µF I'},{to:'c3_8p',val:()=>rd(3.8,'P'),unit:'W',dec:2,label:'C = 3.8 µF P'},{to:'c4v',val:()=>rd(4.0,'V'),unit:'V',dec:1,label:'C = 4.0 µF V'},{to:'c4i',val:()=>rd(4.0,'I'),unit:'A',dec:4,label:'C = 4.0 µF I'},{to:'c4p',val:()=>rd(4.0,'P'),unit:'W',dec:2,label:'C = 4.0 µF P'},{to:'c4_2v',val:()=>rd(4.2,'V'),unit:'V',dec:1,label:'C = 4.2 µF V'},{to:'c4_2i',val:()=>rd(4.2,'I'),unit:'A',dec:4,label:'C = 4.2 µF I'},{to:'c4_2p',val:()=>rd(4.2,'P'),unit:'W',dec:2,label:'C = 4.2 µF P'},{to:'c4_4v',val:()=>rd(4.4,'V'),unit:'V',dec:1,label:'C = 4.4 µF V'},{to:'c4_4i',val:()=>rd(4.4,'I'),unit:'A',dec:4,label:'C = 4.4 µF I'},{to:'c4_4p',val:()=>rd(4.4,'P'),unit:'W',dec:2,label:'C = 4.4 µF P'},{to:'c4_6v',val:()=>rd(4.6,'V'),unit:'V',dec:1,label:'C = 4.6 µF V'},{to:'c4_6i',val:()=>rd(4.6,'I'),unit:'A',dec:4,label:'C = 4.6 µF I'},{to:'c4_6p',val:()=>rd(4.6,'P'),unit:'W',dec:2,label:'C = 4.6 µF P'},{to:'c4_8v',val:()=>rd(4.8,'V'),unit:'V',dec:1,label:'C = 4.8 µF V'},{to:'c4_8i',val:()=>rd(4.8,'I'),unit:'A',dec:4,label:'C = 4.8 µF I'},{to:'c4_8p',val:()=>rd(4.8,'P'),unit:'W',dec:2,label:'C = 4.8 µF P'},{to:'c5v',val:()=>rd(5.0,'V'),unit:'V',dec:1,label:'C = 5.0 µF V'},{to:'c5i',val:()=>rd(5.0,'I'),unit:'A',dec:4,label:'C = 5.0 µF I'},{to:'c5p',val:()=>rd(5.0,'P'),unit:'W',dec:2,label:'C = 5.0 µF P'},{to:'c5_2v',val:()=>rd(5.2,'V'),unit:'V',dec:1,label:'C = 5.2 µF V'},{to:'c5_2i',val:()=>rd(5.2,'I'),unit:'A',dec:4,label:'C = 5.2 µF I'},{to:'c5_2p',val:()=>rd(5.2,'P'),unit:'W',dec:2,label:'C = 5.2 µF P'},{to:'c5_4v',val:()=>rd(5.4,'V'),unit:'V',dec:1,label:'C = 5.4 µF V'},{to:'c5_4i',val:()=>rd(5.4,'I'),unit:'A',dec:4,label:'C = 5.4 µF I'},{to:'c5_4p',val:()=>rd(5.4,'P'),unit:'W',dec:2,label:'C = 5.4 µF P'},{to:'c5_6v',val:()=>rd(5.6,'V'),unit:'V',dec:1,label:'C = 5.6 µF V'},{to:'c5_6i',val:()=>rd(5.6,'I'),unit:'A',dec:4,label:'C = 5.6 µF I'},{to:'c5_6p',val:()=>rd(5.6,'P'),unit:'W',dec:2,label:'C = 5.6 µF P'},{to:'c5_8v',val:()=>rd(5.8,'V'),unit:'V',dec:1,label:'C = 5.8 µF V'},{to:'c5_8i',val:()=>rd(5.8,'I'),unit:'A',dec:4,label:'C = 5.8 µF I'},{to:'c5_8p',val:()=>rd(5.8,'P'),unit:'W',dec:2,label:'C = 5.8 µF P'},{to:'c6v',val:()=>rd(6.0,'V'),unit:'V',dec:1,label:'C = 6.0 µF V'},{to:'c6i',val:()=>rd(6.0,'I'),unit:'A',dec:4,label:'C = 6.0 µF I'},{to:'c6p',val:()=>rd(6.0,'P'),unit:'W',dec:2,label:'C = 6.0 µF P'}]},
-      {dev:'cb',t:'5. للمبة بدون مكثف: احسب الـ load resistance R، والـ inductive reactance X<sub>L</sub>، والـ impedance Z<sub>L</sub>، والـ phase angle θ<sub>L</sub> والـ PF. احسب قيمة C اللي تخلّي PF = 1.',ok:s=>!!ST[key(0)]},
-      {dev:'cb',t:'6. احسب الـ PF لكل قيمة C وكمّل Table 1. طلّع قيمة C اللي تعطي أعلى PF، وقارنها باللي حسبتها في خطوة 5.',ok:s=>s.done}
+      {dev:'board',build:'4',t:'1. وصّل الدائرة مثل Fig. 4. «Get the connection checked by the instructor and let him energize the circuit for you».',subs:[
+        {k:'build',fig:'4',t:'وصّل الدائرة <bdi dir="ltr">Fig. 4</bdi> (مع المفتاح S وصندوق المكثفات).'},
+        {k:'set',chk:true,dev:'ac',t:chkT,ok:()=>!!RT.S.ac.ok,do:A=>A.press('a:CHK'),hint:'بعد ما تكمّل Fig. 4 اضغط «المشرف يتأكد من التوصيل»؛ إذا رفض، اقرا سببه وصلّحه'},
+        {k:'set',dev:'ac',t:'ركّب فيش السلك في الفيش الجداري (127 V ~ 60 Hz): اضغط على الفيش.',ok:s=>s.on,do:A=>A.press('a:PWR'),hint:'اضغط على فيش السلك الأسود عشان يدخل في الفيش الجداري'},
+        {k:'set',dev:'pw1',t:'شغّل الـ PX 120 (زر POWER).',ok:s=>!!s.pw.pwr,do:A=>A.press('w1:PWR'),hint:'زر POWER في الـ PX 120'},
+        {k:'measure',t:'حط الـ voltmeter (الـ Fluke اللي على المصدر) على V~.',ok:()=>{const m=vM();return !!m&&m.D.fn==='ACV'},do:A=>sw(A,vM(),1),hint:'لف مفتاح الـ Fluke اللي على L و N لين V~'},
+        {k:'measure',t:'حط الـ ammeter (الـ Fluke اللي على التوالي، مدخل 300 mA) على A~.',ok:()=>{const m=aM();return !!m&&m.D.fn==='ACI'},do:A=>sw(A,aM(),7),hint:'لف مفتاح الـ Fluke اللي على التوالي لين A~'}]},
+      {dev:'cb',t:'2. سجّل قراءة الـ voltmeter والـ ammeter والـ wattmeter قبل ما توصّل المكثف (كل أقراص الصندوق على 0 µF).',subs:[
+        {k:'set',dev:'cb',t:'لف أقراص صندوق المكثفات لين C = 0 µF (المكثف مو موصول).',ok:()=>isC(0),do:A=>setC(A,0),hint:'كل الأقراص على 0 µF'},
+        {k:'rec',t:'سجّل V و I و P (C not connected) في Table 1.',ok:()=>!!ST[key(0)],rec:recC(0)}]},
+      {dev:'cb',t:'3. وصّل المكثف على الخط بسعة 1 µF (قرص ×1µF على 1 µF)، وسجّل قراءة الـ voltmeter والـ ammeter والـ wattmeter مرة ثانية.',subs:[
+        {k:'set',dev:'cb',t:'لف قرص ×1µF لين C = 1.0 µF.',ok:()=>isC(1),do:A=>setC(A,1),hint:'قرص ×1µF على 1 µF وباقي الأقراص على 0 µF'},
+        {k:'rec',t:'سجّل V و I و P (C = 1.0 µF) في Table 1.',ok:()=>!!ST[key(1)],rec:recC(1)}]},
+      {dev:'cb',t:'4. زِد قيمة المكثف خطوة خطوة (2.0 و 3.0 µF، وبعدين من 3.2 µF إلى 6.0 µF كل 0.2 µF) وسجّل القراءات لين توصل لنقطة يكون فيها التيار أقل شي.',subs:[
+        {k:'rec',dev:'cb',t:'لكل قيمة C (2.0 µF، 3.0 µF، 3.2 µF … 6.0 µF): لف أقراص الصندوق عليها وسجّل V و I و P في Table 1.',ok:s=>s.done,rec:C4.flatMap(recC),do:A=>sweep(A,0),
+          hint:s=>{const c=C4.find(c=>!ST[key(c)]);return c!=null?`الحين C = ${s.C.toFixed(1)} µF: لف الأقراص لين C = ${c.toFixed(1)} µF`:'كل القيم جاهزة: سجّلها'}}]},
+      {dev:'cb',t:'5. للمبة بدون مكثف: احسب الـ load resistance R، والـ inductive reactance X<sub>L</sub>، والـ impedance Z<sub>L</sub>، والـ phase angle θ<sub>L</sub> والـ PF. احسب قيمة C اللي تخلّي PF = 1.',subs:[
+        {k:'set',t:'احسب في الـ sheet: R = P / I²، Z<sub>L</sub> = V / I، X<sub>L</sub> = √(Z<sub>L</sub>² − R²)، θ<sub>L</sub>، PF = cos θ<sub>L</sub>، و C = X<sub>L</sub> / (ω Z<sub>L</sub>²).',ok:()=>!!ST[key(0)]}]},
+      {dev:'cb',t:'6. احسب الـ PF لكل قيمة C وكمّل Table 1. طلّع قيمة C اللي تعطي أعلى PF، وقارنها باللي حسبتها في خطوة 5.',subs:[
+        {k:'set',t:'احسب PF = P / (V·I) لكل صف في Table 1، واكتب قيمة C اللي تعطي أقل تيار وأعلى PF.',ok:s=>s.done}]}
     ],
     onReset(){ST={};$('result').innerHTML=''}};
 }};})();
