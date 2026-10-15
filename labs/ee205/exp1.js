@@ -152,43 +152,75 @@ setup(RT){
     g.add(G.near(v('iyc'),CAL.id,0.1),'IY calculated','= ID calculated (Y is equivalent to Δ)');
     g.show($('result'))});
   const COLTXT=c=>COLS.find(q=>q[0]===c)[1];
-  const calc=t=>({dev:'board',t,ok:()=>true});
+  const calc=t=>({dev:'board',t,subs:[{k:'set',t:'احسبها واكتبها في الـ sheet.',ok:()=>true}]});
+  const fmtR=v=>v>=1000?v/1000+' kΩ':v+' Ω';
+  /* "do it for me" helpers (Batch 7 item 3): the supply unit wired into the circuit, its voltage by COARSE then FINE; a
+     handheld meter's rotary switch to a position; a decade box's dials to a value */
+  const U=()=>RT.leadNet('Rp')!=null&&RT.leadNet('Lp')==null?'R':'L';
+  const unit=()=>RT.S.psu.u[U()==='L'?0:1];
+  const volts=async(A,E)=>{const u=U();if(!RT.S.psu.pwr)await A.press('p:PWR');for(let i=0;i<80&&Math.abs(unit().v-E)>=0.5;i++)await A.tap('p:'+u+'VC'+(unit().v<E?'+':'-'),90);
+    for(let i=0;i<300&&Math.abs(unit().v-E)>0.004;i++)await A.tap('p:'+u+'VF'+(unit().v<E?'+':'-'),35)};
+  const psuOn=async(A,E)=>{await volts(A,E);if(!unit().on)await A.press('p:'+U()+'ON')};
+  const meterTo=(A,n,pos)=>A.until(`h${n}:SW${RT.S['hm'+n].pos<pos?'+':'-'}`,()=>RT.S['hm'+n].pos===pos,12);
+  const dials=async(A,n,v)=>{const t=[0,1,2,3,4,5].map(j=>Math.floor(Math.round(v)/Math.pow(10,j))%10),d=RT.S['yew'+n].d;
+    for(let j=0;j<6;j++){const k=t[j]-d[j];if(k)await A.press(`y${n}:D${j}${k>0?'+':'-'}`,Math.abs(k))}};
   return {status,
     steps:[
-      /* Procedure I (manual p. 13–14), steps 1–4 */
-      {dev:'hm1',t:'Procedure I · 1. عندك على الطاولة ثلاث color coded resistors: حدّد قيمة كل وحدة، أولاً بالحساب من الـ color code، وثانياً بالقياس بالـ ohmmeter. سجّل قراءاتك في Table 2 وعلّق على الفرق.',
-        acts:['حوّل الـ Fluke 77 (M1) على Ω (الـ ohmmeter).','حط Resistor 1 لحاله على اللوحة ووصّل M1 عليه (VΩ و COM)، واقرا ألوانه وقيمته.','كرّر لـ Resistor 2 و Resistor 3 (شيل اللي قبلها).'],
-        ok:s=>ST.rRC1!=null&&ST.rRC2!=null&&ST.rRC3!=null,
-        rec:[1,2,3].flatMap(k=>{const t='RC'+k,c='abc'[k-1];return [{to:'c'+k,val:()=>ST['r'+t]!=null?c:null,txt:()=>COLTXT(c),label:`Resistor ${k} colors`,none:`حط Resistor ${k} لحاله على الـ ohmmeter`},
-          {to:'cm'+k,val:()=>ST['r'+t],unit:'Ω',dec:1,label:`Resistor ${k} (ohmmeter)`}]})},
-      {dev:'yew1',t:'2. بالـ ohmmeter قِس المقاومات المحددة من الـ decade resistance box مثل Table 3، وسجّل قراءاتك. واحسب كمان الـ tolerance المكتوبة على الصندوق والـ errors في قراءاتك.',
-        acts:['شيل المقاومة، ووصّل طرفي الـ decade box (H و L) مع أطراف M1 لحالها.',...BOX.map(([k,r,val])=>`صفّر الأقراص واضبط قرص ${r} لين يصير الصندوق ${val>=1000?val/1000+' kΩ':val+' Ω'}، وسجّل قراءة الـ ohmmeter.`)],
-        ok:s=>BOX.every(([k])=>ST[k]!=null),rec:BOX.map(([k,r,val])=>({to:k,val:()=>ST[k],unit:'Ω',dec:1,label:`${r} · ${val>=1000?val/1000+' kΩ':val+' Ω'}`}))},
+      /* Procedure I (manual p. 13–14), steps 1–4; every step split into its sub-steps (Batch 7 item 3) */
+      {dev:'hm1',t:'Procedure I · 1. عندك على الطاولة ثلاث color coded resistors: حدّد قيمة كل وحدة، أولاً بالحساب من الـ color code، وثانياً بالقياس بالـ ohmmeter. سجّل قراءاتك في Table 2 وعلّق على الفرق.',subs:[
+        {k:'set',dev:'hm1',t:'حوّل الـ Fluke 77 (M1) على Ω (الـ ohmmeter).',ok:s=>s.flOhm,do:A=>meterTo(A,1,4),hint:'لف قرص الـ Fluke لين يوقف على Ω'},
+        ...[1,2,3].flatMap(k=>{const t='RC'+k,c='abc'[k-1];return [
+          {k:'measure',dev:'hm1',t:`حط Resistor ${k} لحاله على اللوحة${k>1?' (شيل اللي قبلها)':''} ووصّل M1 عليه (VΩ و COM).`,ok:()=>ST['r'+t]!=null,do:A=>A.build(OHM[t]),
+            hint:s=>s.flOhm?`Resistor ${k} لحاله على اللوحة، وطرفي M1 (VΩ و COM) على رجليه`:'M1 لازم يكون على Ω'},
+          {k:'rec',t:`اقرا ألوان Resistor ${k} وسجّلها مع قراءة الـ ohmmeter في Table 2.`,ok:()=>ST['r'+t]!=null,
+            rec:[{to:'c'+k,val:()=>ST['r'+t]!=null?c:null,txt:()=>COLTXT(c),label:`Resistor ${k} colors`,none:`حط Resistor ${k} لحاله على الـ ohmmeter`},{to:'cm'+k,val:()=>ST['r'+t],unit:'Ω',dec:1,label:`Resistor ${k} (ohmmeter)`}]}]})]},
+      {dev:'yew1',t:'2. بالـ ohmmeter قِس المقاومات المحددة من الـ decade resistance box مثل Table 3، وسجّل قراءاتك. واحسب كمان الـ tolerance المكتوبة على الصندوق والـ errors في قراءاتك.',subs:[
+        {k:'measure',dev:'yew1',t:'شيل المقاومة، ووصّل طرفي الـ decade box (H و L) مع أطراف M1 لحالها.',ok:s=>!!s.boxOn,do:A=>A.build(OHMBOX),hint:'الـ decade box لحاله على M1: H على VΩ و L على COM (أو بالعكس)، و M1 على Ω'},
+        ...BOX.flatMap(([k,r,val])=>[
+          {k:'set',dev:'yew1',t:`صفّر الأقراص واضبط قرص ${r} لين يصير الصندوق ${fmtR(val)}.`,ok:()=>ST[k]!=null,do:A=>dials(A,1,val),hint:`الصندوق لازم يكون ${fmtR(val)} بالضبط: قرص ${r} بس، وباقي الأقراص على الصفر`},
+          {k:'rec',t:`سجّل قراءة الـ ohmmeter (${fmtR(val)}) في Table 3.`,ok:()=>ST[k]!=null,rec:[{to:k,val:()=>ST[k],unit:'Ω',dec:1,label:`${r} · ${fmtR(val)}`}]}])]},
       calc('3. من نسبة الـ % tolerance المكتوبة على كل range في الصندوق، احسب المدى المقبول لكل قيمة وسجّله في Table 3. مثال: ×1 عليه 0.5 %، يعني 4 Ω ± 0.02 Ω (من 3.98 Ω إلى 4.02 Ω).'),
       calc('4. احسب الـ % error لكل قراءة: % error = (actual meter reading − decade box reading) / decade box reading × 100.'),
       /* Procedure II (manual p. 14), steps 1–6 */
-      {dev:'board',build:'5',t:'Procedure II · 1. وصّل الدائرة Fig. 5.'},
-      {dev:'hm1',t:'2. قِس V<sub>1</sub> و V<sub>2</sub> و V<sub>3</sub> و E بدقة.',acts:['شغّل الـ POWER، واضبط الوحدة على E = 10 V (COARSE ثم FINE)، وحوّل الـ OUTPUT على ON.','حوّل M1 على V⎓: V<sub>1</sub> على R1، و V<sub>2</sub> على R2، و V<sub>3</sub> على R3، و E على المصدر (VΩ على طرف الـ +).'],
-        ok:s=>['v1','v2','v3','vt'].every(k=>ST[k]!=null),rec:[['v1','V<sub>1</sub>'],['v2','V<sub>2</sub>'],['v3','V<sub>3</sub>'],['vt','E = V<sub>Total</sub>']].map(([k,l])=>({to:k+'m',val:()=>ST[k],unit:'V',dec:3,label:l}))},
+      {dev:'board',build:'5',t:'Procedure II · 1. وصّل الدائرة Fig. 5.',subs:[{k:'build',fig:'5'}]},
+      {dev:'hm1',t:'2. قِس V<sub>1</sub> و V<sub>2</sub> و V<sub>3</sub> و E بدقة.',subs:[
+        {k:'set',dev:'psu',t:'شغّل الـ POWER.',ok:()=>RT.S.psu.pwr,do:A=>A.press('p:PWR')},
+        {k:'set',dev:'psu',t:'اضبط الوحدة على E = 10 V (COARSE ثم FINE).',ok:s=>!!s.s10&&Math.abs(s.s10.U.v-10)<0.006,do:A=>volts(A,10),hint:'لف COARSE لين قريب من 10 V، وكمّل بالـ FINE'},
+        {k:'set',dev:'psu',t:'حوّل الـ OUTPUT على ON.',ok:s=>!!s.s10&&s.s10.ok,do:A=>psuOn(A,10)},
+        {k:'set',dev:'hm1',t:'حوّل M1 على V⎓.',ok:s=>s.flV,do:A=>meterTo(A,1,2),hint:'لف قرص الـ Fluke على V⎓'},
+        ...[['v1','V<sub>1</sub>','على R1'],['v2','V<sub>2</sub>','على R2'],['v3','V<sub>3</sub>','على R3'],['vt','E = V<sub>Total</sub>','على المصدر']].flatMap(([k,l,on])=>[
+          {k:'measure',dev:'hm1',t:`${l}: M1 ${on} (VΩ على جهة الـ +).`,ok:()=>ST[k]!=null,do:A=>A.connect(VM[k]),hint:s=>s.flV?`طرفي M1 ${on}: VΩ على الطرف اللي جهة الـ + و COM على الثاني`:'M1 لازم يكون على V⎓'},
+          {k:'rec',t:`سجّل ${l} في Table 4.`,ok:()=>ST[k]!=null,rec:[{to:k+'m',val:()=>ST[k],unit:'V',dec:3,label:l}]}])]},
       calc('3. احسب V<sub>1</sub> و V<sub>2</sub> و V<sub>3</sub> بالـ voltage division rule.'),
       calc('4. قارن قيم V<sub>1</sub> و V<sub>2</sub> و V<sub>3</sub> في الخطوات (2) و (3) و (4).'),
       calc('5. سجّل نتائجك في Table 4.'),
       calc('6. علّق على الفرق (إن وجد) بين V<sub>1</sub> و V<sub>2</sub> و V<sub>3</sub> في الخطوات (2) و (3) و (4).'),
       /* Procedure III (manual p. 15), steps 1–5 */
-      {dev:'board',build:'6',t:'Procedure III · 1. وصّل الدائرة Fig. 6.'},
-      {dev:'hm2',t:'2. قِس I<sub>1</sub> و I<sub>2</sub> و I<sub>3</sub> و I<sub>T</sub> بدقة.',acts:['شغّل الـ OUTPUT على E = 10 V.','حوّل الـ GoldStar (M2) على 40mA. الأميتر ينركّب على التوالي: شيل الـ bridging plug اللي في الفرع وحط الأميتر مكانه (V·Ω·mA على جهة المصدر، COM على جهة المقاومة)، وبعدها رجّع الـ plug.','سجّل I<sub>1</sub> (فرع R1) و I<sub>2</sub> و I<sub>3</sub>، وآخر شي I<sub>T</sub> مكان الـ plug اللي بين المصدر والفروع.'],
-        ok:s=>['i1','i2','i3','it'].every(k=>ST[k]!=null),rec:[['i1','I<sub>1</sub>'],['i2','I<sub>2</sub>'],['i3','I<sub>3</sub>'],['it','I<sub>T</sub>']].map(([k,l])=>({to:k+'m',val:()=>ST[k]!=null?ST[k]*1e3:null,unit:'mA',dec:2,label:l}))},
+      {dev:'board',build:'6',t:'Procedure III · 1. وصّل الدائرة Fig. 6.',subs:[{k:'build',fig:'6'}]},
+      {dev:'hm2',t:'2. قِس I<sub>1</sub> و I<sub>2</sub> و I<sub>3</sub> و I<sub>T</sub> بدقة.',subs:[
+        {k:'set',dev:'psu',t:'شغّل الـ OUTPUT على E = 10 V.',ok:s=>!!s.s10&&s.s10.ok,do:A=>psuOn(A,10),hint:'الـ POWER والـ OUTPUT على ON، والوحدة على 10 V'},
+        {k:'set',dev:'hm2',t:'حوّل الـ GoldStar (M2) على 40 mA.',ok:s=>s.gs40&&RT.S.hm2.fn==='DCI',do:A=>meterTo(A,2,6),hint:'لف قرص الـ GoldStar على 40 mA'},
+        ...[['i1','I<sub>1</sub>','اللي في فرع R1'],['i2','I<sub>2</sub>','اللي في فرع R2'],['i3','I<sub>3</sub>','اللي في فرع R3'],['it','I<sub>T</sub>','اللي بين المصدر والفروع']].flatMap(([k,l,at])=>[
+          {k:'measure',dev:'hm2',t:`${l}: شيل الـ bridging plug ${at} وحط الأميتر مكانه (V·Ω·mA على جهة المصدر، COM على الجهة الثانية)، وبعدها رجّع الـ plug.`,ok:()=>ST[k]!=null,do:A=>A.connect(AM[k]),
+            hint:s=>s.gs40?`الأميتر على التوالي: مكان الـ plug ${at}`:'M2 لازم يكون على 40 mA'},
+          {k:'rec',t:`سجّل ${l} في Table 5.`,ok:()=>ST[k]!=null,rec:[{to:k+'m',val:()=>ST[k]!=null?ST[k]*1e3:null,unit:'mA',dec:2,label:l}]}])]},
       calc('3. احسب I<sub>1</sub> و I<sub>2</sub> و I<sub>3</sub> بالـ current division rule.'),
       calc('4. سجّل نتائجك في Table 5.'),
       calc('5. علّق على الفرق (إن وجد) بين I<sub>1</sub> و I<sub>2</sub> و I<sub>3</sub> و I<sub>T</sub> في الخطوات (2) و (3) و (4).'),
       /* Procedure IV (manual p. 16), steps 1–6 */
-      {dev:'board',build:'7',t:'Procedure IV · 1. وصّل الدائرة Fig. 7 واحسب التيار I<sub>D</sub> بأي طريقة <b>إلا</b> الـ Δ-Y transformation.'},
-      {dev:'hm2',t:'2. قِس I<sub>D</sub> بدقة.',acts:['حوّل M2 على 400mA (I<sub>D</sub> أكبر من 40 mA).','اضبط المصدر على E = 15 V وشغّل الـ OUTPUT، وسجّل I<sub>D</sub>.'],ok:s=>ST.id!=null,
-        rec:[{to:'idm',val:()=>ST.id!=null?ST.id*1e3:null,unit:'mA',dec:2,label:'I<sub>D</sub>'}]},
+      {dev:'board',build:'7',t:'Procedure IV · 1. وصّل الدائرة Fig. 7 واحسب التيار I<sub>D</sub> بأي طريقة <b>إلا</b> الـ Δ-Y transformation.',subs:[{k:'build',fig:'7'}]},
+      {dev:'hm2',t:'2. قِس I<sub>D</sub> بدقة.',subs:[
+        {k:'set',dev:'hm2',t:'حوّل M2 على 400 mA (I<sub>D</sub> أكبر من 40 mA).',ok:s=>s.gs400,do:A=>meterTo(A,2,7),hint:'لف قرص الـ GoldStar على 400 mA'},
+        {k:'set',dev:'psu',t:'اضبط المصدر على E = 15 V.',ok:s=>!!s.s15&&Math.abs(s.s15.U.v-15)<0.006,do:A=>volts(A,15),hint:'لف COARSE لين 15 V، وكمّل بالـ FINE'},
+        {k:'set',dev:'psu',t:'شغّل الـ OUTPUT.',ok:s=>!!s.s15&&s.s15.ok,do:A=>psuOn(A,15)},
+        {k:'rec',t:'سجّل I<sub>D</sub>.',ok:()=>ST.id!=null,rec:[{to:'idm',val:()=>ST.id!=null?ST.id*1e3:null,unit:'mA',dec:2,label:'I<sub>D</sub>'}]}]},
       calc('3. قارن قيم I<sub>D</sub>: المحسوبة والمقاسة والـ simulated.'),
       calc('4. احسب الـ Y المكافئ لـ Δ abc وسجّل قيم المقاومات R<sub>a</sub> و R<sub>b</sub> و R<sub>c</sub>.'),
-      {dev:'board',build:'8',t:'5. وصّل دائرة Fig. 8 وقِس I<sub>Y</sub>.',acts:['اضبط R<sub>a</sub> على الصندوق R1، و R<sub>b</sub> على R2، و R<sub>c</sub> على R3 (لأقرب Ω).','شيل مقاومات الـ Δ abc (220 Ω a-c، 470 Ω a-b، 10 kΩ c-b)، ووصّل الصناديق الثلاث Y: كل صندوق بين نقطة الـ Y وطرفه.','بنفس E = 15 V سجّل I<sub>Y</sub> من M2.'],
-        ok:s=>s.ySet&&ST.iy!=null,rec:[{to:'iym',val:()=>ST.iy!=null?ST.iy*1e3:null,unit:'mA',dec:2,label:'I<sub>Y</sub>'}]},
+      {dev:'board',build:'8',t:'5. وصّل دائرة Fig. 8 وقِس I<sub>Y</sub>.',subs:[
+        ...[['a',1,'ra','R<sub>ab</sub> R<sub>ac</sub>'],['b',2,'rb','R<sub>ab</sub> R<sub>bc</sub>'],['c',3,'rc','R<sub>ac</sub> R<sub>bc</sub>']].map(([x,n,k,num])=>
+          ({k:'set',dev:'yew'+n,t:`اضبط R<sub>${x}</sub> اللي حسبته على الصندوق R${n} (لأقرب Ω).`,ok:()=>Math.abs(box(n)-CAL[k])<=1,do:A=>dials(A,n,CAL[k]),hint:`R<sub>${x}</sub> = ${num} / (R<sub>ab</sub> + R<sub>bc</sub> + R<sub>ac</sub>)`})),
+        {k:'build',fig:'8',t:'شيل مقاومات الـ Δ abc (220 Ω a-c، 470 Ω a-b، 10 kΩ c-b)، ووصّل الصناديق الثلاث Y (<bdi dir="ltr">Fig. 8</bdi>): كل صندوق بين نقطة الـ Y وطرفه.'},
+        {k:'rec',t:'بنفس E = 15 V سجّل I<sub>Y</sub> من M2.',ok:s=>s.ySet&&ST.iy!=null,rec:[{to:'iym',val:()=>ST.iy!=null?ST.iy*1e3:null,unit:'mA',dec:2,label:'I<sub>Y</sub>'}]}]},
       calc('6. قارن قيم I<sub>D</sub> و I<sub>Y</sub>: المقاسة والمحسوبة والـ simulated.')
     ],
     onReset(){ST={};$('result').innerHTML=''}};

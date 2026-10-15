@@ -7,7 +7,8 @@ export async function run(page, vp, ok) {
   const done = async n => (await H.steps()).done >= n;
   const sc = () => page.evaluate(() => BENCH.sim.RT.S.sc);
   // ---- Procedure I (Figs. 1 and 2 on nodes of their own, not the reference ones) ----
-  await H.focus('sc'); await H.key('s:PWR'); await H.key('s:FOC-', 3); ok(await done(1), 'I.1 scope on, focus turned');
+  await H.focus('sc'); await H.key('s:PWR'); await H.key('s:FOC-', 3); await H.key('s:INT-'); await H.key('s:Y1+'); await H.key('s:Y1-');
+  ok(await done(1), 'I.1 scope on, focus, intensity and position turned');
   await H.focus('board'); await H.lead('c1r', 2); await H.lead('c1b', 9); await H.lead('Lp', 2); await H.lead('Lm', 9);
   ok(await page.evaluate(() => BENCH.sim.RT.match('1').ok), 'I.2 Fig. 1 matches');
   await H.focus('sc'); await H.key('s:GD1'); await H.key('s:GD1'); await H.key('s:AC1');

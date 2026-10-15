@@ -210,3 +210,4 @@ Updated after every finished item (commit + push each time).
 - Batch 7 item 3: EE312 Exp 2 and 3 in sub-steps, every one doable by «اضبط لي / وصّل لي / سجّل لي» (sweeps set each voltage with COARSE then FINE and capture), Exam full marks, doall / units / circuits pass.
 - Batch 7 item 3: EE205 Exp 4 and 5 in sub-steps (instructor check as its own sub-step; the Exp 4 C sweep 2.0–6.0 µF by «سجّل لي»), Exam full marks, doall / units / circuits pass.
 - Batch 7 item 3: EE312 Exp 4, 7, 9, 10 in sub-steps (Table 7.1 / Exp 9 rows captured by «سجّل لي» that sets each row), all doable by do-it-for-me; engine: «وصّل لي» counts each bench lead for one figure terminal only (alt keys on a shared net).
+- Batch 7 item 3: EE205 Exp 1, 2, 3 in sub-steps (Fluke / GoldStar rotary switch, Thandar COARSE / FINE, YEW dials, Metrix keys by «اضبط لي»), all doable by do-it-for-me, Exam full marks.
