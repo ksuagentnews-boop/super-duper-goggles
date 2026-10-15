@@ -49,6 +49,9 @@ ${tr('Opposing: V','vop','V')}${tr('Opposing: I','iop','mA','0.01')}${tr('X<sub>
 const SRC=[{lead:'acL',at:8},{lead:'acN',at:22},{lead:'h1v',at:8},{lead:'h1c',at:22}],AMM=[{lead:'h4ma',at:8},{lead:'h4c',at:9}],UCX={ic:'UC',pins:{P1:10,A:11,P2:17,B:18}};
 const BOT=[{wire:[17,24]},{wire:[24,23]},{wire:[23,22]}],F='labs/ee205/fig/';
 const figs={
+  /* Rdc of each coil with any one of the four meters (step I.1, I.3): the U-core alone, the meter's VΩ and COM on the coil */
+  'rdc1':{img:F+'e7-fig7.png',cap:'R<sub>dc</sub> of coil 1 (the multimeter on Ω across 1 and 2, the source off)',lines:[UCX,{lead:'h1v',alt:['h2v','h3v','h4v'],at:10},{lead:'h1c',alt:['h2c','h3c','h4c'],at:17}]},
+  'rdc2':{img:F+'e7-fig7.png',cap:'R<sub>dc</sub> of coil 2 (the multimeter on Ω across A and B, the source off)',lines:[UCX,{lead:'h1v',alt:['h2v','h3v','h4v'],at:11},{lead:'h1c',alt:['h2c','h3c','h4c'],at:18}]},
   '7':{img:F+'e7-fig7.png',cap:'Fig. 7 · coil 1 on the 60 Hz source (A in series, V across the source)',lines:[UCX,...SRC,...AMM,{wire:[9,10]},...BOT]},
   '7b':{img:F+'e7-fig7.png',cap:'Fig. 7 · repeated for coil 2 (A → B)',lines:[{ic:'UC',pins:{P1:17,A:18,P2:24,B:25}},...SRC,...AMM,{wire:[9,10]},{wire:[10,11]},{wire:[11,18]},{wire:[25,32]},{wire:[32,31]},{wire:[31,30]},{wire:[30,29]},{wire:[29,22]}]},
   '8':{img:F+'e7-fig8.png',cap:'Fig. 8 · V<sub>2</sub> on coil 2',lines:[UCX,...SRC,...AMM,{wire:[9,10]},...BOT,{lead:'h2v',at:11},{lead:'h2c',at:18}]},
@@ -107,42 +110,88 @@ setup(RT){
     add('vop','opposing V',1,'V');add('iop','opposing I',1e3,'mA');g.add(G.near(v('xe2'),Math.sqrt(Math.max(0,(v('vop')/v('iop')*1e3)**2-(v('r1')+v('r2'))**2)),2),'Xeq2',`≈ ${T.xe2.toFixed(0)} Ω`);
     g.add(G.near(v('m12'),(v('xe1')-v('xe2'))/(4*W),0.002)&&G.near(v('m12'),M,M*0.05),'M12',`≈ ${M} H`);g.add(G.near(v('kk'),v('m12')/Math.sqrt(v('l1')*v('l2')),0.01),'k',`≈ ${T.k.toFixed(2)}`);
     g.show($('result'))});
+  /* the instructor check (Batch 7 item 3): its button shows in the card from the sub-step that asks for it (chk:true) on —
+     not while the circuit is still being built before it (as Exp 4 and 5) */
+  const LKa=(RT.locks||[]).find(l=>l.key==='ac');
+  if(LKa){const real=LKa.isOk;LKa.isOk=()=>real()||!atChk()}
+  function atChk(){try{const S=BENCH.sim.steps,i=BENCH.cur(),s=S[i];if(!s)return false;const SS=BENCH.subState(s);
+      if(SS.L.slice(0,SS.cur+1).some(x=>x.chk))return true;for(let j=i-1;j>=0&&S[j].proc===s.proc;j--)if((S[j].subs||[]).some(x=>x.chk))return true;return false}catch(e){return false}}
+  /* "do it for me" helpers: the Fluke whose leads sit on two nets (either way round), the one used as the ammeter, its rotary
+     switch turned to a position (V~ = 1, Ω = 4, A~ = 7), the variac knob until the voltmeter across the source reads 2.00 V */
+  const ln=(n,j)=>RT.leadNet('h'+n+j);
+  const vMeter=(a,b)=>a==null||b==null?null:[1,2,3,4].find(n=>ln(n,'ma')==null&&ln(n,'a')==null&&(ln(n,'v')===a&&ln(n,'c')===b||ln(n,'v')===b&&ln(n,'c')===a))||null;
+  const aMeter=()=>[1,2,3,4].find(n=>ln(n,'ma')!=null||ln(n,'a')!=null)||null;
+  const vOn=(a,b)=>{const n=vMeter(a,b);return !!n&&RT.S['hm'+n].pos===1};
+  const sw=async(A,n,pos)=>{if(!n)return;const k='hm'+n,d=RT.S[k];if(d.pos===pos)return;await A.until('h'+n+':SW'+(d.pos<pos?'+':'-'),()=>RT.S[k].pos===pos,8)};
+  const set2=async A=>{await A.focus('ac');let flips=0,last=0;for(let k=0;k<160&&flips<6;k++){const v=status().Vs;if(v==null||Math.abs(v-2)<=0.02)return;const d=v<2?1:-1;if(last&&d!==last)flips++;last=d;await A.tap(d>0?'a:V+':'a:V-',60)}};
+  const chkT='اطلب من المشرف يتأكد من التوصيل: اضغط «المشرف يتأكد من التوصيل» في هذي البطاقة.';
+  const chkS=()=>({k:'set',chk:true,dev:'ac',t:chkT,ok:()=>!!RT.S.ac.ok,do:A=>A.press('a:CHK'),hint:'بعد ما تكمّل الشكل اضغط «المشرف يتأكد من التوصيل»؛ إذا رفض، اقرا سببه وصلّحه'});
+  const pwrS=()=>({k:'set',dev:'ac',t:'شغّل الـ variac (POWER).',ok:s=>s.on,do:async A=>{if(!RT.S.ac.pwr)await A.press('a:PWR')},hint:'مفتاح POWER في الـ variac (بعد ما يشيّك المشرف)'});
+  const offS=()=>({k:'set',dev:'ac',t:'طفّ الـ variac (POWER) قبل ما تغيّر التوصيل.',ok:s=>s.off,do:async A=>{if(RT.S.ac.pwr)await A.press('a:PWR')}});
+  const v2S=(ok,t)=>({k:'set',dev:'ac',t:t||'لف الـ variac لين M1 يقرا 2.00 V<sub>rms</sub>.',ok,do:set2,hint:s=>`M1 يقرا الحين ${s.Vs!=null?s.Vs.toFixed(3)+' V':'؟ (هو على V~ وعلى المصدر؟)'}: لف الـ variac لين 2.00 V`});
+  const vS=(n,t,pins)=>({k:'measure',dev:'hm'+n,t,ok:()=>vOn(...pins()),do:A=>sw(A,vMeter(...pins())||n,1),hint:`الملتيميتر اللي على النقطتين: حوّل مفتاحه على V~`});
+  const ohmS=(pins,t)=>({k:'measure',dev:'hm1',t,ok:()=>{const n=vMeter(...pins());return !!n&&RT.S['hm'+n].pos===4},do:A=>sw(A,vMeter(...pins()),4),hint:'الملتيميتر اللي على الـ coil: حوّل مفتاحه على Ω (المصدر طافي)'});
+  const P=()=>[pin('P1'),pin('P2')],AB=()=>[pin('A'),pin('B')],SRCN=()=>{const s=src();return [s.L,s.N]};
+  const ammS=()=>({k:'measure',dev:'hm4',t:'الأميتر M4 (على التوالي في 300mA و COM) على A~.',ok:()=>{const n=aMeter();return !!n&&RT.S['hm'+n].pos===7},do:A=>sw(A,aMeter(),7),hint:'الملتيميتر اللي على التوالي: حوّل مفتاحه على A~'});
   return {status,
     steps:[
-      /* Procedure I (manual pp. 60–61), steps 1–7 */
-      {dev:'hm4',t:'Procedure I · 1. قِس المقاومة R<sub>dc</sub> لـ coil 1 بالـ multimeter: هذي الـ dc resistance لـ coil 1.',
-        acts:['حط الـ 2 coils على الـ U-core في اللوحة (coil 1 = 1000 turns: 1 و 2، coil 2 = 500 turns: A و B).','الملتيميتر على Ω: VΩ على 1 و COM على 2، والمصدر طافي.'],ok:s=>ST.rdc1!=null,
-        rec:[{to:'rdc1',label:'R<sub>dc</sub> coil 1',unit:'Ω',dec:1,val:()=>ST.rdc1}]},
-      {dev:'hm4',t:'2. احسب الـ ac resistance لـ coil 1: R<sub>1</sub> = 1.15 R<sub>dc</sub> (زيادة 15 % بسبب الـ skin effect).',ok:s=>ST.rdc1!=null},
-      {dev:'hm4',t:'3. بنفس الطريقة طلّع R<sub>2</sub>، الـ ac resistance لـ coil 2 (قِس R<sub>dc</sub> بين A و B).',ok:s=>ST.rdc2!=null,
-        rec:[{to:'rdc2',label:'R<sub>dc</sub> coil 2',unit:'Ω',dec:1,val:()=>ST.rdc2}]},
-      {dev:'board',build:'7',t:'4. وصّل coil 1 على مصدر جهد متغير 60 Hz مثل Fig. 7 (coil 1: 1000 turns، coil 2: 500 turns).'},
-      {dev:'ac',t:'⚠ «Get the connection checked by the instructor»: اضغط «المشرف يتأكد من التوصيل» في هذي البطاقة، وبعدين شغّل الـ POWER.',ok:s=>s.on&&RT.S.ac.ok},
-      {dev:'ac',t:'5. اضبط الجهد المطبّق على 2 V<sub>rms</sub>، وخذ قراءة الأميتر والفولتميتر.',acts:['M1 على V~ و M4 على A~.','لفّ الـ variac لين M1 يقرا 2.00 V.'],ok:s=>ST.va!=null,
-        rec:[{to:'va',label:'V',unit:'V',dec:3,val:()=>ST.va},{to:'ia',label:'I',unit:'mA',dec:2,val:()=>ST.ia!=null?ST.ia*1e3:null}]},
-      {dev:'ac',t:'6. احسب الـ self inductance لـ coil 1: Z<sub>1</sub> = V/I = √(R<sub>1</sub>² + X<sub>1</sub>²)، و X<sub>1</sub> = √(Z<sub>1</sub>² − R<sub>1</sub>²)، و L<sub>1</sub> = X<sub>1</sub>/ω.',ok:s=>ST.va!=null},
-      {dev:'board',build:'7b',t:'7. كرّر لـ coil 2 عشان تطلع L<sub>2</sub>.',acts:['طفّ المصدر ووصّل coil 2 (A و B) مكان coil 1 في Fig. 7.','المشرف يتأكد، شغّل، واضبط 2 V<sub>rms</sub>، وسجّل V و I.'],ok:s=>ST.vb!=null,
-        rec:[{to:'vb',label:'V',unit:'V',dec:3,val:()=>ST.vb},{to:'ib',label:'I',unit:'mA',dec:2,val:()=>ST.ib!=null?ST.ib*1e3:null}]},
+      /* Procedure I (manual pp. 60–61), steps 1–7; every step split into its sub-steps (Batch 7 item 3) */
+      {dev:'hm1',t:'Procedure I · 1. قِس المقاومة R<sub>dc</sub> لـ coil 1 بالـ multimeter: هذي الـ dc resistance لـ coil 1.',subs:[
+        {k:'connect',fig:'rdc1',t:'حط الـ 2 coils على الـ U-core في اللوحة (coil 1 = 1000 turns: طرف 1 وطرف 2، coil 2 = 500 turns: A و B)، ووصّل الملتيميتر: VΩ على طرف 1 و COM على طرف 2.'},
+        ohmS(P,'حوّل الملتيميتر على Ω (المصدر طافي).'),
+        {k:'rec',t:'سجّل R<sub>dc</sub> لـ coil 1.',ok:()=>ST.rdc1!=null,rec:[{to:'rdc1',label:'R<sub>dc</sub> coil 1',unit:'Ω',dec:1,val:()=>ST.rdc1}]}]},
+      {dev:'hm1',t:'2. احسب الـ ac resistance لـ coil 1: R<sub>1</sub> = 1.15 R<sub>dc</sub> (زيادة 15 % بسبب الـ skin effect).',subs:[
+        {k:'set',t:'احسب R<sub>1</sub> = 1.15 R<sub>dc</sub> واكتبها في الـ sheet.',ok:()=>ST.rdc1!=null}]},
+      {dev:'hm1',t:'3. بنفس الطريقة طلّع R<sub>2</sub>، الـ ac resistance لـ coil 2 (قِس R<sub>dc</sub> بين A و B).',subs:[
+        {k:'connect',fig:'rdc2',t:'انقل أطراف الملتيميتر على coil 2: VΩ على A و COM على B.'},
+        ohmS(AB,'الملتيميتر على Ω.'),
+        {k:'rec',t:'سجّل R<sub>dc</sub> لـ coil 2، واحسب R<sub>2</sub> = 1.15 R<sub>dc</sub>.',ok:()=>ST.rdc2!=null,rec:[{to:'rdc2',label:'R<sub>dc</sub> coil 2',unit:'Ω',dec:1,val:()=>ST.rdc2}]}]},
+      {dev:'board',build:'7',t:'4. وصّل coil 1 على مصدر جهد متغير 60 Hz مثل Fig. 7 (coil 1: 1000 turns، coil 2: 500 turns).',subs:[
+        {k:'build',fig:'7',t:'وصّل الدائرة <bdi dir="ltr">Fig. 7</bdi>: الـ variac، و M4 على التوالي، و M1 على المصدر.'}]},
+      {dev:'ac',t:'⚠ «Get the connection checked by the instructor»: اضغط «المشرف يتأكد من التوصيل» في هذي البطاقة، وبعدين شغّل الـ POWER.',subs:[chkS(),pwrS()]},
+      {dev:'ac',t:'5. اضبط الجهد المطبّق على 2 V<sub>rms</sub>، وخذ قراءة الأميتر والفولتميتر.',subs:[
+        vS(1,'M1 (على المصدر) على V~.',SRCN),ammS(),v2S(()=>ST.va!=null),
+        {k:'rec',t:'سجّل V و I.',ok:()=>ST.va!=null,rec:[{to:'va',label:'V',unit:'V',dec:3,val:()=>ST.va},{to:'ia',label:'I',unit:'mA',dec:2,val:()=>ST.ia!=null?ST.ia*1e3:null}]}]},
+      {dev:'ac',t:'6. احسب الـ self inductance لـ coil 1: Z<sub>1</sub> = V/I = √(R<sub>1</sub>² + X<sub>1</sub>²)، و X<sub>1</sub> = √(Z<sub>1</sub>² − R<sub>1</sub>²)، و L<sub>1</sub> = X<sub>1</sub>/ω.',subs:[
+        {k:'set',t:'احسب Z<sub>1</sub> و X<sub>1</sub> و L<sub>1</sub> (حساب في الـ sheet).',ok:()=>ST.va!=null}]},
+      {dev:'board',build:'7b',t:'7. كرّر لـ coil 2 عشان تطلع L<sub>2</sub>.',subs:[
+        offS(),
+        {k:'build',fig:'7b',t:'وصّل coil 2 (A و B) مكان coil 1 في <bdi dir="ltr">Fig. 7</bdi>.'},
+        chkS(),pwrS(),v2S(()=>ST.vb!=null),
+        {k:'rec',t:'سجّل V و I لـ coil 2.',ok:()=>ST.vb!=null,rec:[{to:'vb',label:'V',unit:'V',dec:3,val:()=>ST.vb},{to:'ib',label:'I',unit:'mA',dec:2,val:()=>ST.ib!=null?ST.ib*1e3:null}]}]},
       /* Procedure II (manual p. 62), steps 1–3 */
-      {dev:'board',build:'8',t:'Procedure II · 1. وصّل الدائرة Fig. 8، و coil 2 مقترن مغناطيسياً مع coil 1.'},
-      {dev:'ac',t:'2. اضبط الجهد المطبّق على 2 V<sub>rms</sub>، وخذ القراءات V<sub>1</sub> و I<sub>1</sub> و V<sub>2</sub>.',acts:['المشرف يتأكد وشغّل الـ POWER.','M2 على V~، واضبط الـ variac لين M1 = 2.00 V.'],ok:s=>ST.v2m!=null,
-        rec:[{to:'v1m',label:'V<sub>1</sub>',unit:'V',dec:3,val:()=>ST.v1m},{to:'i1m',label:'I<sub>1</sub>',unit:'mA',dec:2,val:()=>ST.i1m!=null?ST.i1m*1e3:null},{to:'v2m',label:'V<sub>2</sub>',unit:'V',dec:3,val:()=>ST.v2m}]},
-      {dev:'ac',t:'3. احسب الـ mutual inductance: X<sub>M</sub> = V<sub>2</sub>/I<sub>1</sub>، و M = X<sub>M</sub>/ω.',ok:s=>ST.v2m!=null},
+      {dev:'board',build:'8',t:'Procedure II · 1. وصّل الدائرة Fig. 8، و coil 2 مقترن مغناطيسياً مع coil 1.',subs:[
+        offS(),{k:'build',fig:'8',t:'وصّل الدائرة <bdi dir="ltr">Fig. 8</bdi>: coil 1 على المصدر مثل Fig. 7، و M2 على coil 2.'}]},
+      {dev:'ac',t:'2. اضبط الجهد المطبّق على 2 V<sub>rms</sub>، وخذ القراءات V<sub>1</sub> و I<sub>1</sub> و V<sub>2</sub>.',subs:[
+        vS(2,'M2 (على coil 2) على V~.',AB),chkS(),pwrS(),v2S(()=>ST.v2m!=null),
+        {k:'rec',t:'سجّل V<sub>1</sub> و I<sub>1</sub> و V<sub>2</sub>.',ok:()=>ST.v2m!=null,rec:[{to:'v1m',label:'V<sub>1</sub>',unit:'V',dec:3,val:()=>ST.v1m},{to:'i1m',label:'I<sub>1</sub>',unit:'mA',dec:2,val:()=>ST.i1m!=null?ST.i1m*1e3:null},{to:'v2m',label:'V<sub>2</sub>',unit:'V',dec:3,val:()=>ST.v2m}]}]},
+      {dev:'ac',t:'3. احسب الـ mutual inductance: X<sub>M</sub> = V<sub>2</sub>/I<sub>1</sub>، و M = X<sub>M</sub>/ω.',subs:[
+        {k:'set',t:'احسب X<sub>M</sub> و M (حساب في الـ sheet).',ok:()=>ST.v2m!=null}]},
       /* Procedure III (manual pp. 62–63), steps 1–3 */
-      {dev:'board',build:'9',t:'Procedure III · 1. وصّل الدائرة الكهربائية Fig. 9.'},
-      {dev:'ac',t:'2. والجهد المحدد مطبّق على coil 1، خذ قراءة V<sub>T</sub>.',acts:['المشرف يتأكد وشغّل الـ POWER.','M3 على V~، واضبط 2.00 V على M1، وسجّل V<sub>1</sub> و V<sub>2</sub> و V<sub>T</sub>.'],ok:s=>ST.vtp!=null,
-        rec:[{to:'v1p',label:'V<sub>1</sub>',unit:'V',dec:3,val:()=>ST.v1p},{to:'v2p',label:'V<sub>2</sub>',unit:'V',dec:3,val:()=>ST.v2p},{to:'vtp',label:'V<sub>T</sub>',unit:'V',dec:3,val:()=>ST.vtp}]},
-      {dev:'ac',t:'3. إذا V<sub>T</sub> هو الفرق بين V<sub>1</sub> و V<sub>2</sub>، النقطة (dot) تنحط عند A، وإلا تنحط عند B.',ok:s=>ST.vtp!=null},
+      {dev:'board',build:'9',t:'Procedure III · 1. وصّل الدائرة الكهربائية Fig. 9.',subs:[
+        offS(),{k:'build',fig:'9',t:'وصّل الدائرة <bdi dir="ltr">Fig. 9</bdi>: B موصّل بطرف 2، و M3 بين طرف 1 و A.'}]},
+      {dev:'ac',t:'2. والجهد المحدد مطبّق على coil 1، خذ قراءة V<sub>T</sub>.',subs:[
+        vS(3,'M3 (V<sub>T</sub> بين طرف 1 و A) على V~.',()=>[pin('P1'),pin('A')]),chkS(),pwrS(),v2S(()=>ST.vtp!=null),
+        {k:'rec',t:'سجّل V<sub>1</sub> و V<sub>2</sub> و V<sub>T</sub>.',ok:()=>ST.vtp!=null,rec:[{to:'v1p',label:'V<sub>1</sub>',unit:'V',dec:3,val:()=>ST.v1p},{to:'v2p',label:'V<sub>2</sub>',unit:'V',dec:3,val:()=>ST.v2p},{to:'vtp',label:'V<sub>T</sub>',unit:'V',dec:3,val:()=>ST.vtp}]}]},
+      {dev:'ac',t:'3. إذا V<sub>T</sub> هو الفرق بين V<sub>1</sub> و V<sub>2</sub>، النقطة (dot) تنحط عند A، وإلا تنحط عند B.',subs:[
+        {k:'rec',t:'قارن V<sub>T</sub> بـ V<sub>1</sub> + V<sub>2</sub> و V<sub>1</sub> − V<sub>2</sub>، وسجّل مكان النقطة.',ok:()=>ST.vtp!=null,
+          rec:[{to:'dot',label:'dot',val:()=>ST.vtp==null?null:(Math.abs(ST.vtp-(ST.v1p+ST.v2p))<Math.abs(ST.vtp-Math.abs(ST.v1p-ST.v2p))?'B':'A'),txt:v=>'at '+v}]}]},
       /* Procedure IV (manual p. 63), steps 1–7 */
-      {dev:'board',build:'10',t:'Procedure IV · 1. حسب الـ polarity اللي طلّعتها، وصّل الدائرة Fig. 10.'},
-      {dev:'ac',t:'2. اضبط جهد المصدر على 2 V<sub>rms</sub> وخذ قراءة الجهد والتيار.',acts:['المشرف يتأكد وشغّل الـ POWER.','اضبط الـ variac لين M1 = 2.00 V.'],ok:s=>ST.vad!=null,
-        rec:[{to:'vad',label:'V (aiding)',unit:'V',dec:3,val:()=>ST.vad},{to:'iad',label:'I (aiding)',unit:'mA',dec:2,val:()=>ST.iad!=null?ST.iad*1e3:null}]},
-      {dev:'ac',t:'3. احسب الـ equivalent impedance في هذي الحالة: X<sub>eq1</sub> = √((V/I)² − (R<sub>1</sub> + R<sub>2</sub>)²) = ω(L<sub>1</sub> + L<sub>2</sub> + 2M).',ok:s=>ST.vad!=null},
-      {dev:'board',build:'10b',t:'4. كرّر خطوة 1 و 2 بس والـ 2 coils موصّلة بالعكس (in opposition): X<sub>eq2</sub> = ω(L<sub>1</sub> + L<sub>2</sub> − 2M).',acts:['طفّ المصدر، ووصّل 2 بـ A بدال B، و B يرجع للمصدر.','المشرف يتأكد، شغّل، 2 V<sub>rms</sub>، وسجّل V و I.'],ok:s=>ST.vop!=null,
-        rec:[{to:'vop',label:'V (opposing)',unit:'V',dec:3,val:()=>ST.vop},{to:'iop',label:'I (opposing)',unit:'mA',dec:2,val:()=>ST.iop!=null?ST.iop*1e3:null}]},
-      {dev:'ac',t:'5. طلّع الـ mutual inductance: M<sub>12</sub> = (X<sub>eq1</sub> − X<sub>eq2</sub>)/4ω.',ok:s=>ST.vop!=null},
-      {dev:'ac',t:'6. قارنها بالقيمة اللي طلعت قبل (Procedure II) وعلّق على أي فرق بينهم.',ok:s=>ST.vop!=null},
-      {dev:'ac',t:'7. احسب الـ coupling coefficient: k = M<sub>12</sub>/√(L<sub>1</sub>L<sub>2</sub>).',ok:s=>ST.vop!=null}
+      {dev:'board',build:'10',t:'Procedure IV · 1. حسب الـ polarity اللي طلّعتها، وصّل الدائرة Fig. 10.',subs:[
+        offS(),{k:'build',fig:'10',t:'وصّل الدائرة <bdi dir="ltr">Fig. 10</bdi>: طرف 2 موصّل بـ B (series aiding)، و M4 على التوالي، و M1 على المصدر.'}]},
+      {dev:'ac',t:'2. اضبط جهد المصدر على 2 V<sub>rms</sub> وخذ قراءة الجهد والتيار.',subs:[
+        chkS(),pwrS(),v2S(()=>ST.vad!=null),
+        {k:'rec',t:'سجّل V و I (aiding).',ok:()=>ST.vad!=null,rec:[{to:'vad',label:'V (aiding)',unit:'V',dec:3,val:()=>ST.vad},{to:'iad',label:'I (aiding)',unit:'mA',dec:2,val:()=>ST.iad!=null?ST.iad*1e3:null}]}]},
+      {dev:'ac',t:'3. احسب الـ equivalent impedance في هذي الحالة: X<sub>eq1</sub> = √((V/I)² − (R<sub>1</sub> + R<sub>2</sub>)²) = ω(L<sub>1</sub> + L<sub>2</sub> + 2M).',subs:[
+        {k:'set',t:'احسب X<sub>eq1</sub> (حساب في الـ sheet).',ok:()=>ST.vad!=null}]},
+      {dev:'board',build:'10b',t:'4. كرّر خطوة 1 و 2 بس والـ 2 coils موصّلة بالعكس (in opposition): X<sub>eq2</sub> = ω(L<sub>1</sub> + L<sub>2</sub> − 2M).',subs:[
+        offS(),
+        {k:'build',fig:'10b',t:'وصّل طرف 2 بـ A بدال B، و B يرجع للمصدر (in opposition).'},
+        chkS(),pwrS(),v2S(()=>ST.vop!=null),
+        {k:'rec',t:'سجّل V و I (opposing).',ok:()=>ST.vop!=null,rec:[{to:'vop',label:'V (opposing)',unit:'V',dec:3,val:()=>ST.vop},{to:'iop',label:'I (opposing)',unit:'mA',dec:2,val:()=>ST.iop!=null?ST.iop*1e3:null}]}]},
+      {dev:'ac',t:'5. طلّع الـ mutual inductance: M<sub>12</sub> = (X<sub>eq1</sub> − X<sub>eq2</sub>)/4ω.',subs:[{k:'set',t:'احسب X<sub>eq2</sub> و M<sub>12</sub> (حساب في الـ sheet).',ok:()=>ST.vop!=null}]},
+      {dev:'ac',t:'6. قارنها بالقيمة اللي طلعت قبل (Procedure II) وعلّق على أي فرق بينهم.',subs:[{k:'set',t:'قارن M<sub>12</sub> بـ M من Procedure II.',ok:()=>ST.vop!=null}]},
+      {dev:'ac',t:'7. احسب الـ coupling coefficient: k = M<sub>12</sub>/√(L<sub>1</sub>L<sub>2</sub>).',subs:[{k:'set',t:'احسب k (حساب في الـ sheet).',ok:()=>ST.vop!=null}]}
     ],
     onReset(){ST={};$('result').innerHTML=''}};
 }};})();

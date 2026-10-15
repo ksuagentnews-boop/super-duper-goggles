@@ -112,24 +112,50 @@ setup(RT){
       gr.add(G.near(v(k+'x'),xc,xc*0.005+0.1),`${cv} µF |Xc|`,`1/(ωC) = ${xc.toFixed(1)} Ω`);gr.add(G.near(v(k+'p'),v(k+'v')*v(k+'v')/v('rd')*1e3,0.05),`${cv} µF P`,'Va-b² / RD')});
     gr.add(s('q6')==='a','Step 6 maximum power','|XC| = XL: the load is the conjugate of ZTH');
     gr.show($('result'))});
-  const calc=t=>({dev:'board',t,ok:()=>true});
+  const calc=t=>({dev:'board',t,subs:[{k:'set',t:'احسبها واكتبها في الـ sheet.',ok:()=>true}]});
+  /* "do it for me" helpers (Batch 7 item 3): the Metrix (parameter key, cursor digit, wheel), a Fluke's rotary switch,
+     the decade box's dials */
+  const meterTo=(A,n,pos)=>A.until(`h${n}:SW${RT.S['hm'+n].pos<pos?'+':'-'}`,()=>RT.S['hm'+n].pos===pos,12);
+  const mtx=async(A,p,target)=>{if(!RT.S.gen.pwr)await A.press('g:PWR');await A.press('g:'+{f:'FREQ',a:'AMPL',o:'OFFSET'}[p]);
+    for(let i=0;i<400;i++){const g=RT.S.gen,cur={f:g.freq,a:g.amp,o:g.off}[p],diff=target-cur;if(Math.abs(diff)<1e-9*Math.max(1,Math.abs(target)))return;
+      const lim={f:[-1,6],a:[-3,1],o:[-3,0]}[p];let d=Math.max(lim[0],Math.min(lim[1],Math.floor(Math.log10(Math.abs(diff))+1e-9)));if(p==='f'&&cur+Math.sign(diff)*Math.pow(10,d)<0.1)d--;
+      if(g.dig[p]!==d){await A.tap(g.dig[p]<d?'g:CL':'g:CR',40);continue}await A.tap(diff>0?'g:KN+':'g:KN-',40)}};
+  const genSine=async(A,f,a)=>{if(!RT.S.gen.pwr)await A.press('g:PWR');if(RT.S.gen.wave!=='Sine')await A.press('g:Sine');if(f!=null)await mtx(A,'f',f);if(a!=null)await mtx(A,'a',a);
+    if(RT.S.gen.off!==0)await mtx(A,'o',0);if(!RT.S.gen.out)await A.press('g:OUT')};
+  const dials=async(A,n,v)=>{const t=[0,1,2,3,4,5].map(j=>Math.floor(Math.round(v)/Math.pow(10,j))%10),d=RT.S['yew'+n].d;
+    for(let j=0;j<6;j++){const k=t[j]-d[j];if(k)await A.press(`y${n}:D${j}${k>0?'+':'-'}`,Math.abs(k))}};
+  const ethPP=()=>ST.eth!=null?Math.round(ST.eth*2*Math.SQRT2*1000)/1000:null;
+  const CTXT={c057:' (0.47 µF + 0.1 µF على التوازي)',c11:' (1 µF + 0.1 µF على التوازي)',c12:' (1 µF + 0.1 µF + 0.1 µF على التوازي)',c147:' (1 µF + 0.47 µF على التوازي)'};
   return {status,
     steps:[
-      /* Procedure I (manual p. 24), steps 1–4 */
-      {dev:'board',build:'6a',t:'Procedure I · 1. وصّل الدائرة Fig. 6a، وقِس V<sub>R</sub> و I<sub>R</sub>.',
-        acts:['حط الـ iron core في الـ coil (96 mH).','شغّل الـ generator: Sine، 1 kHz، و 5 V rms يعني AMPL = 14.14 Vpp (الـ Metrix يعرض Vpp)، و OUTPUT ON.','M1 على V~ على الـ 10 kΩ (V<sub>R</sub>)، و M2 على A~ (المدخل 300mA) على التوالي بين a والـ 10 kΩ (I<sub>R</sub>).'],
-        ok:s=>s.g5&&ST.vr1!=null&&ST.ir1!=null,rec:[{to:'vr1',val:()=>ST.vr1,unit:'V',dec:3,label:'V<sub>R</sub>'},{to:'ir1',val:()=>ST.ir1!=null?ST.ir1*1e3:null,unit:'mA',dec:2,label:'I<sub>R</sub>'}]},
-      {dev:'hm1',t:'2. افصل الـ 10 kΩ عن الدائرة وقِس الجهد بين الطرفين (a-b). هذا الجهد هو E<sub>TH</sub>.',acts:['شيل فرع الـ load: الـ 10 kΩ وأطراف M2.','M1 (V~) بين a والأرضي b.'],ok:s=>ST.eth!=null,
-        rec:[{to:'eth',val:()=>ST.eth,unit:'V',dec:3,label:'E<sub>TH</sub>'}]},
+      /* Procedure I (manual p. 24), steps 1–4; every step split into its sub-steps (Batch 7 item 3) */
+      {dev:'board',build:'6a',t:'Procedure I · 1. وصّل الدائرة Fig. 6a، وقِس V<sub>R</sub> و I<sub>R</sub>.',subs:[
+        {k:'build',fig:'6a',t:'وصّل الدائرة <bdi dir="ltr">Fig. 6a</bdi> (الـ iron core داخل الـ coil: 96 mH؛ M1 على الـ 10 kΩ، و M2 على التوالي بين a والـ 10 kΩ بالمدخل 300 mA).'},
+        {k:'set',dev:'gen',t:'شغّل الـ generator (POWER).',ok:()=>RT.S.gen.pwr,do:A=>A.press('g:PWR')},
+        {k:'set',dev:'gen',t:'FREQ = 1 kHz.',ok:()=>RT.S.gen.freq===1000,do:A=>mtx(A,'f',1000),hint:'اضغط FREQ، واختر الخانة بالأسهم، ولف العجلة لين 1 kHz'},
+        {k:'set',dev:'gen',t:'5 V rms يعني AMPL = 14.14 Vpp (الـ Metrix يعرض Vpp).',ok:()=>Math.abs(RT.S.gen.amp-14.14)<0.02,do:A=>mtx(A,'a',14.14),hint:'اضغط AMPL ولف العجلة لين 14.14 Vpp'},
+        {k:'set',dev:'gen',t:'Sine، OFFSET = 0 V، و OUTPUT ON.',ok:s=>s.g5,do:A=>genSine(A)},
+        {k:'set',dev:'hm1',t:'حوّل M1 على V~.',ok:()=>RT.S.hm1.pwr&&RT.S.hm1.fn==='ACV',do:A=>meterTo(A,1,1),hint:'لف قرص M1 على V~'},
+        {k:'set',dev:'hm2',t:'حوّل M2 على A~.',ok:()=>RT.S.hm2.pwr&&RT.S.hm2.fn==='ACI',do:A=>meterTo(A,2,7),hint:'لف قرص M2 على A~'},
+        {k:'rec',t:'سجّل V<sub>R</sub> و I<sub>R</sub>.',ok:()=>ST.vr1!=null&&ST.ir1!=null,rec:[{to:'vr1',val:()=>ST.vr1,unit:'V',dec:3,label:'V<sub>R</sub>'},{to:'ir1',val:()=>ST.ir1!=null?ST.ir1*1e3:null,unit:'mA',dec:2,label:'I<sub>R</sub>'}]}]},
+      {dev:'hm1',t:'2. افصل الـ 10 kΩ عن الدائرة وقِس الجهد بين الطرفين (a-b). هذا الجهد هو E<sub>TH</sub>.',subs:[
+        {k:'connect',fig:ETH,t:'شيل فرع الـ load (الـ 10 kΩ وأطراف M2)، وحط M1 (V~) بين a والأرضي b.'},
+        {k:'rec',t:'سجّل E<sub>TH</sub>.',ok:()=>ST.eth!=null,rec:[{to:'eth',val:()=>ST.eth,unit:'V',dec:3,label:'E<sub>TH</sub>'}]}]},
       calc('3. احسب Z<sub>TH</sub> وأنت قاصر المصدر (shorting the supply): (1 kΩ ∥ 3.3 kΩ) + R<sub>L</sub> + jωL، واكتبه rectangular.'),
-      {dev:'board',build:'6b',t:'4. ركّب الـ Thevenin\'s equivalent لدائرة Fig. 6a بإدخال E<sub>TH</sub> و Z<sub>TH</sub> مثل Fig. 6b، وقِس I<sub>R</sub> و V<sub>R</sub>. قارنها بالخطوة (1).',
-        acts:['Z<sub>TH</sub>: الـ decade box على الجزء الحقيقي ناقص R<sub>L</sub> (≈ 767 Ω) على التوالي مع نفس الـ coil بالـ iron core.','رجّع الـ 10 kΩ مع M1 و M2 مثل Fig. 6a.','اضبط الـ generator على E<sub>TH</sub> اللي قسته (AMPL = E<sub>TH</sub> × 2√2 Vpp).'],
-        ok:s=>s.boxTh&&s.gEth&&ST.vr2!=null&&ST.ir2!=null,rec:[{to:'vr2',val:()=>ST.vr2,unit:'V',dec:3,label:'V<sub>R</sub>'},{to:'ir2',val:()=>ST.ir2!=null?ST.ir2*1e3:null,unit:'mA',dec:2,label:'I<sub>R</sub>'}]},
+      {dev:'board',build:'6b',t:'4. ركّب الـ Thevenin\'s equivalent لدائرة Fig. 6a بإدخال E<sub>TH</sub> و Z<sub>TH</sub> مثل Fig. 6b، وقِس I<sub>R</sub> و V<sub>R</sub>. قارنها بالخطوة (1).',subs:[
+        {k:'set',dev:'yew1',t:'Z<sub>TH</sub>: الـ decade box على الجزء الحقيقي ناقص R<sub>L</sub> (≈ 767 Ω).',ok:s=>s.boxTh,do:A=>dials(A,1,767),hint:'R<sub>TH</sub> − R<sub>L</sub> ≈ 767 Ω على أقراص الصندوق'},
+        {k:'build',fig:'6b',t:'ركّب <bdi dir="ltr">Fig. 6b</bdi>: الصندوق على التوالي مع نفس الـ coil بالـ iron core، ورجّع الـ 10 kΩ مع M1 و M2 مثل <bdi dir="ltr">Fig. 6a</bdi>.'},
+        {k:'set',dev:'gen',t:'اضبط الـ generator على E<sub>TH</sub> اللي قسته: AMPL = E<sub>TH</sub> × 2√2 Vpp.',ok:s=>s.gEth,do:async A=>{const a=ethPP();if(a!=null)await genSine(A,1000,a)},
+          hint:()=>ethPP()!=null?`AMPL = ${ethPP().toFixed(3)} Vpp`:'قِس E<sub>TH</sub> أول (الخطوة 2)'},
+        {k:'rec',t:'سجّل V<sub>R</sub> و I<sub>R</sub>.',ok:()=>ST.vr2!=null&&ST.ir2!=null,rec:[{to:'vr2',val:()=>ST.vr2,unit:'V',dec:3,label:'V<sub>R</sub>'},{to:'ir2',val:()=>ST.ir2!=null?ST.ir2*1e3:null,unit:'mA',dec:2,label:'I<sub>R</sub>'}]}]},
       /* Procedure II (manual pp. 25–26), steps 1–6 */
-      {dev:'board',build:'7',t:'Procedure II · 1. ركّب دائرة Fig. 7. خلّ R<sub>D</sub> = R + R<sub>L</sub>.',acts:['R<sub>D</sub> على الـ decade box: 100 + R<sub>L</sub> ≈ 118 Ω.','شغّل الـ generator: 5 V rms (14.14 Vpp)، 1 kHz.'],ok:s=>s.rdOK&&s.g5},
-      {dev:'board',t:'2. بدّل الـ capacitor combinations مثل Table 1 وقِس V<sub>a-b</sub> لكل combination.',
-        acts:CS.map(([k,cv])=>`${cv} µF${cv===0.57?' (0.47 + 0.1 على التوازي)':cv===1.1?' (1 + 0.1)':cv===1.2?' (1 + 0.1 + 0.1)':cv===1.47?' (1 + 0.47)':''}`),
-        ok:s=>CS.every(([k])=>ST[k]!=null),rec:CS.map(([k,cv])=>({to:k+'v',val:()=>ST[k],unit:'V',dec:3,label:`${cv} µF`}))},
+      {dev:'board',build:'7',t:'Procedure II · 1. ركّب دائرة Fig. 7. خلّ R<sub>D</sub> = R + R<sub>L</sub>.',subs:[
+        {k:'build',fig:'7',t:'ركّب دائرة <bdi dir="ltr">Fig. 7</bdi> (C = 0.1 µF أول، و M1 على R<sub>D</sub>).'},
+        {k:'set',dev:'yew1',t:'R<sub>D</sub> على الـ decade box: 100 Ω + R<sub>L</sub> ≈ 118 Ω.',ok:s=>s.rdOK,do:A=>dials(A,1,118),hint:'أقراص الصندوق على 118 Ω'},
+        {k:'set',dev:'gen',t:'الـ generator على 5 V rms (AMPL = 14.14 Vpp)، 1 kHz، و OUTPUT ON.',ok:s=>s.g5,do:A=>genSine(A,1000,14.14),hint:'Sine، FREQ = 1 kHz، AMPL = 14.14 Vpp، والـ OUTPUT على ON'}]},
+      {dev:'board',t:'2. بدّل الـ capacitor combinations مثل Table 1 وقِس V<sub>a-b</sub> لكل combination.',subs:CS.flatMap(([k,cv])=>[
+        {k:'connect',fig:CF[k],t:`ركّب C = ${cv} µF${CTXT[k]||''} بين b والأرضي.`,ok:()=>ST[k]!=null},
+        {k:'rec',t:`سجّل V<sub>a-b</sub> عند ${cv} µF.`,ok:()=>ST[k]!=null,rec:[{to:k+'v',val:()=>ST[k],unit:'V',dec:3,label:`${cv} µF`}]}])},
       calc('3. احسب Z<sub>TH</sub> لدائرة Fig. 7 وسجّله بالـ rectangular form.'),
       calc('4. احسب X<sub>C</sub> لكل combination وسجّلها في Table 1.'),
       calc('5. احسب الـ power المنقولة للـ load: P = V<sub>a-b</sub>² / R<sub>D</sub>. كرّر لكل الـ combinations وسجّلها في Table 1.'),

@@ -59,6 +59,16 @@ const figs={
   '7':{img:FG+'e8-fig7.png',cap:'Fig. 7 · parallel RLC (E = 2 Vrms, 1 kHz; plugs where the ammeter goes, the Fluke across E)',lines:[...GN,...FL,{wire:[8,9]},...BUS,...PAR('R100','L175','C47'),{wire:[23,24]},{wire:[24,25]},{wire:[22,23]}]},
   '7cl':{img:FG+'e8-fig7.png',cap:'Fig. 7 · 10 Ω in series with C and with L (CH I across the one under C, CH II under L)',lines:[...GN,...FL,{wire:[8,9]},...BUS,...PAR('R100','L175','C47'),
     {part:['R10',23,30]},{part:['R10',25,32]},{wire:[24,31]},{wire:[22,29]},{wire:[29,30]},{wire:[30,31]},{wire:[31,32]},{lead:'c1r',at:23},{lead:'c1b',at:22},{lead:'c2r',at:25},{lead:'c2b',at:22}]},
+  /* step I.1: the Fluke moved across R, the coil and C in turn */
+  '6vr':{img:FG+'e8-fig6.png',cap:'Fig. 6 · the Fluke across R (V<sub>R</sub>)',lines:[...GN,...BK,...SER('R100','L175','C47'),{lead:'h1v',at:9},{lead:'h1c',at:10}]},
+  '6vl':{img:FG+'e8-fig6.png',cap:'Fig. 6 · the Fluke across the coil (V<sub>L</sub>)',lines:[...GN,...BK,...SER('R100','L175','C47'),{lead:'h1v',at:10},{lead:'h1c',at:11}]},
+  '6vc':{img:FG+'e8-fig6.png',cap:'Fig. 6 · the Fluke across C (V<sub>C</sub>)',lines:[...GN,...BK,...SER('R100','L175','C47'),{lead:'h1v',at:11},{lead:'h1c',at:22}]},
+  /* step II.1: the BK in place of one plug at a time (main line, above C, above R, above L), then 10 Ω under the bus for θ */
+  '7i':{img:FG+'e8-fig7.png',cap:'Fig. 7 · the BK in the main line (I)',lines:[...GN,{lead:'h2ma',at:8},{lead:'h2c',at:9},{wire:[9,10]},{wire:[10,11]},{wire:[9,16]},{wire:[10,17]},{wire:[11,18]},...PAR('R100','L175','C47'),{wire:[23,24]},{wire:[24,25]},{wire:[22,23]}]},
+  '7ic':{img:FG+'e8-fig7.png',cap:'Fig. 7 · the BK above C (I<sub>C</sub>)',lines:[...GN,{wire:[8,9]},{wire:[9,10]},{wire:[10,11]},{lead:'h2ma',at:9},{lead:'h2c',at:16},{wire:[10,17]},{wire:[11,18]},...PAR('R100','L175','C47'),{wire:[23,24]},{wire:[24,25]},{wire:[22,23]}]},
+  '7ir':{img:FG+'e8-fig7.png',cap:'Fig. 7 · the BK above R (I<sub>R</sub>)',lines:[...GN,{wire:[8,9]},{wire:[9,10]},{wire:[10,11]},{wire:[9,16]},{lead:'h2ma',at:10},{lead:'h2c',at:17},{wire:[11,18]},...PAR('R100','L175','C47'),{wire:[23,24]},{wire:[24,25]},{wire:[22,23]}]},
+  '7il':{img:FG+'e8-fig7.png',cap:'Fig. 7 · the BK above L (I<sub>L</sub>)',lines:[...GN,{wire:[8,9]},{wire:[9,10]},{wire:[10,11]},{wire:[9,16]},{wire:[10,17]},{lead:'h2ma',at:11},{lead:'h2c',at:18},...PAR('R100','L175','C47'),{wire:[23,24]},{wire:[24,25]},{wire:[22,23]}]},
+  '7th':{img:FG+'e8-fig7.png',cap:'Fig. 7 · 10 Ω between the bottom bus and ground (θ: CH I on E, CH II on the 10 Ω)',lines:[...GN,{wire:[8,9]},...BUS,...PAR('R100','L175','C47'),{wire:[23,24]},{wire:[24,25]},{part:['R10',23,22]},{lead:'c1r',at:8},{lead:'c1b',at:22},{lead:'c2r',at:23},{lead:'c2b',at:22}]},
   '8':{img:FG+'e8-fig8.png',cap:'Fig. 8 · series resonance (100 Ω, 17.5 mH, 10 nF; V on CH I)',lines:[...GN,...CR,...BK,...SER('R100','L175','C10n')]},
   '9':{img:FG+'e8-fig9.png',cap:'Fig. 9 · parallel resonance (5 kΩ, 4.38 mH, 0.1 µF; V on CH I)',lines:[...GN,...CR,...BK,...BUS,...PAR('R5k','L438','C01'),{wire:[23,24]},{wire:[24,25]},{wire:[22,23]}]}};
 return {figs,procs:[{id:'I',title:'Series RLC circuit (Fig. 6)'},{id:'II',title:'Parallel RLC circuit (Fig. 7)'},{id:'III',title:'Series resonance (Fig. 8, Table 1)'},{id:'IV',title:'Parallel resonance (Fig. 9, Table 2)'}],
@@ -143,38 +153,81 @@ setup(RT){
     g.show($('result'))});
   const mA=k=>()=>ST[k]!=null?ST[k]*1e3:null;
   const sweep=(pre,list,id)=>list.map(f=>({to:id+f,label:fk(f),unit:'mA',dec:pre==='p'?3:2,val:mA(pre+f)}));
+  /* "do it for me" helpers (Batch 7 item 3): the Metrix value by its digit cursor and knob, the generator held at 2 Vrms
+     (AMPL scaled from the present reading), a meter's rotary switch, the sweep of a table (each frequency set, held, captured) */
+  const mtx=async(A,p,target)=>{const g=RT.S.gen;if(!g.pwr)return;await A.press('g:'+{f:'FREQ',a:'AMPL',o:'OFFSET'}[p]);
+    for(let i=0;i<400;i++){const cur={f:g.freq,a:g.amp,o:g.off}[p],diff=target-cur;if(Math.abs(diff)<1e-9*Math.max(1,Math.abs(target)))return;
+      const lim={f:[-1,6],a:[-3,1],o:[-3,0]}[p];let d=Math.max(lim[0],Math.min(lim[1],Math.floor(Math.log10(Math.abs(diff))+1e-9)));
+      if(p==='f'&&cur+Math.sign(diff)*Math.pow(10,d)<0.1)d--;
+      if(g.dig[p]!==d){await A.tap(g.dig[p]<d?'g:CL':'g:CR',60);continue}await A.tap(diff>0?'g:KN+':'g:KN-',60)}};
+  const hold2=async A=>{for(let k=0;k<4;k++){const v=genV();if(!(v>0)||Math.abs(v-2)<=0.01)return;await mtx(A,'a',Math.round(Math.min(20,RT.S.gen.amp*2/v)*100)/100)}};
+  const sw=async(A,n,pos)=>{const k='hm'+n,d=RT.S[k];if(!d||d.pos===pos)return;await A.until('h'+n+':SW'+(d.pos<pos?'+':'-'),()=>RT.S[k].pos===pos,24)};
+  const G0=()=>RT.S.gen,BKP=()=>RT.S.hm2.pos,aci=p=>BKP()>=14&&BKP()<=16;
+  const genSubs=f=>[
+    {k:'set',dev:'gen',t:'شغّل الـ generator واختر Sine.',ok:()=>G0().pwr&&G0().wave==='Sine'&&Math.abs(G0().off)<1e-9,do:async A=>{if(!G0().pwr)await A.press('g:PWR');if(G0().wave!=='Sine')await A.press('g:Sine');if(G0().off)await mtx(A,'o',0)},hint:'زر POWER ثم زر الـ sine ∿ (و OFFSET = 0 V)'},
+    ...(f?[{k:'set',dev:'gen',t:'FREQ = 1 kHz.',ok:()=>G0().freq===1000,do:A=>mtx(A,'f',1000),hint:'اضغط FREQ ولف الـ knob (◀ ▶ يختار الخانة) لين 1.000 kHz'}]:[]),
+    {k:'set',dev:'gen',t:'OUTPUT ON.',ok:()=>K.gen().on,do:async A=>{if(!G0().out)await A.press('g:OUT')},hint:'زر OUTPUT (يولّع الـ LED)'}];
+  const ampS=(ok,t)=>({k:'set',dev:'gen',t:t||'عدّل AMPL لين E = 2.00 V<sub>rms</sub> على الـ Fluke.',ok:ok||(s=>s.v2),do:hold2,hint:s=>`E الحين ${s.v!=null?s.v.toFixed(3)+' V':'؟'}: عدّل AMPL لين 2.00 V`});
+  const bkS=(pos,rng)=>({k:'measure',dev:'hm2',t:`الـ BK (الأميتر) على ACA ${rng}.`,ok:()=>aci(),do:A=>sw(A,2,pos),hint:`لف مفتاح الـ BK على ACA ${rng} (الـ A~)`});
+  const flS=()=>({k:'measure',dev:'hm1',t:'الـ Fluke على V~.',ok:()=>RT.S.hm1&&RT.S.hm1.pos===1,do:A=>sw(A,1,1),hint:'لف مفتاح الـ Fluke على V~'});
+  const dualS=()=>({k:'set',dev:'sc',t:'شغّل الـ Hameg واختر DUAL (CH I و CH II مع بعض).',ok:()=>{const S=RT.S.sc,m=RT.inst.sc.mode();return S.pwr&&(m==='DUAL'||m==='CHOP')&&!S.xy},
+    do:async A=>{const S=RT.S.sc;if(!S.pwr)await A.press('s:PWR');if(S.xy)await A.press('s:XY');const m=RT.inst.sc.mode();if(m!=='DUAL'&&m!=='CHOP')await A.press('s:DUAL')},hint:'زر POWER ثم زر DUAL'});
+  /* a sweep: each frequency of the table set on the generator, V held at 2 Vrms, the BK's range fitted, then captured */
+  const sweepDo=(pre,list)=>async A=>{const s=BENCH.sim.steps[BENCH.cur()];const j=BENCH.subsOf(s).findIndex(x=>x.k==='rec');const n=BENCH.capsOf(s,j).length;
+    for(const f of list.slice(n)){await mtx(A,'f',f);await hold2(A);
+      for(let q=0;q<3;q++){const m=RT.meters().find(x=>x.key==='hm2');if(!m)break;if(m.r.ol&&BKP()<16)await sw(A,2,BKP()+1);else if(BKP()===15&&Math.abs(m.r.val)<0.0019)await sw(A,2,14);else break}
+      A.st();A.capture()}};
   return {status,
     steps:[
-      /* Procedure I (manual p. 72), steps 1–4 */
-      {dev:'board',build:'6',t:'Procedure I · 1. وصّل دائرة Fig. 6 وقِس E و I و V<sub>R</sub> و V<sub>L</sub> و V<sub>C</sub> و Z = E/I.',
-        acts:['وصّل Fig. 6 مع الـ BK (ACA 200m) على التوالي من المصدر، والـ Fluke (V~) على E.','الـ generator: Sine، 1 kHz، و OUTPUT ON، وعدّل AMPL لين E = 2.00 V.','قِس V<sub>R</sub> و V<sub>L</sub> و V<sub>C</sub> بالـ Fluke، وبعدين رجّعه على E.'],
-        ok:s=>['e1','i1','vr1','vl1','vc1'].every(k=>ST[k]!=null),
-        rec:[{to:'e1',label:'E',unit:'V',dec:3,val:()=>ST.e1},{to:'i1',label:'I',unit:'mA',dec:2,val:mA('i1')},{to:'vr1',label:'V<sub>R</sub>',unit:'V',dec:3,val:()=>ST.vr1},{to:'vl1',label:'V<sub>L</sub>',unit:'V',dec:3,val:()=>ST.vl1},{to:'vc1',label:'V<sub>C</sub>',unit:'V',dec:3,val:()=>ST.vc1}]},
-      {dev:'board',t:'2. بالـ impedance diagram أثبت إن Z = Z<sub>R</sub> + Z<sub>L</sub> + Z<sub>C</sub> تساوي قيمة Z المقاسة في خطوة 1، واحسب θ.',ok:s=>ST.i1!=null},
-      {dev:'board',t:'3. أثبت إن E = V<sub>R</sub> + V<sub>L</sub> + V<sub>C</sub> (phasors).',ok:s=>ST.vc1!=null},
-      {dev:'board',t:'4. احسب الـ Average Power والـ Power Factor لدائرة Fig. 6.',ok:s=>ST.i1!=null},
+      /* Procedure I (manual p. 72), steps 1–4; every step split into its sub-steps (Batch 7 item 3) */
+      {dev:'board',build:'6',t:'Procedure I · 1. وصّل دائرة Fig. 6 وقِس E و I و V<sub>R</sub> و V<sub>L</sub> و V<sub>C</sub> و Z = E/I.',subs:[
+        {k:'build',fig:'6',t:'وصّل الدائرة <bdi dir="ltr">Fig. 6</bdi>: الـ BK على التوالي من المصدر، والـ Fluke على E.'},
+        bkS(16,'200m'),flS(),...genSubs(true),ampS(),
+        {k:'rec',t:'سجّل E و I.',ok:()=>ST.e1!=null&&ST.i1!=null,rec:[{to:'e1',label:'E',unit:'V',dec:3,val:()=>ST.e1},{to:'i1',label:'I',unit:'mA',dec:2,val:mA('i1')}]},
+        {k:'connect',fig:'6vr',t:'انقل الـ Fluke على R (V<sub>R</sub>).',ok:()=>ST.vr1!=null},
+        {k:'connect',fig:'6vl',t:'انقل الـ Fluke على الـ coil (V<sub>L</sub>).',ok:()=>ST.vl1!=null},
+        {k:'connect',fig:'6vc',t:'انقل الـ Fluke على المكثف (V<sub>C</sub>).',ok:()=>ST.vc1!=null},
+        {k:'rec',t:'سجّل V<sub>R</sub> و V<sub>L</sub> و V<sub>C</sub>.',ok:()=>ST.vc1!=null,rec:[{to:'vr1',label:'V<sub>R</sub>',unit:'V',dec:3,val:()=>ST.vr1},{to:'vl1',label:'V<sub>L</sub>',unit:'V',dec:3,val:()=>ST.vl1},{to:'vc1',label:'V<sub>C</sub>',unit:'V',dec:3,val:()=>ST.vc1}]}]},
+      {dev:'board',t:'2. بالـ impedance diagram أثبت إن Z = Z<sub>R</sub> + Z<sub>L</sub> + Z<sub>C</sub> تساوي قيمة Z المقاسة في خطوة 1، واحسب θ.',subs:[{k:'set',t:'احسب Z = E/I و θ (حساب في الـ sheet).',ok:()=>ST.i1!=null}]},
+      {dev:'board',t:'3. أثبت إن E = V<sub>R</sub> + V<sub>L</sub> + V<sub>C</sub> (phasors).',subs:[{k:'set',t:'ارسم الـ phasors وتأكد من المجموع (في الـ sheet).',ok:()=>ST.vc1!=null}]},
+      {dev:'board',t:'4. احسب الـ Average Power والـ Power Factor لدائرة Fig. 6.',subs:[{k:'set',t:'احسب P = I²R و PF = cos θ (حساب في الـ sheet).',ok:()=>ST.i1!=null}]},
       /* Procedure II (manual p. 73), steps 1–4 */
-      {dev:'board',build:'7',t:'Procedure II · 1. وصّل دائرة Fig. 7 وقِس E و V<sub>R</sub> و V<sub>C</sub> و V<sub>L</sub> و I و I<sub>R</sub> و I<sub>C</sub> و I<sub>L</sub> و Z<sub>L</sub> و Z و θ و F<sub>P</sub> و P (تلميح: استخدم مقاومة 10 Ω على التوالي عشان تلقى θ). لاحظ إن Z = V/I.',
-        acts:['وصّل Fig. 7: bridging plug في كل مكان يروح له الأميتر (الخط الرئيسي وكل فرع)، والـ Fluke (V~) على E.','OUTPUT ON على 1 kHz، وعدّل AMPL لين E = 2.00 V.','قِس I و I<sub>C</sub> و I<sub>R</sub> و I<sub>L</sub>: الـ BK مكان الـ plug، وبعدين رجّع الـ plug.','θ: 10 Ω بين الـ bottom bus والأرضي، CH I على E و CH II على الـ 10 Ω، و DUAL. بعدها رجّع الـ plug مكان الـ 10 Ω.'],
-        ok:s=>['e2','i2','ir2','ic2','il2'].every(k=>ST[k]!=null)&&ST.th2,
-        rec:[{to:'e2',label:'E',unit:'V',dec:3,val:()=>ST.e2},{to:'i2',label:'I',unit:'mA',dec:2,val:mA('i2')},{to:'ir2',label:'I<sub>R</sub>',unit:'mA',dec:2,val:mA('ir2')},{to:'ic2',label:'I<sub>C</sub>',unit:'mA',dec:2,val:mA('ic2')},{to:'il2',label:'I<sub>L</sub>',unit:'mA',dec:2,val:mA('il2')},
-          {to:'th2',label:'θ (CRO)',unit:'°',dec:1,val:()=>{const s=status();return s.th!=null?s.th:null},none:'حط الـ 10 Ω بين الـ bottom bus والأرضي، و CH I على E و CH II على الـ 10 Ω، و DUAL'}]},
-      {dev:'board',t:'2. احسب Z<sub>R</sub> و Z<sub>C</sub> و Z<sub>L</sub> و Z بقانون أوم.',ok:s=>ST.il2!=null},
-      {dev:'board',t:'3. احسب I من I = E/Z = EY وقارن النتيجة بالقيمة المقاسة.',ok:s=>ST.i2!=null},
-      {dev:'board',build:'7cl',t:'4. باستخدام الـ CRO قِس زاوية الطور بين I<sub>C</sub> و I<sub>L</sub> (تلميح: استخدم مقاومة 10 Ω على التوالي مع L ومع C عشان تلقى الزاوية).',
-        acts:['10 Ω تحت المكثف و 10 Ω تحت الـ coil، والـ R على الأرضي مباشرة.','CH I على الـ 10 Ω اللي مع C، و CH II على اللي مع L، والأرضي على الأرضي، و DUAL.'],ok:s=>ST.cl2,
-        rec:[{to:'cl2',label:'I<sub>C</sub> ↔ I<sub>L</sub>',unit:'°',dec:1,val:()=>{const s=status();return s.cl!=null?s.cl:null}}]},
+      {dev:'board',build:'7',t:'Procedure II · 1. وصّل دائرة Fig. 7 وقِس E و V<sub>R</sub> و V<sub>C</sub> و V<sub>L</sub> و I و I<sub>R</sub> و I<sub>C</sub> و I<sub>L</sub> و Z<sub>L</sub> و Z و θ و F<sub>P</sub> و P (تلميح: استخدم مقاومة 10 Ω على التوالي عشان تلقى θ). لاحظ إن Z = V/I.',subs:[
+        {k:'build',fig:'7',t:'وصّل الدائرة <bdi dir="ltr">Fig. 7</bdi>: bridging plug في كل مكان يروح له الأميتر (الخط الرئيسي وكل فرع)، والـ Fluke على E.'},
+        flS(),...genSubs(true),ampS(()=>ST.e2!=null),
+        {k:'rec',t:'سجّل E.',ok:()=>ST.e2!=null,rec:[{to:'e2',label:'E',unit:'V',dec:3,val:()=>ST.e2}]},
+        bkS(16,'200m'),
+        {k:'connect',fig:'7i',t:'I: الـ BK مكان الـ plug في الخط الرئيسي.',ok:()=>ST.i2!=null},
+        {k:'connect',fig:'7ic',t:'I<sub>C</sub>: رجّع الـ plug، والـ BK مكان الـ plug اللي فوق المكثف.',ok:()=>ST.ic2!=null},
+        {k:'connect',fig:'7ir',t:'I<sub>R</sub>: الـ BK مكان الـ plug اللي فوق المقاومة 100 Ω.',ok:()=>ST.ir2!=null},
+        {k:'connect',fig:'7il',t:'I<sub>L</sub>: الـ BK مكان الـ plug اللي فوق الـ coil.',ok:()=>ST.il2!=null},
+        {k:'rec',t:'سجّل I و I<sub>C</sub> و I<sub>R</sub> و I<sub>L</sub>.',ok:()=>['i2','ic2','ir2','il2'].every(k=>ST[k]!=null),rec:[{to:'i2',label:'I',unit:'mA',dec:2,val:mA('i2')},{to:'ic2',label:'I<sub>C</sub>',unit:'mA',dec:2,val:mA('ic2')},{to:'ir2',label:'I<sub>R</sub>',unit:'mA',dec:2,val:mA('ir2')},{to:'il2',label:'I<sub>L</sub>',unit:'mA',dec:2,val:mA('il2')}]},
+        {k:'connect',fig:'7th',t:'θ: رجّع الـ plug، وحط 10 Ω بين الـ bottom bus والأرضي، و CH I على E و CH II على الـ 10 Ω.'},
+        {...dualS(),ok:()=>!!ST.th2},
+        {k:'rec',t:'سجّل θ (الفرق بين الموجتين على الـ CRO).',ok:()=>!!ST.th2,rec:[{to:'th2',label:'θ (CRO)',unit:'°',dec:1,val:()=>{const s=status();return s.th!=null?s.th:null},none:'حط الـ 10 Ω بين الـ bottom bus والأرضي، و CH I على E و CH II على الـ 10 Ω، و DUAL'}]}]},
+      {dev:'board',t:'2. احسب Z<sub>R</sub> و Z<sub>C</sub> و Z<sub>L</sub> و Z بقانون أوم.',subs:[{k:'set',t:'احسب الـ impedances من E والتيارات (في الـ sheet).',ok:()=>ST.il2!=null}]},
+      {dev:'board',t:'3. احسب I من I = E/Z = EY وقارن النتيجة بالقيمة المقاسة.',subs:[{k:'set',t:'احسب I = EY وقارنها بالمقاسة (في الـ sheet).',ok:()=>ST.i2!=null}]},
+      {dev:'board',build:'7cl',t:'4. باستخدام الـ CRO قِس زاوية الطور بين I<sub>C</sub> و I<sub>L</sub> (تلميح: استخدم مقاومة 10 Ω على التوالي مع L ومع C عشان تلقى الزاوية).',subs:[
+        {k:'build',fig:'7cl',t:'10 Ω تحت المكثف و 10 Ω تحت الـ coil، والـ R على الأرضي مباشرة؛ CH I على الـ 10 Ω اللي مع C، و CH II على اللي مع L.'},
+        {...dualS(),ok:()=>!!ST.cl2},
+        {k:'rec',t:'سجّل زاوية الطور بين I<sub>C</sub> و I<sub>L</sub>.',ok:()=>!!ST.cl2,rec:[{to:'cl2',label:'I<sub>C</sub> ↔ I<sub>L</sub>',unit:'°',dec:1,val:()=>{const s=status();return s.cl!=null?s.cl:null}}]}]},
       /* Procedure III (manual p. 73), steps 1–5 */
-      {dev:'board',build:'8',t:'Procedure III · 1. وصّل الدائرة اللي في Fig. 8.',acts:['الـ BK على ACA 20m على التوالي، و CH I على المصدر يقيس V (الـ Fluke ما يلحق الـ kHz العالية).']},
-      {dev:'gen',t:'2. خلّ جهد الدخل الـ sinusoidal على 2 V<sub>rms</sub> وغيّر التردد من 7.5 kHz لين 15 kHz بخطوات 500 Hz. عند كل تردد ثبّت V على 2 V<sub>rms</sub> (5.66 Vpp على CH I)، وقِس التيار I، وسجّل القيم في Table 1.',ok:s=>F3.every(f=>ST['s'+f]!=null),rec:sweep('s',F3,'s')},
-      {dev:'gen',t:'3. احسب P = I²R وكمّل Table 1 (P = I²R إذا I قيمة rms، و P = ½I²R إذا I قيمة peak).',ok:s=>F3.every(f=>ST['s'+f]!=null)},
-      {dev:'gen',t:'4. ارسم P ضد التردد، ومن الرسم طلّع الـ resonant frequency f<sub>os</sub>، والـ half-power frequencies f<sub>1</sub> و f<sub>2</sub>، والـ bandwidth B، والـ quality factor Q<sub>o</sub>.',ok:s=>F3.every(f=>ST['s'+f]!=null)},
-      {dev:'gen',t:'5. قارن f<sub>os</sub> و f<sub>1</sub> و f<sub>2</sub> و B و Q<sub>o</sub> المقاسة بالقيم النظرية من Eqs. 6-a و 6-b و 6-c و 7 و 9.',ok:s=>F3.every(f=>ST['s'+f]!=null)},
+      {dev:'board',build:'8',t:'Procedure III · 1. وصّل الدائرة اللي في Fig. 8.',subs:[
+        {k:'build',fig:'8',t:'وصّل الدائرة <bdi dir="ltr">Fig. 8</bdi>: الـ BK على التوالي، و CH I على المصدر يقيس V (الـ Fluke ما يلحق الـ kHz العالية).'},
+        bkS(15,'20m'),...genSubs(false)]},
+      {dev:'gen',t:'2. خلّ جهد الدخل الـ sinusoidal على 2 V<sub>rms</sub> وغيّر التردد من 7.5 kHz لين 15 kHz بخطوات 500 Hz. عند كل تردد ثبّت V على 2 V<sub>rms</sub> (5.66 Vpp على CH I)، وقِس التيار I، وسجّل القيم في Table 1.',subs:[
+        {k:'rec',t:'لكل تردد من 7.5 kHz لين 15 kHz: اضبط FREQ، وثبّت V على 2 V<sub>rms</sub> بالـ AMPL، وسجّل I.',ok:()=>F3.every(f=>ST['s'+f]!=null),rec:sweep('s',F3,'s'),do:sweepDo('s',F3)}]},
+      {dev:'gen',t:'3. احسب P = I²R وكمّل Table 1 (P = I²R إذا I قيمة rms، و P = ½I²R إذا I قيمة peak).',subs:[{k:'set',t:'احسب P = I²R لكل تردد (في الـ sheet).',ok:()=>F3.every(f=>ST['s'+f]!=null)}]},
+      {dev:'gen',t:'4. ارسم P ضد التردد، ومن الرسم طلّع الـ resonant frequency f<sub>os</sub>، والـ half-power frequencies f<sub>1</sub> و f<sub>2</sub>، والـ bandwidth B، والـ quality factor Q<sub>o</sub>.',subs:[{k:'set',t:'ارسم P(f) وطلّع f<sub>os</sub> و f<sub>1</sub> و f<sub>2</sub> و B و Q<sub>o</sub> (في الـ sheet).',ok:()=>F3.every(f=>ST['s'+f]!=null)}]},
+      {dev:'gen',t:'5. قارن f<sub>os</sub> و f<sub>1</sub> و f<sub>2</sub> و B و Q<sub>o</sub> المقاسة بالقيم النظرية من Eqs. 6-a و 6-b و 6-c و Eq. 7 و Eq. 9.',subs:[{k:'set',t:'احسب القيم النظرية وقارنها (في الـ sheet).',ok:()=>F3.every(f=>ST['s'+f]!=null)}]},
       /* Procedure IV (manual pp. 74–75), steps 1–4 */
-      {dev:'board',build:'9',t:'Procedure IV · 1. وصّل الدائرة اللي في Fig. 9.',acts:['الـ BK على ACA 2m على التوالي، و CH I على المصدر.']},
-      {dev:'gen',t:'2. خلّ جهد الدخل الـ sinusoidal على 2 V<sub>rms</sub> وغيّر التردد من 6 kHz لين 9 kHz بخطوات 200 Hz. عند كل تردد حاول تثبّت V على 2 V<sub>rms</sub>، وقِس I وسجّله في Table 2.',ok:s=>F4.every(f=>ST['p'+f]!=null),rec:sweep('p',F4,'q')},
-      {dev:'gen',t:'3. احسب Z = V/I وكمّل Table 2.',ok:s=>F4.every(f=>ST['p'+f]!=null)},
-      {dev:'gen',t:'4. ارسم Z ضد التردد، ومنه طلّع الـ resonant frequency f<sub>op</sub>، والـ half-power frequencies f<sub>1</sub> و f<sub>2</sub>، والـ bandwidth B، والـ quality factor Q<sub>o</sub>.',ok:s=>F4.every(f=>ST['p'+f]!=null)}
+      {dev:'board',build:'9',t:'Procedure IV · 1. وصّل الدائرة اللي في Fig. 9.',subs:[
+        {k:'build',fig:'9',t:'وصّل الدائرة <bdi dir="ltr">Fig. 9</bdi>: الـ BK على التوالي، و CH I على المصدر.'},
+        bkS(14,'2m'),...genSubs(false)]},
+      {dev:'gen',t:'2. خلّ جهد الدخل الـ sinusoidal على 2 V<sub>rms</sub> وغيّر التردد من 6 kHz لين 9 kHz بخطوات 200 Hz. عند كل تردد حاول تثبّت V على 2 V<sub>rms</sub>، وقِس I وسجّله في Table 2.',subs:[
+        {k:'rec',t:'لكل تردد من 6 kHz لين 9 kHz: اضبط FREQ، وثبّت V على 2 V<sub>rms</sub>، وسجّل I (إذا الـ BK قرا OL ارفع الـ range).',ok:()=>F4.every(f=>ST['p'+f]!=null),rec:sweep('p',F4,'q'),do:sweepDo('p',F4)}]},
+      {dev:'gen',t:'3. احسب Z = V/I وكمّل Table 2.',subs:[{k:'set',t:'احسب Z = V/I لكل تردد (في الـ sheet).',ok:()=>F4.every(f=>ST['p'+f]!=null)}]},
+      {dev:'gen',t:'4. ارسم Z ضد التردد، ومنه طلّع الـ resonant frequency f<sub>op</sub>، والـ half-power frequencies f<sub>1</sub> و f<sub>2</sub>، والـ bandwidth B، والـ quality factor Q<sub>o</sub>.',subs:[{k:'set',t:'ارسم Z(f) وطلّع f<sub>op</sub> و f<sub>1</sub> و f<sub>2</sub> و B و Q<sub>o</sub> (في الـ sheet).',ok:()=>F4.every(f=>ST['p'+f]!=null)}]}
     ],
     onReset(){ST={};$('result').innerHTML=''}};
 }};})();

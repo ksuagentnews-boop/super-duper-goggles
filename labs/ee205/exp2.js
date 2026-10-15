@@ -210,7 +210,7 @@ setup(RT){
         {k:'set',dev:'gen',t:'FREQ = 100 Hz.',ok:()=>RT.S.gen.freq===100,do:A=>mtx(A,'f',100)},
         {k:'set',dev:'gen',t:'Sine، OFFSET = 0 V، و OUTPUT ON.',ok:s=>s.s10,do:A=>genSine(A)}]},
       {dev:'sc',t:'2. استخدم الـ oscilloscope وقِس الـ peak to peak (10 V). RMS = 5/√2 = 3.535 V.',subs:[
-        {k:'set',dev:'sc',t:'الإشارة على CH II، و VOLTS/DIV على 2 V/div (5 divisions).',ok:()=>!!ST.pp10,do:async A=>{await modeII(A);await vdTo(A,1,2)},hint:'الـ display على CH II، و VOLTS/DIV على 2 V/div'}]},
+        {k:'set',dev:'sc',t:'الإشارة على CH II، و VOLTS/DIV على 2 V/div (الموجة على خمس divisions).',ok:()=>!!ST.pp10,do:async A=>{await modeII(A);await vdTo(A,1,2)},hint:'الـ display على CH II، و VOLTS/DIV على 2 V/div'}]},
       {dev:'hm1',t:'3. استخدم الـ digital multimeter وقِس الـ RMS.',subs:[
         {k:'measure',dev:'hm1',t:'الـ Fluke على V~ على مخرج الـ generator.',ok:()=>FQ.some(f=>ST['d'+f]!=null),
           do:async A=>{if(RT.S.hm1.pos!==1)await meterTo(A,1,1);if(K.across('ACV',RT.leadNet('gr'),-1,false)==null)await A.build(FVD2)},hint:'الـ Fluke على V~: VΩ على الأحمر حق الـ generator و COM على الأسود'}]},
@@ -231,13 +231,13 @@ setup(RT){
           {k:'rec',t:`سجّل ${l}.`,ok:()=>ST[k]!=null,rec:[{to:k,val:()=>ST[k],unit:'V',dec:3,label:l}]}])]},
       {dev:'sc',t:'3. اعرض V<sub>R</sub> و E على الـ oscilloscope. ارسم الموجات.',subs:[
         {k:'connect',t:'CH I على a (V<sub>R</sub>)، و CH II على c (E)، والأرضي على b.',ok:s=>!!s.scope3,do:A=>A.connect(FSC),hint:'الأحمر حق CH I على a، والأحمر حق CH II على c، والأسود على b'},
-        {k:'set',dev:'sc',t:'حوّل على DUAL.',ok:()=>!!ST.dual3,do:async A=>{if(sc().xy)await A.press('s:XY');if(sc().add)await A.press('s:ADD');if(!sc().dual)await A.press('s:DUAL')}},
+        {k:'set',dev:'sc',t:'حوّل على DUAL.',ok:()=>!!ST.dual3,do:async A=>{if(!sc().pwr)await A.press('s:PWR');if(sc().xy)await A.press('s:XY');if(sc().add)await A.press('s:ADD');if(!sc().dual)await A.press('s:DUAL')}},
         {k:'rec',t:'سجّل الموجتين.',ok:()=>!!ST.dual3,rec:[{scope:'w3',label:'V<sub>R</sub> و E'}]}]},
       {dev:'sc',t:'4. قِس الـ phase angle θ، ووضّح أي موجة تسبق. ليش؟ (من الإزاحة بين الموجتين على DUAL، أو من الـ Lissajous: θ = sin⁻¹(L<sub>1</sub>/L<sub>2</sub>)، Fig. 3-c)',subs:[
-        {k:'set',dev:'sc',t:'اضغط XY: الـ Lissajous.',ok:()=>!!ST.xy,do:async A=>{if(!sc().xy)await A.press('s:XY')}},
+        {k:'set',dev:'sc',t:'اضغط XY: الـ Lissajous.',ok:()=>!!ST.xy,do:async A=>{if(!sc().pwr)await A.press('s:PWR');if(!sc().xy)await A.press('s:XY')}},
         {k:'rec',t:'سجّل الـ Lissajous.',ok:()=>!!ST.xy,rec:[{scope:'w4',label:'Lissajous'}]}]},
       {dev:'board',t:'5. شيل توصيلة الـ oscilloscope وقِس التيار I اللي يمشي في الدائرة.',subs:[
-        {k:'connect',t:'شيل توصيلة الـ oscilloscope (CH I و CH II) وأطراف الـ Fluke.',ok:s=>s.noScope,do:async A=>{const g=RT.lead.grpOf;RT.lead.unplug(['c1r','c2r','h1v','h1c'].map(g));RT.dirty=true;await A.wait(200)},hint:'اسحب الـ probes من CH I و CH II'},
+        {k:'connect',t:'شيل توصيلة الـ oscilloscope (CH I و CH II).',ok:s=>s.noScope,do:async A=>{const g=RT.lead.grpOf;RT.lead.unplug(['c1r','c2r'].map(g));RT.dirty=true;await A.wait(200)},hint:'اسحب الـ probes من CH I و CH II'},
         {k:'set',dev:'hm1',t:'حوّل الـ Fluke على A~.',ok:s=>s.fl.pwr&&s.fl.fn==='ACI',do:A=>meterTo(A,1,7),hint:'لف قرص الـ Fluke على A~'},
         {k:'measure',dev:'hm1',t:'شيل الـ plug اللي بين الـ generator و c، وحط الأميتر مكانه (المدخل 300 mA على جهة الـ generator، COM على c).',ok:()=>ST.i3!=null,do:A=>A.connect(figs.I),hint:'الأميتر على التوالي: مكان الـ plug بين الـ generator و c'},
         {k:'rec',t:'سجّل I.',ok:()=>ST.i3!=null,rec:[{to:'i3',val:()=>ST.i3!=null?ST.i3*1e3:null,unit:'mA',dec:2,label:'I'}]}]},
