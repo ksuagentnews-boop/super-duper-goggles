@@ -173,7 +173,7 @@ setup(RT){
         {k:'set',dev:'scope',t:'SCALE حق CH1 على 5 V/div.',ok:()=>SC().ch[0].vd===5,do:A=>vTo(A,0,5),hint:'لف SCALE حق CH1 لين تقرا 5 V/div'},
         {k:'set',dev:'scope',t:'SCALE حق CH2 على 5 V/div.',ok:s=>s.v5&&s.plug,do:A=>vTo(A,1,5),hint:'لف SCALE حق CH2 لين تقرا 5 V/div'}]},
       {dev:'scope',t:'7. لو احتجت، غيّر SCALE حق الـ Horizontal (time/div) عشان يطلع لك عدد مناسب من الدورات.',subs:[
-        {k:'set',dev:'scope',t:'SCALE حق الـ Horizontal: بين 1 و 10 دورات على الشاشة.',ok:s=>s.cyc&&s.plug,do:async A=>{for(let q=0;q<20&&cycles()<1;q++)await A.press('s:H+');for(let q=0;q<20&&cycles()>10;q++)await A.press('s:H-')},hint:'لف SCALE حق الـ Horizontal: كل 16.7 ms دورة وحدة (60 Hz)'}]},
+        {k:'set',dev:'scope',t:'SCALE حق الـ Horizontal: من دورة وحدة إلى 10 دورات على الشاشة.',ok:s=>s.cyc&&s.plug,do:async A=>{for(let q=0;q<20&&cycles()<1;q++)await A.press('s:H+');for(let q=0;q<20&&cycles()>10;q++)await A.press('s:H-')},hint:'لف SCALE حق الـ Horizontal: كل 16.7 ms دورة وحدة (60 Hz)'}]},
       {dev:'scope',t:'8. اضغط Measure ← Add Measurement ← V/I، وبالـ VARIABLE اختر Pk-Pk أو Max واضغط Select.',subs:[
         {k:'set',dev:'scope',t:'اضغط Measure.',ok:s=>SC().menu==='measure'||s.meas1,do:A=>A.press('s:Measure'),hint:'زر Measure فوق الإسكوب'},
         {k:'set',dev:'scope',t:'اختر Add Measurement من القائمة اللي تحت، وبعدها V/I.',ok:s=>SC().list&&SC().list.kind==='vi'||s.meas1,do:async A=>{if(SC().menu!=='measure')await A.press('s:Measure');if(SC().side!=='add')await A.press('s:B0');await A.press('s:S0')},hint:'أول زر تحت الشاشة (Add Measurement) وبعدها أول زر يمين (V/I)'},

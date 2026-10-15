@@ -155,7 +155,7 @@ setup(RT){
   return {status,
     steps:[
       /* Procedure A (manual p. 76), steps 1–4; every step split into its sub-steps (Batch 7 item 3) */
-      {dev:'dmm',t:'Procedure A · 1. بالـ DMM قِس كل مقاومة (وهي لحالها) وسجّل قيمتها في Table 10.1.',subs:[
+      {dev:'dmm',lines:[{jack:'mh',altJack:'m2h'},{jack:'ml',altJack:'m2l'}],t:'Procedure A · 1. بالـ DMM قِس كل مقاومة (وهي لحالها) وسجّل قيمتها في Table 10.1.',subs:[
         {k:'set',dev:'dmm',t:'شغّل الـ DMM (POWER) واختر Ω.',ok:()=>RT.meters().some(m=>m.D.pwr&&m.D.fn==='OHM'),do:Ax=>dmm1(Ax,'OHM'),hint:'زر POWER وبعدها زر Ω في صف الوظائف'},
         ...RS.map(t=>({k:'measure',dev:'board',t:`حط ${RL[t]} لحالها على اللوحة وطرفي الـ DMM عليها.`,ok:()=>ST.r[t]!=null,do:async Ax=>{await dmm1(Ax,'OHM');await Ax.build(RF[t])},
           hint:`${RL[t]} لحالها على nodes فاضية (ما فيه شي ثاني عليها)، والأحمر (HI) والأسود (COM) على طرفيها، والـ DMM على Ω`})),
@@ -167,7 +167,7 @@ setup(RT){
         {k:'set',dev:'psu',t:'بالـ COARSE و FINE خلّ V<sub>CC</sub> = 12 V.',ok:()=>near(RT.S.psu.u[unit()].v,12,0.006),do:Ax=>{const u=unit();return knobTo(Ax,UK(u),()=>RT.S.psu.u[u].v,12,0.004)},
           hint:()=>`الجهد الحين ${RT.S.psu.u[unit()].v.toFixed(2)} V: لف COARSE لين قريب من 12 V، وكمّل بالـ FINE`},
         {k:'set',dev:'psu',t:'شغّل مفتاح الـ dc ⎓ ON.',ok:s=>s.on,do:async Ax=>{const u=unit();if(!RT.S.psu.u[u].on)await Ax.press('p:'+UK(u)+'ON')}}]},
-      {dev:'dmm',t:'3. بالـ DMM على قياس الجهد المستمر (DCV)، قِس وسجّل V<sub>BE</sub> و V<sub>BC</sub> و V<sub>CE</sub> و V<sub>R1</sub> و V<sub>R2</sub> و V<sub>RC</sub> و V<sub>RE</sub> على Fig. 10.3.',subs:[
+      {dev:'dmm',lines:[{jack:'mh',altJack:'m2h'},{jack:'ml',altJack:'m2l'},{jack:'m2h',altJack:'mh'},{jack:'m2l',altJack:'ml'}],t:'3. بالـ DMM على قياس الجهد المستمر (DCV)، قِس وسجّل V<sub>BE</sub> و V<sub>BC</sub> و V<sub>CE</sub> و V<sub>R1</sub> و V<sub>R2</sub> و V<sub>RC</sub> و V<sub>RE</sub> على Fig. 10.3.',subs:[
         {k:'set',dev:'dmm',t:'الـ DMM على DCV (تقدر تقسم القياسات بين الملتيميترين).',ok:()=>RT.meters().some(m=>m.D.pwr&&m.D.fn==='DCV'),do:Ax=>dmm1(Ax,'DCV'),hint:'زر DCV في صف الوظائف'},
         ...Object.keys(MP).map(k=>({k:'measure',dev:'board',t:`قِس ${VL[k]}.`,ok:()=>ST.v[k]!=null,do:async Ax=>{await dmm1(Ax,'DCV');await Ax.connect(MF[k])},
           hint:s=>!s.on?'V<sub>CC</sub> = 12 V لازم يكون شغّال':`حط طرفي الـ DMM (على DCV) على ${VL[k]}`})),
@@ -182,7 +182,7 @@ setup(RT){
       /* Procedure B (manual p. 77), steps 1–7 */
       {dev:'board',build:'10.2',t:'Procedure B · 1. وصّل الدائرة Fig. 10.2.',subs:[
         {k:'build',fig:'10.2',t:'وصّل الدائرة <bdi dir="ltr">Fig. 10.2</bdi>: C<sub>1</sub> = C<sub>2</sub> = 2.2 µF و C<sub>E</sub> = 470 µF. انتبه لقطبية المكثفات الكيميائية: الطرف + جهة الـ base والـ collector والـ emitter.'}]},
-      {dev:'scope',t:'2. شغّل الإسكوب، انتظر كم ثانية، اضغط Default وبعدها Autoset. اعرض v<sub>i</sub>(t) على CH1 و v<sub>O</sub>(t) على CH2.',subs:[
+      {dev:'scope',lines:[{jack:'c1r'},{jack:'c2r'}],t:'2. شغّل الإسكوب، انتظر كم ثانية، اضغط Default وبعدها Autoset. اعرض v<sub>i</sub>(t) على CH1 و v<sub>O</sub>(t) على CH2.',subs:[
         {k:'set',dev:'scope',t:'شغّل الإسكوب (POWER) وانتظر كم ثانية.',ok:()=>sc().pwr,do:Ax=>Ax.press('s:PWR')},
         {k:'set',dev:'scope',t:'اضغط Default.',ok:()=>!!ST.def,do:Ax=>Ax.press('s:Default')},
         {k:'set',dev:'scope',t:'اضغط Autoset.',ok:()=>!!ST.auto,do:Ax=>Ax.press('s:Autoset')},

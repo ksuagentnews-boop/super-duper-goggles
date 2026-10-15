@@ -826,7 +826,9 @@ const baseOf=F=>{if(!BASE.has(F))BASE.set(F,{...F,lines:(F.lines||[]).filter(l=>
 function nodeOnNet(net,ref){if(net==null)return null;if(RT.netOf(ref)===net)return ref;const cand=[];for(let n=0;n<NN;n++)if(RT.netOf(n)===net)cand.push(n);
   if(!cand.length)return null;const want=BBG?BBG.kind(ref):null;return cand.find(n=>!BBG||BBG.kind(n)===want)??cand.find(n=>!BBG||BBG.kind(n)!=='post')??cand[0]}
 RT.connectFig=(f,ms=260)=>new Promise(res=>{const F=figOf(f);if(!F){res(false);return}const M=RT.match(baseOf(F));if(!M.ok){RT.buildFig(f,110).then(res);return}
-  const todo=(F.lines||[]).filter(L=>L.lead&&![L.lead].concat(L.alt||[]).some(k=>RT.leadNet(k)!=null&&RT.leadNet(k)===M.net(L.at)));
+  /* a bench lead satisfies one figure terminal only (alt keys on shared nets: the other unit's − on the same net does not count twice) */
+  const used=new Set(),todo=[];(F.lines||[]).filter(L=>L.lead).forEach(L=>{const k=[L.lead].concat(L.alt||[]).find(k=>!used.has(k)&&RT.leadNet(k)!=null&&RT.leadNet(k)===M.net(L.at));if(k)used.add(k);else todo.push(L)});
+  todo.forEach((L,i)=>{const ks=[L.lead].concat(L.alt||[]);const k=ks.find(k=>!used.has(k)&&RT.leadNet(k)==null)||ks.find(k=>!used.has(k))||L.lead;used.add(k);todo[i]={...L,lead:k}});
   const run=i=>{if(i>=todo.length){render();res(true);return}const L=todo[i];const at=L.via?null:nodeOnNet(M.net(L.at),L.at);
     if(L.via||at!=null)placeLead(L,at??L.at);render();if(ms)setTimeout(()=>run(i+1),ms);else run(i+1)};run(0)});
 /* an instrument key / knob detent pressed from the code («اضبط لي»): the same as a tap, with the white highlight on it */
