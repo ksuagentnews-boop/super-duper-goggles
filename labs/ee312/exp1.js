@@ -136,32 +136,71 @@ setup(RT){
     g.proc(null);g.add(v('q5n')===3,'PLQ 5 i','3 diodes × 0.67 V ≈ 2 V');g.add(v('q5b')===2,'PLQ 5 cells','2 × 1.5 V = 3 V (the smallest battery above 2 V)');
     g.add(G.near(v('q5r'),(3-3*0.67)/0.02,1.5),'PLQ 5 ii RS','RS = (3 − 2.01) / (10 mA load + 10 mA diodes) ≈ 49.5 Ω');g.add(G.s('q5c')==='a','PLQ 5 iii');
     g.show($('result'))});
+  /* "do it for me" helpers: the supply unit wired into the circuit, its voltage by COARSE then FINE, V_RS by the same knobs */
+  const U=()=>RT.leadNet('Rp')!=null&&RT.leadNet('Lp')==null?'R':'L';
+  /* turn COARSE while it brings the value closer, then FINE (a COARSE step that overshoots is turned back) */
+  const knobTo=async(A,u,get,t,tol,done)=>{let fineOnly=false;for(let i=0;i<500;i++){if(done&&done())return;const x=get();if(x==null)return;const e=x-t;if(Math.abs(e)<=tol)return;
+      const k='p:'+u+(fineOnly?'VF':'VC')+(e<0?'+':'-');await A.tap(k,fineOnly?35:90);
+      if(!fineOnly){const y=get();if(y==null)return;if(Math.abs(y-t)>=Math.abs(e)||Math.sign(y-t)!==Math.sign(e)&&Math.abs(y-t)>tol){if(Math.abs(y-t)>=Math.abs(e))await A.tap('p:'+u+'VC'+(e<0?'-':'+'),90);fineOnly=true}}}};
+  const volts=(A,v)=>{const u=U();return knobTo(A,u,()=>RT.S.psu.u[u==='L'?0:1].v,v,0.004)};
+  const tune=(A,t)=>{const u=U(),k='rs'+{0.1:'1',1:'10',2:'20'}[t];return knobTo(A,u,()=>{const m=rsM();return m&&m.D.fn==='DCV'?status().vrs:null},t,0.004,()=>!!ST[k])};
+  /* the meter on the circuit (Fig. 1.3a draws one: DMM 1 or DMM 2), the one across R_S (Fig. 1.3b) */
+  const rsM=()=>{const B=procB();return B?RT.meters().find(m=>m.hi===B.P&&m.lo===B.X||m.hi===B.X&&m.lo===B.P):null};
+  const MM=()=>RT.leadNet('m2h')!=null?{key:'dmm2',p:'m2'}:RT.leadNet('mh')!=null?{key:'dmm',p:'m'}:null;
   return {status,
     steps:[
-      /* Procedure A (manual p. 10), steps 1–5 */
-      {dev:'dmm',t:'Procedure A · 1. حوّل الـ DMM على وضع اختبار الدايود (diode-test ▶|).',ok:s=>s.dmmDiode},
-      {dev:'dmm',t:'2. شوف قراءة الـ DMM والمداخل فاضية (open circuit) وسجّلها في Table 1.1.',ok:s=>ST.open,
-        rec:[{to:'a_open',val:()=>ST.open?'ovl':null,txt:()=>'OVL.D',label:'Open circuit',none:'فضّ مداخل الـ DMM وخلّه على ▶|'}]},
-      {dev:'dmm',t:'3. حط أي دايود (Fig. 1.2) بين المدخل الأحمر والأسود للـ DMM (V·Ω و COM) بحيث يبقى يقرا نفس قراءة الـ open circuit: الكاثود يكون على الأحمر.',
-        acts:['اسحب الـ 1N4001 من «العلبة» وحطه على مداخل الـ DMM (HI و COM).','اضغط على الدايود عشان تقلبه لين يصير الكاثود (الحلقة) في HI.'],ok:s=>ST.revSi,
-        rec:[{to:'a_rev',val:()=>ST.revSi?'ovl':null,txt:()=>'OVL.D',label:'Reverse-biased'}]},
-      {dev:'dmm',t:'4. اعكس توصيل الدايود: الـ DMM يعطيك الـ forward voltage drop. سجّله في Table 1.1 وتأكد إنه في المدى المكتوب.',ok:s=>ST.f_D4001!=null,
-        rec:[{to:'a_si',val:()=>ST.f_D4001,unit:'V',dec:3,label:'Rectifier'}]},
-      {dev:'dmm',t:'5. كرّر خطوة 3 و 4 لباقي أنواع الدايودات.',acts:['الزينر 1N4733A.','الـ LED (الرجل الطويلة = الأنود؛ يضوي خفيف).','الـ Ge diode.','بعدها اضغط «شيل» عشان تفضّى مداخل الـ DMM.'],
-        ok:s=>ST.f_Z4733!=null&&ST.f_LED!=null&&ST.f_GE!=null&&!s.jdIn,
-        rec:[{to:'a_z',val:()=>ST.f_Z4733,unit:'V',dec:3,label:'Zener'},{to:'a_led',val:()=>ST.f_LED,unit:'V',dec:3,label:'LED'},{to:'a_ge',val:()=>ST.f_GE,unit:'V',dec:3,label:'Germanium'}]},
+      /* Procedure A (manual p. 10), steps 1–5; every step split into its sub-steps (Batch 7 item 3) */
+      {dev:'dmm',t:'Procedure A · 1. حوّل الـ DMM على وضع اختبار الدايود (diode-test ▶|).',subs:[
+        {k:'set',dev:'dmm',t:'شغّل الـ DMM (زر POWER).',ok:()=>RT.meters().some(m=>m.D.pwr),do:async A=>{if(!RT.S.dmm.pwr)await A.press('m:PWR')},hint:'زر POWER تحت يمين الـ DMM'},
+        {k:'set',dev:'dmm',t:'اختر diode-test ▶|.',ok:s=>s.dmmDiode,do:A=>A.press('m:DIODE'),hint:'زر ▶| في صف الوظائف'}]},
+      {dev:'dmm',t:'2. شوف قراءة الـ DMM والمداخل فاضية (open circuit) وسجّلها في Table 1.1.',subs:[
+        {k:'measure',dev:'dmm',t:'خلّ مداخل الـ DMM فاضية: الشاشة تقرا OVL.D (open circuit).',ok:()=>!!ST.open,do:async A=>{if(RT.S.dmm.jd)await A.press('m:JDOUT')},hint:'شيل أي دايود أو سلك من مداخل الـ DMM وخلّه على ▶|'},
+        {k:'rec',t:'سجّل القراءة في Table 1.1 (Open circuit).',ok:()=>!!ST.open,rec:[{to:'a_open',val:()=>ST.open?'ovl':null,txt:()=>'OVL.D',label:'Open circuit',none:'فضّ مداخل الـ DMM وخلّه على ▶|'}]}]},
+      {dev:'dmm',t:'3. حط أي دايود (Fig. 1.2) بين المدخل الأحمر والأسود للـ DMM (V·Ω و COM) بحيث يبقى يقرا نفس قراءة الـ open circuit: الكاثود يكون على الأحمر.',subs:[
+        {k:'measure',dev:'dmm',t:'حط الـ 1N4001 من «العلبة» في مداخل الـ DMM (HI و COM).',ok:()=>RT.meters().some(m=>m.D.jd&&m.D.jd.type==='D4001'),do:async A=>{if(RT.S.dmm.jd)await A.press('m:JDOUT');await A.jack('D4001')},hint:'اسحب الـ 1N4001 من «العلبة» وأفلته على مداخل الـ DMM'},
+        {k:'set',dev:'dmm',t:'اقلبه لين يصير الكاثود (الحلقة) في HI: الشاشة OVL.D.',ok:()=>!!ST.revSi,do:A=>A.until('m:JDFLIP',()=>!!ST.revSi,2),hint:'اضغط على الدايود اللي في المداخل عشان تقلبه'},
+        {k:'rec',t:'سجّل القراءة في Table 1.1 (Reverse-biased).',ok:()=>!!ST.revSi,rec:[{to:'a_rev',val:()=>ST.revSi?'ovl':null,txt:()=>'OVL.D',label:'Reverse-biased'}]}]},
+      {dev:'dmm',t:'4. اعكس توصيل الدايود: الـ DMM يعطيك الـ forward voltage drop. سجّله في Table 1.1 وتأكد إنه في المدى المكتوب.',subs:[
+        {k:'set',dev:'dmm',t:'اعكس الدايود: الأنود في HI.',ok:()=>ST.f_D4001!=null,do:A=>A.until('m:JDFLIP',()=>ST.f_D4001!=null,2),hint:'اضغط على الدايود عشان تقلبه'},
+        {k:'rec',t:'سجّل الـ forward drop في Table 1.1 (Rectifier).',ok:()=>ST.f_D4001!=null,rec:[{to:'a_si',val:()=>ST.f_D4001,unit:'V',dec:3,label:'Rectifier'}]}]},
+      {dev:'dmm',t:'5. كرّر خطوة 3 و 4 لباقي أنواع الدايودات.',subs:[
+        {k:'measure',dev:'dmm',t:'الزينر 1N4733A: الأنود في HI.',ok:()=>ST.f_Z4733!=null,do:async A=>{if(RT.S.dmm.jd)await A.press('m:JDOUT');await A.jack('Z4733');if(ST.f_Z4733==null)await A.press('m:JDFLIP')},hint:'حط الـ 1N4733A في المداخل، الحلقة (الكاثود) في COM'},
+        {k:'measure',dev:'dmm',t:'الـ LED (الرجل الطويلة = الأنود في HI؛ يضوي خفيف).',ok:()=>ST.f_LED!=null,do:async A=>{if(RT.S.dmm.jd)await A.press('m:JDOUT');await A.jack('LED');if(ST.f_LED==null)await A.press('m:JDFLIP')},hint:'حط الـ LED في المداخل، الرجل الطويلة في HI'},
+        {k:'measure',dev:'dmm',t:'الـ Ge diode: الأنود في HI.',ok:()=>ST.f_GE!=null,do:async A=>{if(RT.S.dmm.jd)await A.press('m:JDOUT');await A.jack('GE');if(ST.f_GE==null)await A.press('m:JDFLIP')},hint:'حط الـ Ge diode في المداخل، الحلقة في COM'},
+        {k:'set',dev:'dmm',t:'اضغط «شيل» عشان تفضّى مداخل الـ DMM.',ok:s=>!s.jdIn,do:A=>A.press('m:JDOUT')},
+        {k:'rec',t:'سجّل الثلاث قراءات في Table 1.1.',ok:()=>ST.f_Z4733!=null&&ST.f_LED!=null&&ST.f_GE!=null,rec:[{to:'a_z',val:()=>ST.f_Z4733,unit:'V',dec:3,label:'Zener'},{to:'a_led',val:()=>ST.f_LED,unit:'V',dec:3,label:'LED'},{to:'a_ge',val:()=>ST.f_GE,unit:'V',dec:3,label:'Germanium'}]}]},
       /* Procedure B (manual p. 11), steps 1–11 */
-      {dev:'board',build:'1.3a',t:'Procedure B · 1. وصّل الدائرة Fig. 1.3a، في البداية بالـ DMM بس على الـ open circuit (بدون دايود).'},
-      {dev:'dmm2',t:'2. تأكد إن الـ DMM على قياس الجهد المستمر (DCV).',ok:s=>s.figA&&s.vxDCV},
-      {dev:'psu',t:'3. شغّل الـ dc supply بمفتاح ∼ POWER.',acts:['بالـ CURRENT خلّ حد التيار 0.05 A.','بالـ COARSE و FINE خلّ الجهد 5 V.','شغّل مفتاح الـ dc ⎓ ON.'],ok:s=>s.figA&&s.unitOK},
-      {dev:'dmm2',t:'4. سجّل قراءة الـ DMM للـ open-circuit voltage V<sub>OC</sub> في Table 1.2.',ok:s=>ST.voc!=null,rec:[{to:'b_voc',val:()=>ST.voc,unit:'V',dec:3,label:'V<sub>OC</sub>'}]},
-      {dev:'board',build:'1.5a',t:'5. وصّل الـ rectifier diode بالعكس (Fig. 1.5a)، وسجّل الـ reverse voltage drop V<sub>rev</sub> على الدايود.',ok:s=>ST.vrev!=null,rec:[{to:'b_vrev',val:()=>ST.vrev,unit:'V',dec:3,label:'V<sub>rev</sub>'}]},
-      {dev:'board',build:'1.3b',t:'6. طفّ مفتاح الـ dc. اقلب الدايود (Fig. 1.3b).',ok:s=>s.B&&!s.B.on},
-      {dev:'psu',t:'7. شغّل مفتاح الـ dc. اضبط جهد المصدر لين الجهد على المقاومة V<sub>RS</sub> = 0.1 V (التيار 1 mA). سجّل الـ forward drop V<sub>D</sub> في Table 1.2.',ok:s=>ST.vd1!=null,rec:[{to:'b_vd1',val:()=>ST.vd1,unit:'V',dec:3,label:'V<sub>D</sub> @ 1 mA'}]},
-      {dev:'psu',t:'8. ارفع جهد المصدر لين V<sub>RS</sub> = 1 V (التيار 10 mA). سجّل V<sub>D</sub> الجديدة.',ok:s=>ST.vd10!=null,rec:[{to:'b_vd10',val:()=>ST.vd10,unit:'V',dec:3,label:'V<sub>D</sub> @ 10 mA'}]},
-      {dev:'psu',t:'9. ارفع جهد المصدر أكثر لين V<sub>RS</sub> = 2 V (التيار 20 mA). سجّل V<sub>D</sub> الجديدة.',ok:s=>ST.vd20!=null,rec:[{to:'b_vd20',val:()=>ST.vd20,unit:'V',dec:3,label:'V<sub>D</sub> @ 20 mA'},{to:'b_vdn',val:()=>ST.vd20,unit:'V',dec:3,label:'V<sub>D</sub> (no load)'}]},
-      {dev:'board',build:'1.3b-RL',t:'10. وصّل مقاومة 100 Ω (R<sub>L</sub>) بالتوازي مع الدايود. سجّل V<sub>D</sub>′ في Table 1.2.',ok:s=>ST.vdl!=null,rec:[{to:'b_vdl',val:()=>ST.vdl,unit:'V',dec:3,label:'V<sub>D</sub>′'}]},
-      {dev:'psu',t:'11. طفّ الـ dc supply، وفكّ القطع، ورتّب طاولتك.',ok:s=>ST.off}
+      {dev:'board',build:'1.3a',t:'Procedure B · 1. وصّل الدائرة Fig. 1.3a، في البداية بالـ DMM بس على الـ open circuit (بدون دايود).',subs:[{k:'build',fig:'1.3a',t:'وصّل الدائرة <bdi dir="ltr">Fig. 1.3a</bdi>: R<sub>S</sub> = 100 Ω والـ DMM على الـ open circuit.'}]},
+      {dev:'dmm2',t:'2. تأكد إن الـ DMM على قياس الجهد المستمر (DCV).',subs:[
+        {k:'set',t:'شغّل الـ DMM اللي على الدائرة (زر POWER).',ok:()=>{const m=MM();return !!m&&RT.S[m.key].pwr},do:async A=>{const m=MM();if(m&&!RT.S[m.key].pwr)await A.press(m.p+':PWR')}},
+        {k:'set',t:'اختر DCV.',ok:s=>s.figA&&s.vxDCV,do:async A=>{const m=MM();if(m)await A.press(m.p+':DCV')},hint:'زر DCV في صف الوظائف'}]},
+      {dev:'psu',t:'3. شغّل الـ dc supply بمفتاح ∼ POWER.',subs:[
+        {k:'set',dev:'psu',t:'شغّل مفتاح ∼ POWER.',ok:()=>RT.S.psu.pwr,do:A=>A.press('p:PWR')},
+        {k:'set',dev:'psu',t:'بالـ CURRENT خلّ حد التيار 0.05 A.',ok:s=>{const B=s.B;return !!B&&B.U.ilim<=0.0501},do:A=>A.until('p:'+U()+'I-',s=>!!s.B&&s.B.U.ilim<=0.0501,80),hint:'لف CURRENT لليسار لين 0.05 A'},
+        {k:'set',dev:'psu',t:'بالـ COARSE و FINE خلّ الجهد 5 V.',ok:s=>{const B=s.B;return !!B&&Math.abs(B.U.v-5)<0.006},do:A=>volts(A,5),hint:'لف COARSE لين قريب من 5 V، وكمّل بالـ FINE'},
+        {k:'set',dev:'psu',t:'شغّل مفتاح الـ dc ⎓ ON.',ok:s=>s.figA&&s.unitOK,do:A=>A.press('p:'+U()+'ON')}]},
+      {dev:'dmm2',t:'4. سجّل قراءة الـ DMM للـ open-circuit voltage V<sub>OC</sub> في Table 1.2.',subs:[{k:'rec',t:'سجّل V<sub>OC</sub>.',ok:()=>ST.voc!=null,rec:[{to:'b_voc',val:()=>ST.voc,unit:'V',dec:3,label:'V<sub>OC</sub>'}]}]},
+      {dev:'board',build:'1.5a',t:'5. وصّل الـ rectifier diode بالعكس (Fig. 1.5a)، وسجّل الـ reverse voltage drop V<sub>rev</sub> على الدايود.',subs:[
+        {k:'build',fig:'1.5a',t:'وصّل الـ 1N4001 بالعكس (<bdi dir="ltr">Fig. 1.5a</bdi>) والـ DMM عليه.'},
+        {k:'rec',t:'سجّل V<sub>rev</sub>.',ok:()=>ST.vrev!=null,rec:[{to:'b_vrev',val:()=>ST.vrev,unit:'V',dec:3,label:'V<sub>rev</sub>'}]}]},
+      {dev:'board',build:'1.3b',t:'6. طفّ مفتاح الـ dc. اقلب الدايود (Fig. 1.3b).',subs:[
+        {k:'set',dev:'psu',t:'طفّ مفتاح الـ dc ⎓ ON.',ok:s=>!!s.B&&!s.B.on||!RT.S.psu.pwr,do:A=>A.press('p:'+U()+'ON')},
+        {k:'build',fig:'1.3b',t:'اقلب الدايود (<bdi dir="ltr">Fig. 1.3b</bdi>).',ok:s=>!!s.B&&!s.B.on}]},
+      {dev:'psu',t:'7. شغّل مفتاح الـ dc. اضبط جهد المصدر لين الجهد على المقاومة V<sub>RS</sub> = 0.1 V (التيار 1 mA). سجّل الـ forward drop V<sub>D</sub> في Table 1.2.',subs:[
+        {k:'set',dev:'psu',t:'شغّل مفتاح الـ dc ⎓ ON.',ok:s=>!!s.B&&s.B.on,do:A=>A.press('p:'+U()+'ON')},
+        {k:'measure',t:'الـ DMM اللي على R<sub>S</sub> على DCV عشان تقرا V<sub>RS</sub>.',ok:()=>{const m=rsM();return !!m&&m.D.pwr&&m.D.fn==='DCV'},do:async A=>{const m=rsM();if(!m)return;const p=m.key==='dmm2'?'m2':'m';if(!m.D.pwr)await A.press(p+':PWR');if(m.D.fn!=='DCV')await A.press(p+':DCV')},hint:'الـ DMM اللي على R<sub>S</sub> (Fig. 1.3b): شغّله واختر DCV'},
+        {k:'set',dev:'psu',t:'اضبط جهد المصدر لين V<sub>RS</sub> = 0.1 V.',ok:()=>!!ST.rs1,do:A=>tune(A,0.1),hint:s=>`V<sub>RS</sub> الحين ${s.vrs!=null?s.vrs.toFixed(3)+' V':'؟'}: لف FINE لين 0.100 V`},
+        {k:'rec',t:'سجّل V<sub>D</sub> @ 1 mA.',ok:()=>ST.vd1!=null,rec:[{to:'b_vd1',val:()=>ST.vd1,unit:'V',dec:3,label:'V<sub>D</sub> @ 1 mA'}]}]},
+      {dev:'psu',t:'8. ارفع جهد المصدر لين V<sub>RS</sub> = 1 V (التيار 10 mA). سجّل V<sub>D</sub> الجديدة.',subs:[
+        {k:'set',dev:'psu',t:'ارفع الجهد لين V<sub>RS</sub> = 1 V.',ok:()=>!!ST.rs10,do:A=>tune(A,1),hint:s=>`V<sub>RS</sub> الحين ${s.vrs!=null?s.vrs.toFixed(3)+' V':'؟'}: لف COARSE ثم FINE لين 1.000 V`},
+        {k:'rec',t:'سجّل V<sub>D</sub> @ 10 mA.',ok:()=>ST.vd10!=null,rec:[{to:'b_vd10',val:()=>ST.vd10,unit:'V',dec:3,label:'V<sub>D</sub> @ 10 mA'}]}]},
+      {dev:'psu',t:'9. ارفع جهد المصدر أكثر لين V<sub>RS</sub> = 2 V (التيار 20 mA). سجّل V<sub>D</sub> الجديدة.',subs:[
+        {k:'set',dev:'psu',t:'ارفع الجهد لين V<sub>RS</sub> = 2 V.',ok:()=>!!ST.rs20,do:A=>tune(A,2),hint:s=>`V<sub>RS</sub> الحين ${s.vrs!=null?s.vrs.toFixed(3)+' V':'؟'}: لف COARSE ثم FINE لين 2.000 V`},
+        {k:'rec',t:'سجّل V<sub>D</sub> @ 20 mA (وهي نفسها V<sub>D</sub> بدون حمل).',ok:()=>ST.vd20!=null,rec:[{to:'b_vd20',val:()=>ST.vd20,unit:'V',dec:3,label:'V<sub>D</sub> @ 20 mA'},{to:'b_vdn',val:()=>ST.vd20,unit:'V',dec:3,label:'V<sub>D</sub> (no load)'}]}]},
+      {dev:'board',build:'1.3b-RL',t:'10. وصّل مقاومة 100 Ω (R<sub>L</sub>) بالتوازي مع الدايود. سجّل V<sub>D</sub>′ في Table 1.2.',subs:[
+        {k:'build',fig:'1.3b-RL',t:'وصّل R<sub>L</sub> = 100 Ω بالتوازي مع الدايود.'},
+        {k:'rec',t:'سجّل V<sub>D</sub>′.',ok:()=>ST.vdl!=null,rec:[{to:'b_vdl',val:()=>ST.vdl,unit:'V',dec:3,label:'V<sub>D</sub>′'}]}]},
+      {dev:'psu',t:'11. طفّ الـ dc supply، وفكّ القطع، ورتّب طاولتك.',subs:[{k:'set',dev:'psu',t:'طفّ مفتاح الـ dc ⎓ ON.',ok:()=>!!ST.off,do:A=>A.press('p:'+U()+'ON')}]}
     ],
     onReset(){ST={};$('result').innerHTML=''}};
 }};})();

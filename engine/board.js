@@ -810,12 +810,31 @@ function figActions(F){const acts=[];const lines=F.lines||[];
     else if(L.ic)acts.push(()=>{const t=L.ic,d=PARTS[t];let n=null;for(let i=0;i<NN&&n==null;i++){if(!fits(t,i))continue;const pn=d.pins.map(q=>i+q.dy*COLS+q.dx);if(Object.entries(L.pins).every(([k,v])=>{const j=d.pins.findIndex(q=>q.n===k||q.role===k);return j>=0&&pn[j]===v}))n=i}
       if(n!=null){RT.S.parts.push({id:RT.uid++,type:t,n});circuitChanged()}});
     else if(L.stub!=null)acts.push(()=>{const have=RT.S.wires.filter(w=>w.b==null&&w.a===L.stub).length;for(let k=have;k<(L.n||1);k++){const h=hole(L.stub);if(h!=null)RT.S.wires.push({id:RT.uid++,a:L.stub,ha:h,b:null,hb:null})}circuitChanged()});
-    else if(L.lead)acts.push(()=>{const k=L.lead,g=grpOf(k);let id=plIn(g);if(id<0){id=leadFor(g);if(id<0)return;plug(id,g)}const j=GMEM[g].indexOf(k),c=RT.S.pl[id].clips[j];
-      if(BBG&&BBG.kind(L.at)!=='post'&&PL[id].kind!=='banana'){/* a hook goes on a free standing jumper of that group (one is added when none is free) */const occ=occupied();let w=RT.S.wires.find(w=>w.b==null&&w.a===L.at&&!occ.has(w.a+':j'+w.id));
-        if(!w){const h=hole(L.at);if(h==null)return;w={id:RT.uid++,a:L.at,ha:h,b:null,hb:null};RT.S.wires.push(w)}c.bn=w.a;c.bh='j'+w.id}
-      else if(L.via&&plIn(grpOf(L.via))>=0){c.bn=c.bh=null;c.bj=grpOf(L.via)}
-      else{const h=hole(L.at);if(h!=null){c.bn=L.at;c.bh=h}}syncLeads();circuitChanged()})});
+    else if(L.lead)acts.push(()=>placeLead(L,L.at))});
   return acts}
+/* one lead of a figure: plugged into its instrument, its end on node at (a hook on a standing jumper on the breadboard) */
+function placeLead(L,at){const k=L.lead,g=grpOf(k);let id=plIn(g);if(id<0){id=leadFor(g);if(id<0)return;plug(id,g)}const j=GMEM[g].indexOf(k),c=RT.S.pl[id].clips[j];c.bj=null;
+  if(BBG&&BBG.kind(at)!=='post'&&PL[id].kind!=='banana'){/* a hook goes on a free standing jumper of that group (one is added when none is free) */const occ=occupied();let w=RT.S.wires.find(w=>w.b==null&&w.a===at&&!occ.has(w.a+':j'+w.id));
+    if(!w){const h=freeHole(at);if(h==null)return;w={id:RT.uid++,a:at,ha:h,b:null,hb:null};RT.S.wires.push(w)}c.bn=w.a;c.bh='j'+w.id}
+  else if(L.via&&plIn(grpOf(L.via))>=0){c.bn=c.bh=null;c.bj=grpOf(L.via)}
+  else{const h=freeHole(at);if(h!=null){c.bn=at;c.bh=h}}syncLeads();circuitChanged()}
+/* «وصّل لي» for a connection sub-step (Batch 7 item 3): the circuit of the figure is already on the board (however the
+   student laid it out); only the figure's leads that are not yet on their points are plugged in and clipped onto a node of
+   the right net, one by one. When the circuit itself does not match yet, the whole figure is built. */
+const BASE=new Map();
+const baseOf=F=>{if(!BASE.has(F))BASE.set(F,{...F,lines:(F.lines||[]).filter(l=>!l.lead&&l.stub==null)});return BASE.get(F)};
+function nodeOnNet(net,ref){if(net==null)return null;if(RT.netOf(ref)===net)return ref;const cand=[];for(let n=0;n<NN;n++)if(RT.netOf(n)===net)cand.push(n);
+  if(!cand.length)return null;const want=BBG?BBG.kind(ref):null;return cand.find(n=>!BBG||BBG.kind(n)===want)??cand.find(n=>!BBG||BBG.kind(n)!=='post')??cand[0]}
+RT.connectFig=(f,ms=260)=>new Promise(res=>{const F=figOf(f);if(!F){res(false);return}const M=RT.match(baseOf(F));if(!M.ok){RT.buildFig(f,110).then(res);return}
+  const todo=(F.lines||[]).filter(L=>L.lead&&![L.lead].concat(L.alt||[]).some(k=>RT.leadNet(k)!=null&&RT.leadNet(k)===M.net(L.at)));
+  const run=i=>{if(i>=todo.length){render();res(true);return}const L=todo[i];const at=L.via?null:nodeOnNet(M.net(L.at),L.at);
+    if(L.via||at!=null)placeLead(L,at??L.at);render();if(ms)setTimeout(()=>run(i+1),ms);else run(i+1)};run(0)});
+/* an instrument key / knob detent pressed from the code («اضبط لي»): the same as a tap, with the white highlight on it */
+/* a diode from «العلبة» put straight into a meter's input jacks («قِس لي», EE312 Exp 1 Part A) */
+RT.jackPut=(t,k='dmm')=>{const i=byKey[k];if(!i||!i.jackSlot)return false;const P=POS[k],r=i.jackSlot;return jackDrop(t,{x:P.x+r.x+r.w/2,y:P.y+r.y+r.h/2})};
+RT.devOf=k=>{const i=byPrefix[k.split(':')[0]];return i?i.key:null};
+RT.press=k=>{const inst=byPrefix[k.split(':')[0]];if(!inst)return false;inst.keyFn(k.slice(k.indexOf(':')+1));render();
+  const el=svg.querySelector(`[data-k="${CSS.escape(k)}"]`);if(el){showHL(el,true);clearTimeout(RT._phl);RT._phl=setTimeout(()=>showHL(null),420)}return true};
 let BUILDING=null;
 RT.buildFig=(f,ms=110)=>new Promise(res=>{const F=figOf(f);if(!F){res(false);return}const acts=figActions(F);if(BUILDING)clearTimeout(BUILDING);
   const run=i=>{if(i>=acts.length){BUILDING=null;render();res(true);return}acts[i]();render();BUILDING=ms?setTimeout(()=>run(i+1),ms):null;if(!ms)run(i+1)};run(0)});

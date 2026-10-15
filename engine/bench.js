@@ -4,7 +4,7 @@
    'exam' (the same steps; the student types the readings and answers, graded; the helpers cost marks) and
    and 'free' (same table and instruments, no steps and no checks). */
 const BENCH={
-  view:'ov',mode:'manual',lastGuided:'manual',helpers:{build:0,hint:0,skip:0},
+  view:'ov',mode:'manual',lastGuided:'manual',helpers:{build:0,do:0,hint:0,skip:0},
   /* Manual and Exam both follow the steps; Free has none */
   guided(){return this.mode!=='free'},
   /* Exam: the score is out of the experiment's graded steps (the steps that record something), else def.marks / 10 */
@@ -41,14 +41,14 @@ const BENCH={
   panelDefault(){const mob=BENCH.sheetOverlay();this.el.view.classList.toggle('panel-closed',!mob&&false);this.el.view.classList.remove('panel-open')},
   togglePanel(force){const v=this.el.view,mob=BENCH.sheetOverlay();
     if(mob){const open=force!==undefined?force:!v.classList.contains('panel-open');v.classList.toggle('panel-open',open)}
-    else{const closed=force!==undefined?!force:!v.classList.contains('panel-closed');v.classList.toggle('panel-closed',closed);requestAnimationFrame(()=>this.refit(false))}},
+    else{const closed=force!==undefined?!force:!v.classList.contains('panel-closed');v.classList.toggle('panel-closed',closed);this.dockCard();if(this.sim&&this.guided())this.drawStepCard();requestAnimationFrame(()=>this.refit(false))}},
   /* «المعمل بس»: the right-hand page (manual sheet, and the step card in Manual) slides away so only the bench shows; a
      small tab brings it back (in Manual it shows the current step); remembered for the session */
   labOnly(on,quiet){const v=this.el.view;if(on===undefined){try{on=sessionStorage.getItem('eelab:labonly')==='1'}catch(_){on=false}}
     else try{sessionStorage.setItem('eelab:labonly',on?'1':'0')}catch(_){}
     const bp=$q('#bpanel');if(quiet){bp.style.transition='none';requestAnimationFrame(()=>requestAnimationFrame(()=>bp.style.transition=''))}
     v.classList.toggle('lab-only',on);if(on)v.classList.remove('panel-open');if(!this.sheetOverlay())v.classList.toggle('panel-closed',on);
-    this.labChip();if(!quiet){this.refit(false);setTimeout(()=>this.refit(false),320)}},
+    this.dockCard&&this.dockCard();this.labChip();if(!quiet){this.refit(false);setTimeout(()=>this.refit(false),320)}},
   labChip(){const b=$q('#labShow'),t=$q('#labShowT'),on=this.el.view.classList.contains('lab-only');b.hidden=!on||!this.sim||!!this.sim.pc&&this.mode!=='manual';if(!on||!this.sim)return;
     if(this.guided()&&this.sim.steps){const i=this.cur(),n=this.sim.steps.length,k=this.el.card.querySelector('.num');t.textContent=i>=n?'خلصت الخطوات':`الخطوة ${k?k.textContent:i+1}`}else t.textContent='المانيوال'},
   /* exp = registry id, e.g. 'ee312/exp3'; the experiment file is loaded on first use */
@@ -56,7 +56,7 @@ const BENCH={
     const E=this.el;E.view.hidden=false;HALL.pause();
     if(!force&&this.built===exp+'|'+mode){this.refit(false);return}
     if(!EXP_DEFS[exp]){REGISTRY.load(exp).then(()=>this.enter(exp,mode,true)).catch(()=>{this.say('تعذّر تحميل التجربة');this.leave()});return}
-    this.exp=exp;this.mode=mode;if(mode!=='free')this.lastGuided=mode;this.helpers={build:0,hint:0,skip:0};this.caps={};this.built=exp+'|'+mode;this.lineLog=[];STATS.start(exp,mode);this.view='ov';this.setUser(false);this.done=[];this.sim=null;this.setMove(false);this.devZoom();
+    this.exp=exp;this.mode=mode;if(mode!=='free')this.lastGuided=mode;this.helpers={build:0,do:0,hint:0,skip:0};this.caps={};this.subDone={};this.built=exp+'|'+mode;this.lineLog=[];STATS.start(exp,mode);this.view='ov';this.setUser(false);this.done=[];this.sim=null;this.setMove(false);this.devZoom();
     E.view.dataset.mode=mode;
     /* the parts box stays open next to the board (its arrow collapses it); none on PC tables or benches without parts */
     const hasBag=!EXP_DEFS[exp].pc&&!!(EXP_DEFS[exp].tray&&EXP_DEFS[exp].tray.length);E.view.classList.toggle('no-wires',!(EXP_DEFS[exp].tray||[]).some(t=>t[0]==='W'||(EXP_DEFS[exp].parts[t[0]]||{}).t==='BR'));this.setPaint(null,true);E.view.classList.toggle('no-bag',!hasBag);/* portrait phones: the box starts folded (its arrow opens it) so the desk keeps the width */const bagOpen=hasBag&&innerWidth>=520;this.drawer=bagOpen;E.view.classList.toggle('drawer-open',bagOpen);$q('#dClose').textContent=bagOpen?'◂':'▸';
@@ -136,12 +136,12 @@ const BENCH={
   tools(){const t=$q('#benchView .btools');if(!t||this.el.view.classList.contains('devzoom')||(this.sim&&this.sim.pc)||getComputedStyle(t).display==='none')return {right:0,top:0};
     const tall=this.el.view.classList.contains('tall'),r=t.getBoundingClientRect();return tall?{right:0,top:r.height+10}:{right:r.width+10,top:0}},
   pads(){const T=this.tools();let top=this.view==='ov'?8:this.el.view.classList.contains('devzoom')?(this.stageSize().H<520?40:56):60;top=Math.max(top,T.top);let bottom=8;
-    if(this.guided()&&!this.el.card.hidden)bottom+=this.el.card.offsetHeight+8;
+    let cr=0;if(this.guided()&&!this.el.card.hidden&&this.el.card.classList.contains('in-stage'))cr=this.el.card.offsetWidth+12;
     const left=this.el.view.classList.contains('no-bag')||this.el.view.classList.contains('devzoom')?0:this.el.drawer.offsetWidth+8;
-    return {top,bottom,left,right:T.right}},
+    return {top,bottom,left,right:Math.max(T.right,cr)}},
   /* free area of the overview in px (used by the layout search before anything is drawn) */
   availArea(){const {W,H}=this.stageSize();const small=innerHeight<=500||innerWidth<=600;const bag=!this.el.view.classList.contains('no-bag');
-    const left=bag?(this.drawer?(small?104:136)+(matchMedia('(pointer:coarse)').matches?12:0):42):0;const card=this.guided()&&!this.el.view.classList.contains('lab-only')?(small?64:150):0;const tall=H>W*1.1,tr=tall?0:(small?70:96),tt=tall?52:0;return {W:Math.max(200,W-left-16-tr),H:Math.max(150,H-16-card-tt)}},
+    const left=bag?(this.drawer?(small?104:136)+(matchMedia('(pointer:coarse)').matches?12:0):42):0;const docked=this.guided()&&!this.el.view.classList.contains('lab-only')&&(this.sheetOverlay()||this.el.view.classList.contains('panel-closed'));const card=docked?(this.el.card.classList.contains('min')?(small?150:200):Math.min(small?250:330,W*0.36)):0;const tall=H>W*1.1,tr=tall?0:(small?70:96),tt=tall?52:0;return {W:Math.max(200,W-left-16-Math.max(tr,card)),H:Math.max(150,H-16-tt)}},
   fit(r){const {W,H}=this.stageSize();if(!W||!H)return null;const {top,bottom,left,right}=this.pads();const m=Math.min(12,W*0.015);
     /* ≈4 % margin around what is on the desk */
     const mg=this.el.view.classList.contains('devzoom')?0:0.02,mx=r[2]*mg,my=r[3]*mg;r=[r[0]-mx,r[1]-my,r[2]+2*mx,r[3]+2*my];
@@ -274,56 +274,124 @@ const BENCH={
   /* ---- Batch 6: a step ticks from the live state; a build step («وصّل الدائرة Fig. X», step.build = figure id) when the
      bench IS the figure's circuit (engine/match.js); in Manual a recording step (step.rec) when its captures are taken ---- */
   stepKey(s){return (s.proc||'')+'|'+s.t},
-  capsOf(s){return this.caps[this.stepKey(s)]||(this.caps[this.stepKey(s)]=[])},
-  capsDone(s){const c=this.capsOf(s);return c.enough||c.length>=s.rec.length},
-  stepOk(s,st){if(s.skipped)return true;if(this.mode==='manual'&&s.rec)return this.capsDone(s)&&(!s.build||!this.sim.RT||!this.sim.RT.match||this.sim.RT.match(s.build).ok);let ok=s.ok?!!s.ok(st):true;
-    if(s.build&&this.sim.RT&&this.sim.RT.match)ok=ok&&this.sim.RT.match(s.build).ok;return ok},
-  /* Capture: the next target of the step — the scope screen into its figure box, or a reading into its table cell */
-  capture(s){const RT=this.sim.RT,c=this.capsOf(s),t=s.rec[c.length];if(!t){this.say('سجّلت كل المطلوب في هذي الخطوة');return}
+  /* ---- Batch 7 item 3: every manual step is split into its sub-steps, exactly as the manual says them. A sub-step:
+     {k, t, fig, ok, do, hint, rec}
+       k 'build'   build the figure (checked as a circuit, Batch 6) · «وصّل لي» builds it
+         'connect' connect instrument leads (the figure fig with them) · «وصّل لي» plugs in only the missing leads
+         'measure' a meter / probe on its points with its function and range · «قِس لي»
+         'set'     a knob, key or menu of an instrument · «اضبط لي»
+         'rec'     record (Manual: Capture into the sheet) · «سجّل لي»
+       ok(st)  done on the bench (build / connect: the figure matches, and ok if given)
+       do(A)   the action played on the bench, animated: A.press(key, n), A.until(key, st => …, max), A.build(fig),
+               A.connect(fig), A.wait(ms), A.st()
+       hint    string or st => string: what is still missing.
+     A sub-step ticks green the moment it is done and stays ticked; the step is done when all are. Steps without subs get
+     them from their old fields (build → one 'build' sub-step, then one for the rest of the step: rec / ok). ---- */
+  subsOf(s){if(s._sub&&s._sub.src===s.subs)return s._sub.L;let L;
+    const figCap=f=>{const F=this.sim.RT&&this.sim.RT.figs&&this.sim.RT.figs[f];const c=F&&F.cap?F.cap.split(' · ')[0]:'Fig. '+f;return c};
+    if(s.subs)L=s.subs.map(x=>typeof x==='string'?{t:x}:{...x});
+    else{L=[];if(s.build)L.push({k:'build',fig:s.build});
+      if(s.rec)L.push({k:'rec',rec:s.rec,ok:s.ok,legacy:true,t:''});else if(s.ok||!s.build)L.push({k:'set',ok:s.ok,legacy:true,t:''})}
+    L.forEach((x,j)=>{if(!x.k)x.k=x.rec?'rec':x.fig?'connect':'set';if(x.k==='build'&&!x.fig)x.fig=s.build;if(x.k==='connect'&&!x.fig)x.fig=s.build;
+      if(x.t==null)x.t=x.k==='build'?`وصّل الدائرة <bdi dir="ltr">${figCap(x.fig)}</bdi>`:x.k==='rec'?'سجّل القراءة':'';
+      if(x.k==='rec'&&!x.rec&&s.rec)x.rec=s.rec});
+    s._sub={src:s.subs,L};return L},
+  subKey(s,j){return this.stepKey(s)+'#'+j},
+  capsOf(s,j){const L=this.subsOf(s),k=j==null||(L[j]&&L[j].legacy)?this.stepKey(s):this.subKey(s,j);return this.caps[k]||(this.caps[k]=[])},
+  capsDone(s,j){const L=this.subsOf(s);if(j==null)j=L.findIndex(x=>x.k==='rec');const x=L[j];if(!x||!x.rec)return true;const c=this.capsOf(s,j);return c.enough||c.length>=x.rec.length},
+  subOk(s,j,st){const x=this.subsOf(s)[j],RT=this.sim.RT;if(!x)return true;
+    if(x.k==='build'||x.k==='connect'){const m=RT&&RT.match&&x.fig?RT.match(x.fig).ok:true;return m&&(x.ok?!!x.ok(st):true)}
+    if(x.k==='rec')return this.mode==='manual'?this.capsDone(s,j):(x.ok?!!x.ok(st):true);
+    return x.ok?!!x.ok(st):true},
+  subState(s,st){const k=this.stepKey(s),D=this.subDone[k]||(this.subDone[k]=new Set()),L=this.subsOf(s);
+    /* in order: a sub-step ticks when it is current and done (one done earlier ticks as soon as it becomes current) */
+    if(st)for(let j=0;j<L.length;j++){if(D.has(j))continue;if(this.subOk(s,j,st))D.add(j);else break}return {D,L,cur:L.findIndex((_,j)=>!D.has(j))}},
+  stepOk(s,st){if(s.skipped)return true;const {D,L}=this.subState(s,st);return D.size>=L.length},
+  /* Capture: the next target of the sub-step — the scope screen into its figure box, or a reading into its table cell */
+  capture(s,j){const RT=this.sim.RT,L=this.subsOf(s);if(j==null)j=L.findIndex((x,i)=>x.k==='rec'&&!this.capsDone(s,i));if(j<0)j=L.findIndex(x=>x.k==='rec');const x=L[j];if(!x||!x.rec)return;
+    const c=this.capsOf(s,j),t=x.rec[c.length];if(!t){this.say('سجّلت كل المطلوب في هذي الخطوة');return}
     if(t.scope){ENGINE.sheet.capture(RT,t.scope);const el=document.getElementById(t.scope);c.push({html:`<div class="capsc">${el?el.innerHTML:''}</div>`+(t.label?`<span>${t.label}</span>`:'')})}
     else{const v=t.val?t.val():null;if(v==null||(typeof v==='number'&&!isFinite(v))){this.say(t.none||'ما فيه قراءة الحين: شغّل الجهاز ووصّله مثل المطلوب');return}
-      const txt=typeof v==='number'?(t.dec!=null?v.toFixed(t.dec):+v.toPrecision(4)+''):String(v);const el=t.to&&document.getElementById(t.to);if(el){el.value=typeof v==='number'?txt:v;el.classList.add('captured')}
+      const txt=typeof v==='number'?(t.dec!=null?v.toFixed(t.dec):+v.toPrecision(4)+''):String(v);const el=t.to&&document.getElementById(t.to);if(el){el.value=typeof v==='number'?txt:v;el.classList.add('captured');el.dispatchEvent(new Event('change',{bubbles:true}))}
       c.push({html:`${t.label?`<span>${t.label}</span> `:''}<bdi dir="ltr">${t.txt?t.txt(v):txt}${t.unit?' '+t.unit:''}</bdi>`})}
     this.say('📸 تسجيل '+c.length);const k=this.el.card;k.dataset.key='';this.onRender()},
   /* the figure the current step works on: its own, or the last build step's before it (same procedure) */
-  figFor(i){const S=this.sim.steps;for(let j=i;j>=0;j--){if(S[j].build)return S[j].build;if(j<i&&S[j].proc!==S[i].proc)break}return null},
-  /* «تلميح»: what is wrong with the circuit (and where), or what the step still wants */
-  hintFor(i){const S=this.sim.steps,s=S[i],RT=this.sim.RT;this.helpers.hint++;const f=RT&&RT.hint?this.figFor(i):null;
-    const h=f?RT.hint(f):null;if(h){this.say('💡 '+h.msg);this.showSpot(h.at);return}
-    const m=typeof s.hint==='function'?s.hint(this.sim.status()):s.hint;if(m){this.say('💡 '+m);if(s.dev&&s.dev!=='board')this.focus(s.dev);return}
-    this.say(f?'💡 الدائرة صحيحة ✓ — باقي: '+(s.t||'').replace(/<[^>]+>/g,'').slice(0,90):'💡 '+(s.t||'').replace(/<[^>]+>/g,'').slice(0,110));if(s.dev&&s.dev!=='board'&&!s.build)this.focus(s.dev)},
+  figFor(i){const S=this.sim.steps;for(let j=i;j>=0;j--){const L=this.subsOf(S[j]);const f=[...L].reverse().find(x=>x.fig);if(f)return f.fig;if(S[j].build)return S[j].build;if(j<i&&S[j].proc!==S[i].proc)break}return null},
+  /* «تلميح» for a sub-step: what is wrong with the circuit (and where), or what that sub-step still wants */
+  hintFor(i,j){const S=this.sim.steps,s=S[i],RT=this.sim.RT;this.helpers.hint++;const L=this.subsOf(s);if(j==null){j=this.subState(s).cur;if(j<0)j=0}const x=L[j]||{};const st=this.sim.status();
+    const f=x.fig||this.figFor(i);
+    if(f&&RT&&RT.hint){const h=RT.hint(f);if(h){this.say('💡 '+h.msg);this.showSpot(h.at);return}}
+    const m=typeof x.hint==='function'?x.hint(st):x.hint||(x.legacy?(typeof s.hint==='function'?s.hint(st):s.hint):null);
+    if(m){this.say('💡 '+m);const d=x.dev||s.dev;if(d&&d!=='board'&&this.view!==d)this.focus(d);return}
+    if(x.k==='rec'){this.say(this.mode==='manual'?'💡 اضغط «📸 Capture» (أو «سجّل لي») عشان تسجّل القراءة':'💡 اكتب القراءة في الـ sheet');return}
+    const txt=(x.t||s.t||'').replace(/<[^>]+>/g,'').slice(0,110);this.say(f&&RT.match(f).ok?'💡 الدائرة صحيحة ✓ — باقي: '+txt:'💡 باقي: '+txt);const d=x.dev||s.dev;if(d&&d!=='board'&&!s.build&&this.view!==d)this.focus(d)},
   showSpot(at){const sim=this.sim;if(!at||!sim.setGuide)return;const RT=sim.RT;let g=null;
     if(at.lead)g={nodes:[],jacks:[at.lead],flash:true};
     else if(at.part!=null||at.type){const p=RT.S.parts.find(q=>at.part!=null?q.id===at.part:q.type===at.type);if(p)g={nodes:p.n!=null?[p.n]:[p.a,p.b],jacks:[],flash:true}}
     if(g){if(this.view!=='ov'&&this.view!=='board')this.back();setTimeout(()=>sim.setGuide(g),reduceMotion?0:300);clearTimeout(this._spot);this._spot=setTimeout(()=>sim.setGuide(null),4200)}},
-  /* step card: header, the manual's step text (its actions line by line), the figure under it for a build step, the
-     captures of a recording step (Manual), the helpers; folded to one line by default on small screens */
-  drawStepCard(){const c=this.el.card;setTimeout(()=>this.labChip());if(!this.sim||!this.guided()){c.hidden=true;return}c.hidden=false;
+  /* "do it for me" of a sub-step: played on the bench, animated, so the student sees how it is done */
+  doName(x){return {build:'🔧 وصّل لي',connect:'🔧 وصّل لي',measure:'📏 قِس لي',set:'🎛 اضبط لي',rec:'📸 سجّل لي'}[x.k]||'▶ سوّها لي'},
+  async doSub(i,j){const S=this.sim.steps,s=S[i],x=this.subsOf(s)[j],RT=this.sim.RT;if(!x||this._doing)return;this._doing=true;const c=this.el.card;
+    const ms=reduceMotion||this.fast?0:260,wait=t=>new Promise(r=>setTimeout(r,ms?t:0));
+    const focusKey=k=>{const d=RT.devOf&&RT.devOf(k);if(d&&this.view!==d&&d!=='board')this.focus(d)};
+    const A={st:()=>this.sim.status(),RT,wait,
+      press:async(k,n=1)=>{focusKey(k);if(ms)await wait(this.view==='ov'?0:380);for(let q=0;q<n;q++){RT.press(k);this.onRender();await wait(ms)}},
+      until:async(k,cond,max=40)=>{focusKey(k);if(ms)await wait(380);for(let q=0;q<max&&!cond(this.sim.status());q++){RT.press(k);this.onRender();await wait(ms*0.7)}},
+      build:async f=>{if(this.view!=='board')this.focus('board');await wait(380);await RT.buildFig(f,ms?110:0)},
+      connect:async f=>{await RT.connectFig(f,ms)},focus:async d=>{if(this.view!==d)this.focus(d);await wait(380)},
+      tap:async(k,t=70)=>{focusKey(k);RT.press(k);this.onRender();await new Promise(r=>setTimeout(r,ms?t:0))},
+      jack:async(t,k='dmm')=>{if(this.view!==k)this.focus(k);await wait(380);RT.jackPut(t,k);this.onRender();await wait(ms)},
+      capture:()=>this.capture(s,j)};
+    try{
+      if(x.k==='build'){this.helpers.build++;this.say('🔧 «وصّل لي»: الدائرة تتركّب قدامك');await A.build(x.fig)}
+      else if(x.k==='connect'&&!x.do){this.helpers.build++;this.say('🔧 «وصّل لي»: الأسلاك تنشبك قدامك');await A.connect(x.fig)}
+      else if(x.k==='rec'&&!x.do){this.helpers.do++;A.capture()}
+      else if(x.do){this.helpers[x.k==='connect'?'build':'do']++;this.say(this.doName(x)+'…');await x.do(A)}
+      else this.say('💡 هذي سوّها بنفسك: '+(x.t||'').replace(/<[^>]+>/g,''))}
+    finally{this._doing=false;c.dataset.key='';this.onRender()}},
+  /* step card: in the right-hand column (Batch 7): header, the manual's step text, the figure of a build step, then the
+     sub-steps, each with ✓ when done and its own "do it for me" and «تلميح»; the captures of a recording sub-step (Manual) */
+  dockCard(){const c=this.el.card;if(!c)return;const panel=$q('#bpanel'),stage=$q('#bstage');
+    const inPanel=!this.sheetOverlay()&&!this.el.view.classList.contains('panel-closed')&&!this.el.view.classList.contains('lab-only');
+    const host=inPanel?panel:stage;if(c.parentNode!==host){if(inPanel)panel.insertBefore(c,$q('#paperHost'));else stage.insertBefore(c,$q('#labShow'));c.dataset.key=''}
+    c.classList.toggle('in-panel',inPanel);c.classList.toggle('in-stage',!inPanel);
+    requestAnimationFrame(()=>{const w=!inPanel&&!c.hidden&&!this.el.view.classList.contains('lab-only')&&this.guided()?c.offsetWidth+12:0;this.el.view.style.setProperty('--cardw',w+'px')})},
+  drawStepCard(){const c=this.el.card;setTimeout(()=>this.labChip());if(!this.sim||!this.guided()){c.hidden=true;return}c.hidden=false;this.dockCard();
     const S=this.sim.steps,i=this.cur(),all=i>=S.length;const min=c.classList.contains('min');const RT=this.sim.RT||{};const s=S[i];
     /* the instructor check of the mains sources (EE205): a button in the card while a source waits for it */
     const LK=((RT&&RT.locks)||[]).filter(l=>RT.S[l.key]),lkOk=LK.length&&LK.every(l=>l.isOk());
     const chk=!all&&LK.length&&(!lkOk||/المشرف/.test(s.t))?(lkOk?'<span class="chkok">✓ المشرف شيّك التوصيل</span>':'<button class="chk" id="scChk">👨‍🏫 المشرف يتأكد من التوصيل</button>'):'';
-    const caps=!all&&s.rec&&this.mode==='manual'?this.capsOf(s):[];
-    const key=this.built+'|'+all+'|'+i+'|'+(s?this.stepKey(s):'')+'|'+this.view+'|'+min+'|'+chk+'|'+caps.length+'|'+(this._skipAsk===i?1:0);if(c.dataset.key===key)return;c.dataset.key=key;
+    const SS=all?null:this.subState(s),capsK=all?'':SS.L.map((x,j)=>x.k==='rec'?this.capsOf(s,j).length:'').join(',');
+    const key=this.built+'|'+all+'|'+i+'|'+(s?this.stepKey(s):'')+'|'+this.view+'|'+min+'|'+chk+'|'+capsK+'|'+(SS?[...SS.D].join(','):'')+'|'+(this._skipAsk===i?1:0)+'|'+c.className;if(c.dataset.key===key)return;c.dataset.key=key;
     if(all){const man=this.mode==='manual';c.innerHTML=`<div class="num done">✓</div><div class="body"><div class="k">خلصت خطوات ${man?'المانيوال':'الاختبار'} 🎉</div><div class="t">${man?'كل الخطوات تمت، والـ sheet تعبّت من تسجيلاتك: افتحها واقراها.':'كل الخطوات تمت. كمّل الـ sheet (الشاشات والقراءات والأسئلة) واضغط "صحّح" عشان تشوف درجتك.'}</div><div class="acts"><button class="go" id="scSheet">افتح الـ sheet</button></div></div>`;
       BIDI.fix(c);c.querySelector('#scSheet').onclick=()=>{this.togglePanel(true);const r=$q('#submit');if(r&&!man)r.scrollIntoView({block:'center'})};return}
     if(this.sim.setGuide&&!this._spot)this.sim.setGuide(null);
-    const F=s.build&&RT.figs?RT.figs[s.build]:null,img=F?F.img:s.fig,cap=F?F.cap:s.figCap;
-    const acts=s.acts&&s.acts.length?`<ol class="sacts">${s.acts.map(a=>`<li>${a}</li>`).join('')}</ol>`:'';
+    const L=SS.L,D=SS.D,cj=SS.cur;
+    const bf=L.find(x=>x.k==='build'),F=bf&&RT.figs?RT.figs[bf.fig]:null,img=F?F.img:s.fig,cap=F?F.cap:s.figCap;
     const fig=img?`<div class="sfig in"><img class="figimg" src="${img}" alt="${cap||'Figure'}"><span>🔍</span>${cap?`<div class="fcap"><bdi dir="ltr">${cap}</bdi></div>`:''}</div>`:'';
-    const rec=s.rec&&this.mode==='manual'?`<div class="caps">${caps.map((q,j)=>`<div class="capi"><b>تسجيل ${j+1}</b>${q.html}</div>`).join('')}</div><div class="acts cap-acts"><button class="go" id="scCap">📸 Capture${s.rec.length>1?` (${Math.min(caps.length+1,s.rec.length)} من ${s.rec.length})`:''}</button>${caps.length&&caps.length<s.rec.length?'<button id="scEnough">اكتفِ بهذه التسجيلات وانتقل</button>':''}</div>`:'';
-    const ex=this.mode==='exam',cost=v=>ex?` <small>(−${v})</small>`:'';
-    const help=`<div class="acts help">${s.build?`<button id="scBuild">🔧 وصّل لي${cost(1)}</button>`:''}<button id="scHint">💡 تلميح${cost(0.5)}</button><button id="scSkip">${this._skipAsk===i?'⚠ متأكد؟ تخطّي':'⏭ تخطّي'+cost(1)}</button></div>`;
+    const ex=this.mode==='exam',cost=v=>ex?` <small>(−${v})</small>`:'';const NUM='①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳';
+    const shown=L.filter(x=>x.t);
+    const subs=shown.length?`<ol class="subs">${L.map((x,j)=>{if(!x.t)return '';const ok=D.has(j),cur=j===cj;const n=NUM[shown.indexOf(x)]||'•';
+      const caps=x.k==='rec'&&this.mode==='manual'?this.capsOf(s,j):[];
+      const recUI=x.k==='rec'&&this.mode==='manual'&&(cur||caps.length)?`<div class="caps">${caps.map((q,m)=>`<div class="capi"><b>تسجيل ${m+1}</b>${q.html}</div>`).join('')}</div>`+(ok?'':`<div class="acts cap-acts"><button class="go"${cur?' id="scCap"':''} data-cap="${j}">📸 Capture${x.rec&&x.rec.length>1?` (${Math.min(caps.length+1,x.rec.length)} من ${x.rec.length})`:''}</button>${caps.length&&x.rec&&caps.length<x.rec.length?`<button${cur?' id="scEnough"':''} data-enough="${j}">اكتفِ بهذه التسجيلات وانتقل</button>`:''}</div>`):'';
+      const btns=ok?'':`<div class="sbtn"><button class="sdo"${cur&&(x.k==='build'||x.k==='connect')?' id="scBuild"':cur?' id="scDo"':''} data-do="${j}">${this.doName(x)}${cost(1)}</button><button class="shint"${cur?' id="scHint"':''} data-hint="${j}">💡 تلميح${cost(0.5)}</button></div>`;
+      return `<li class="${ok?'ok':cur?'cur':'todo'}"><div class="sl"><span class="n">${ok?'✓':n}</span><span class="lt">${x.t}</span></div>${btns}${recUI}</li>`}).join('')}</ol>`:'';
+    const acts=!s.subs&&s.acts&&s.acts.length?`<ol class="sacts">${s.acts.map(a=>`<li>${a}</li>`).join('')}</ol>`:'';
+    const noSubBtns=!shown.length||shown.length<L.length?`<div class="acts help">${L.filter(x=>!x.t).map(x=>{const j=L.indexOf(x);if(D.has(j))return '';return `<button${j===cj?' id="scDo"':''} data-do="${j}">${this.doName(x)}${cost(1)}</button><button${j===cj&&!shown.length?' id="scHint"':''} data-hint="${j}">💡 تلميح${cost(0.5)}</button>`}).join('')}</div>`:'';
+    const legacyRec=L.find((x,j)=>!x.t&&x.k==='rec')&&this.mode==='manual'?(()=>{const j=L.findIndex(x=>!x.t&&x.k==='rec');const caps=this.capsOf(s,j);const x=L[j];return `<div class="caps">${caps.map((q,m)=>`<div class="capi"><b>تسجيل ${m+1}</b>${q.html}</div>`).join('')}</div>`+(D.has(j)?'':`<div class="acts cap-acts"><button class="go" id="scCap" data-cap="${j}">📸 Capture${x.rec.length>1?` (${Math.min(caps.length+1,x.rec.length)} من ${x.rec.length})`:''}</button>${caps.length&&caps.length<x.rec.length?`<button id="scEnough" data-enough="${j}">اكتفِ بهذه التسجيلات وانتقل</button>`:''}</div>`)})():'';
+    const help=`<div class="acts help"><button id="scSkip">${this._skipAsk===i?'⚠ متأكد؟ تخطّي':'⏭ تخطّي الخطوة'+cost(1)}</button></div>`;
     const h0=c.offsetHeight;const PS=s.proc?S.filter(x=>x.proc===s.proc):S,pi=PS.indexOf(s)+1;
-    c.innerHTML=`<div class="num">${pi}</div><div class="body"><div class="k">${s.proc&&this.procs.length>1?`Procedure ${s.proc} · `:''}الخطوة ${pi} من ${PS.length}</div><div class="t">${s.t}</div>${acts}${fig}${rec}<div class="acts">${chk}<button class="go" id="scGo">وريني وين</button><button id="scAll">كل الخطوات</button></div>${help}</div><button class="mini" id="scMin" aria-label="${min?'توسيع':'تصغير'}">${min?'▴':'▾'}</button><button class="mini" id="scHide" title="أخفِ الصفحة، خلّ المعمل بس" aria-label="أخفِ الصفحة">⟩</button>`;
+    c.innerHTML=`<div class="num">${pi}</div><div class="body"><div class="k">${s.proc&&this.procs.length>1?`Procedure ${s.proc} · `:''}الخطوة ${pi} من ${PS.length}</div><div class="t">${s.t}</div>${acts}${fig}${subs}${legacyRec}${noSubBtns}<div class="acts">${chk}<button class="go" id="scGo">وريني وين</button><button id="scAll">كل الخطوات</button></div>${help}</div><button class="mini" id="scMin" aria-label="${min?'توسيع':'تصغير'}">${min?'▴':'▾'}</button><button class="mini" id="scHide" title="أخفِ الصفحة، خلّ المعمل بس" aria-label="أخفِ الصفحة">⟩</button>`;
     BIDI.fix(c);if(Math.abs(c.offsetHeight-h0)>8&&this.view)requestAnimationFrame(()=>this.refit(true));
+    {const cu=c.querySelector('.subs li.cur');if(cu&&c.classList.contains('in-panel')===false&&cu.scrollIntoView)cu.scrollIntoView({block:'nearest'})}
     const small=()=>innerHeight<=500||innerWidth<=600;const on=(id,f)=>{const b=c.querySelector(id);if(b)b.onclick=f};
-    on('#scGo',()=>{if(small()&&!c.classList.contains('min')){c.classList.add('min');c.dataset.key='';this.drawStepCard()}this.focus(s.build?'board':s.dev)});
+    on('#scGo',()=>{if(small()&&!c.classList.contains('min')&&c.classList.contains('in-stage')===false){c.classList.add('min');c.dataset.key='';this.drawStepCard()}const x=L[cj]||{};this.focus(x.k==='build'||x.k==='connect'||s.build&&cj<1?'board':x.dev||s.dev)});
     on('#scAll',()=>this.togglePanel(true));
     on('#scChk',()=>{LK.filter(l=>!l.isOk()).forEach(l=>l.check());c.dataset.key='';RT.render()});
-    on('#scCap',()=>this.capture(s));on('#scEnough',()=>{this.capsOf(s).enough=true;c.dataset.key='';this.onRender()});
-    on('#scBuild',()=>{this.helpers.build++;this.say('🔧 «وصّل لي»: الدائرة تتركّب قدامك');if(this.view!=='board')this.focus('board');RT.buildFig(s.build).then(()=>{c.dataset.key='';this.onRender()})});
-    on('#scHint',()=>this.hintFor(i));
+    c.querySelectorAll('[data-do]').forEach(b=>b.onclick=()=>this.doSub(i,+b.dataset.do));
+    c.querySelectorAll('[data-hint]').forEach(b=>b.onclick=()=>this.hintFor(i,+b.dataset.hint));
+    c.querySelectorAll('[data-cap]').forEach(b=>b.onclick=()=>this.capture(s,+b.dataset.cap));
+    c.querySelectorAll('[data-enough]').forEach(b=>b.onclick=()=>{this.capsOf(s,+b.dataset.enough).enough=true;c.dataset.key='';this.onRender()});
     on('#scSkip',()=>{if(this._skipAsk!==i){this._skipAsk=i;c.dataset.key='';this.drawStepCard();clearTimeout(this._sk);this._sk=setTimeout(()=>{this._skipAsk=null;c.dataset.key='';this.drawStepCard()},3500);return}
       this._skipAsk=null;this.helpers.skip++;s.skipped=true;this.say('⏭ تخطّيت الخطوة');c.dataset.key='';this.onRender()});
     c.querySelector('#scHide').onclick=()=>this.labOnly(true);
