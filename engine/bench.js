@@ -138,10 +138,11 @@ const BENCH={
   pads(){const T=this.tools();let top=this.view==='ov'?8:this.el.view.classList.contains('devzoom')?(this.stageSize().H<520?40:56):60;top=Math.max(top,T.top);let bottom=8;
     let cr=0;if(this.guided()&&!this.el.card.hidden&&this.el.card.classList.contains('in-stage'))cr=this.el.card.offsetWidth+12;
     const left=this.el.view.classList.contains('no-bag')||this.el.view.classList.contains('devzoom')?0:this.el.drawer.offsetWidth+8;
-    return {top,bottom,left,right:Math.max(T.right,cr)}},
+    /* the tools column stands left of a step card docked on the bench (both are reserved) */
+    return {top,bottom,left,right:cr+T.right}},
   /* free area of the overview in px (used by the layout search before anything is drawn) */
   availArea(){const {W,H}=this.stageSize();const small=innerHeight<=500||innerWidth<=600;const bag=!this.el.view.classList.contains('no-bag');
-    const left=bag?(this.drawer?(small?104:136)+(matchMedia('(pointer:coarse)').matches?12:0):42):0;const docked=this.guided()&&!this.el.view.classList.contains('lab-only')&&(this.sheetOverlay()||this.el.view.classList.contains('panel-closed'));const card=docked?(this.el.card.classList.contains('min')?(small?150:200):Math.min(small?250:330,W*0.36)):0;const tall=H>W*1.1,tr=tall?0:(small?70:96),tt=tall?52:0;return {W:Math.max(200,W-left-16-Math.max(tr,card)),H:Math.max(150,H-16-tt)}},
+    const left=bag?(this.drawer?(small?104:136)+(matchMedia('(pointer:coarse)').matches?12:0):42):0;const docked=this.guided()&&!this.el.view.classList.contains('lab-only')&&(this.sheetOverlay()||this.el.view.classList.contains('panel-closed'));const card=docked?(this.el.card.classList.contains('min')?(small?150:200):Math.min(small?250:330,W*0.36)):0;const tall=H>W*1.1,tr=tall?0:(small?70:96),tt=tall?52:0;return {W:Math.max(200,W-left-16-tr-card),H:Math.max(150,H-16-tt)}},
   fit(r){const {W,H}=this.stageSize();if(!W||!H)return null;const {top,bottom,left,right}=this.pads();const m=Math.min(12,W*0.015);
     /* ≈4 % margin around what is on the desk */
     const mg=this.el.view.classList.contains('devzoom')?0:0.02,mx=r[2]*mg,my=r[3]*mg;r=[r[0]-mx,r[1]-my,r[2]+2*mx,r[3]+2*my];
