@@ -119,8 +119,10 @@ function svg(){const d=RT.S[KEY];const DSP=display();let s='';
   // keys
   const ks=D0.keys;ks.forEach(([k,l],i)=>{const kw=(W-52-(ks.length-1)*6)/ks.length,x=26+i*(kw+6);s+=`<rect x="${x}" y="130" width="${kw}" height="20" rx="9" fill="#1f2224" stroke="#0b0c0d" data-k="${PFX}:${k}" style="cursor:pointer"/>`+T(x+kw/2,143.5,l,{size:7.5,fill:'#e8e8e2',a:'middle',w:600})});
   // rotary switch with its positions around
-  D0.pos.forEach(([,l],i)=>{const a=posAng(i),r=RR+(MODEL==='bk2704'?14:20);const x=CX+Math.sin(a)*r,y=CY-Math.cos(a)*r;const on=i===d.pos;
-    s+=T(x,y+3,l,{size:MODEL==='bk2704'?7:8.5,fill:on?'#ffd75e':'#e8e8e2',a:'middle',w:on?700:500})});
+  D0.pos.forEach(([,l],i)=>{const a=posAng(i),r=RR+(MODEL==='bk2704'?19:20);let x=CX+Math.sin(a)*r,y=CY-Math.cos(a)*r;const on=i===d.pos;
+    /* the labels at the top of the dial stand clear of the keys above it: out to the side and a little down, a little smaller */
+    const top=MODEL!=='bk2704'&&Math.cos(a)>0.85;if(top){x+=Math.sign(Math.sin(a))*12;y+=9}
+    s+=T(x,y+3,l,{size:(MODEL==='bk2704'?6.6:8.5)*(top?0.88:1),fill:on?'#ffd75e':'#e8e8e2',a:'middle',w:on?700:500})});
   const a=posAng(d.pos);s+=`<circle cx="${CX}" cy="${CY}" r="${RR*1.35}" fill="transparent" data-k="knob:${PFX}:SW" data-knob="${PFX}:SW"/>`;
   s+=`<circle cx="${CX}" cy="${CY}" r="${RR-6}" fill="#191b1c" stroke="#0b0c0d" stroke-width="3" data-k="knob:${PFX}:SW" data-knob="${PFX}:SW" style="cursor:grab"/>`;
   s+=`<g transform="translate(${CX} ${CY}) rotate(${a*180/Math.PI})" pointer-events="none"><rect x="-9" y="${-RR+4}" width="18" height="${2*RR-8}" rx="8" fill="#2c2f31" stroke="#0b0c0d"/><path d="M0 ${-RR+8} l-5 9 h10z" fill="${yel?'#f2b51c':'#e8e8e2'}"/></g>`;

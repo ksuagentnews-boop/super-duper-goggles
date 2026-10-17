@@ -215,3 +215,4 @@ Updated after every finished item (commit + push each time).
 - Batch 7 item 3: EE312 Exp 5 (A1 in the lab's power-wiring order), Exp 6 and 8 (PC: parts, wires, dialogs and runs played by the do-it buttons) in sub-steps; every experiment of both labs now in sub-steps doable by do-it-for-me.
 - Batch 7 done: full suite desktop + phone ALL PASSED (1235 checks, 0 console errors); merged into main.
 - Batch 8 item 1: Hameg HM 203-7 rotary switches (TIME/DIV, VOLTS/DIV I / II) get drawn ◀ ▶ and their red VAR caps their own ◀ ▶; instruments test clicks every Hameg knob's arrows.
+- Batch 8 item 2: handheld meter dial labels clear of the keys above the dial (Fluke 77 / GoldStar: the top labels move out and down, a little smaller; BK 2704B: label ring a little wider, font a little smaller).
