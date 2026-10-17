@@ -161,5 +161,13 @@ export async function run(page, vp, ok) {
     ok(await page.evaluate(([id, pid]) => !!document.querySelector(`#LtopCab [data-k="head:${id}"]`) && !!document.querySelector(`#Lparts [data-k="part:${pid}"]`), [hd.id, pid]), 'then a lead moved last takes the top layer and the part goes back');
     await page.evaluate(() => BENCH.sim.reset()); }
   await page.evaluate(() => { if (window.__orig) EXP_DEFS['ee312/exp1'] = window.__orig; else delete EXP_DEFS['ee312/exp1']; }); await page.click('#bStand'); await page.waitForTimeout(400);
+  /* Batch 8: every rotary knob of the Hameg HM 203-7 (EE205) has ◀ ▶ that a click turns */
+  { await sit(page, 'ee205/exp2', 'free'); const H2 = bench(page); H2.touch = vp === 'phone'; await H2.focus('sc');
+    const bad = [];
+    for (const k of await page.evaluate(() => BENCH.sim.RT.inst.sc.wheel)) {
+      const info = () => page.evaluate(k => BENCH.sim.RT.inst.sc.knobInfo(k), k); let moved = false;
+      for (const d of ['-', '+', '+']) { if (!(await page.$(`#bench [data-k="s:${k}${d}"]`))) { bad.push(k + d + ' missing'); break; } const a = await info(); await H2.key(`s:${k}${d}`); if ((await info()) !== a) moved = true; }
+      if (!moved) bad.push(k + ' does not turn'); }
+    ok(!bad.length, 'Hameg: every rotary knob has ◀ ▶ and a click turns it' + (bad.length ? ' · ' + bad.join(', ') : '')); }
 }
 
