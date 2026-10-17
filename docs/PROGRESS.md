@@ -216,3 +216,4 @@ Updated after every finished item (commit + push each time).
 - Batch 7 done: full suite desktop + phone ALL PASSED (1235 checks, 0 console errors); merged into main.
 - Batch 8 item 1: Hameg HM 203-7 rotary switches (TIME/DIV, VOLTS/DIV I / II) get drawn ◀ ▶ and their red VAR caps their own ◀ ▶; instruments test clicks every Hameg knob's arrows.
 - Batch 8 item 2: handheld meter dial labels clear of the keys above the dial (Fluke 77 / GoldStar: the top labels move out and down, a little smaller; BK 2704B: label ring a little wider, font a little smaller).
+- Batch 8 item 3: «وريني وين» on scope sub-steps (dev 'scope' → the bench key 'sc'); new tests/exp/helpers.mjs presses «وريني وين», «تلميح» and the do-it button on every sub-step of every experiment.

@@ -205,7 +205,7 @@ const BENCH={
   moveMode:false,
   setMove(on){this.moveMode=!!on;this.el.view.classList.toggle('movemode',this.moveMode);const b=$q('#bMove');if(b)b.setAttribute('aria-pressed',String(this.moveMode));if(this.sim&&this.sim.RT&&this.sim.RT.camera)this.sim.RT.camera();
     if(this.moveMode)this.say('وضع التحريك: اسحب أي جهاز من مقبض ✥ · اضغط «تحريك» مرة ثانية للرجوع')},
-  focus(k){if(this.sim&&this.sim.pc){this.sim.focus(k);return}if(!this.sim||!this.sim.regions[k])return;this.view=k;this.devZoom();this.ui();this.refit(true,true)},
+  focus(k){if(this.sim&&this.sim.pc){this.sim.focus(k);return}if(this.sim&&!this.sim.regions[k]&&k==='scope')k='sc';if(!this.sim||!this.sim.regions[k])return;this.view=k;this.devZoom();this.ui();this.refit(true,true)},
   /* close device zoom: the device alone at ≈90 % of the screen; the box, hints, tools, board and the other instruments hide */
   devZoom(){setTimeout(()=>this.syncTouchMenu(),0);const k=this.view,on=k!=='ov'&&k!=='board'&&!(this.sim&&this.sim.pc);const E=this.el;E.view.classList.toggle('devzoom',on);
     let st=document.getElementById('zoomStyle');if(!st){st=document.createElement('style');st.id='zoomStyle';document.head.appendChild(st)}
